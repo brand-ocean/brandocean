@@ -234,8 +234,11 @@ export default defineSchema({
 			scrollY: v.number(),
 			elementWidth: v.number(),
 			elementHeight: v.number(),
+			px: v.optional(v.number()),
+			py: v.optional(v.number()),
 		}),
 		content: v.string(),
+		clientKey: v.optional(v.string()),
 		kind: v.optional(
 			v.union(
 				v.literal("bug"),
@@ -295,4 +298,9 @@ export default defineSchema({
 		windowStart: v.number(),
 		count: v.number(),
 	}).index("by_project_window", ["projectId", "windowStart"]),
+
+	feedbackNotifyState: defineTable({
+		projectId: v.id("feedbackProjects"),
+		lastAt: v.number(),
+	}).index("by_project", ["projectId"]),
 });

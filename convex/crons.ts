@@ -9,4 +9,11 @@ crons.cron(
 	internal.items.rebalanceAll,
 );
 
+crons.cron(
+	"prune stale feedback rate buckets daily",
+	"30 3 * * *",
+	internal.feedback.pruneRateBuckets,
+	{},
+);
+
 export default crons;

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/share/$shareToken")({
@@ -16,7 +15,6 @@ export const Route = createFileRoute("/share/$shareToken")({
 });
 
 const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL as string | undefined;
-const IDKEY = "bo_feedback_identity";
 
 type Reply = {
 	id: string;
@@ -37,25 +35,13 @@ type Comment = {
 	screenshotUrl: string | null;
 	replies: Reply[];
 };
-type Identity = { name: string; email: string };
-
-function loadIdentity(): Identity | null {
-	try {
-		const raw = localStorage.getItem(IDKEY);
-		if (raw) return JSON.parse(raw) as Identity;
-	} catch {
-		/* ignore */
-	}
-	return null;
-}
-
 function ShareBoardPage() {
 	const { shareToken } = Route.useParams();
 	const base = (SITE_URL ?? "").replace(/\/$/, "");
 	const [comments, setComments] = useState<Comment[] | null>(null);
 	const [projectName, setProjectName] = useState("Feedback");
+	const [projectStatus, setProjectStatus] = useState<string>("active");
 	const [error, setError] = useState<string | null>(null);
-	const [identity, setIdentity] = useState<Identity | null>(loadIdentity);
 	const [statusF, setStatusF] = useState<"open" | "resolved" | "all">(
 		"open",
 	);
@@ -75,6 +61,7 @@ function ShareBoardPage() {
 			}
 			setError(null);
 			setProjectName(json.project?.name ?? "Feedback");
+			setProjectStatus(json.project?.status ?? "active");
 			setComments(json.comments ?? []);
 		} catch {
 			setError("Network error");
@@ -93,7 +80,9 @@ function ShareBoardPage() {
 			(kindF === "all" || c.kind === kindF),
 	);
 	const grouped = filtered.reduce<Record<string, Comment[]>>((acc, c) => {
-		(acc[c.pagePath] ??= []).push(c);
+		const arr = acc[c.pagePath] ?? [];
+		arr.push(c);
+		acc[c.pagePath] = arr;
 		return acc;
 	}, {});
 	const pill = (active: boolean) =>
@@ -111,16 +100,19 @@ function ShareBoardPage() {
 				</h1>
 				<p className="text-sm text-muted-foreground">
 					Shared feedback board — comment without an account.
+					{comments &&
+						comments.length > 0 &&
+						` · ${
+							comments.filter((c) => c.status === "open").length
+						} open of ${comments.length}`}
 				</p>
 			</header>
 
-			{!identity && (
-				<IdentityForm
-					onSave={(v) => {
-						localStorage.setItem(IDKEY, JSON.stringify(v));
-						setIdentity(v);
-					}}
-				/>
+			{projectStatus !== "active" && (
+				<p className="mb-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-800">
+					⏸ This feedback board is {projectStatus} — replies and status
+					changes are disabled.
+				</p>
 			)}
 
 			{error && (
@@ -176,7 +168,7 @@ function ShareBoardPage() {
 									comment={c}
 									base={base}
 									shareToken={shareToken}
-									identity={identity}
+									readOnly={projectStatus !== "active"}
 									onChange={refresh}
 								/>
 							))}
@@ -188,50 +180,17 @@ function ShareBoardPage() {
 	);
 }
 
-function IdentityForm({ onSave }: { onSave: (v: Identity) => void }) {
-	const [name, setName] = useState("");
-	const [email, setEmail] = useState("");
-	return (
-		<div className="mb-6 space-y-2 rounded-lg border bg-muted/30 p-4">
-			<p className="text-sm font-medium">Tell us who you are to comment</p>
-			<div className="flex flex-wrap gap-2">
-				<Input
-					placeholder="Your name"
-					value={name}
-					onChange={(e) => setName(e.target.value)}
-					className="w-44"
-				/>
-				<Input
-					placeholder="Your email"
-					type="email"
-					value={email}
-					onChange={(e) => setEmail(e.target.value)}
-					className="w-56"
-				/>
-				<Button
-					disabled={!name.trim() || !email.trim()}
-					onClick={() =>
-						onSave({ name: name.trim(), email: email.trim() })
-					}
-				>
-					Continue
-				</Button>
-			</div>
-		</div>
-	);
-}
-
 function CommentRow({
 	comment,
 	base,
 	shareToken,
-	identity,
+	readOnly,
 	onChange,
 }: {
 	comment: Comment;
 	base: string;
 	shareToken: string;
-	identity: Identity | null;
+	readOnly?: boolean;
 	onChange: () => void;
 }) {
 	const [reply, setReply] = useState("");
@@ -294,46 +253,46 @@ function CommentRow({
 					))}
 				</ul>
 			)}
-			{identity && (
-				<div className="mt-3 flex items-end gap-2">
-					<Textarea
-						rows={1}
-						value={reply}
-						onChange={(e) => setReply(e.target.value)}
-						placeholder="Reply…"
-						className="min-h-9"
-					/>
-					<Button
-						size="sm"
-						disabled={busy || !reply.trim()}
-						onClick={async () => {
-							await post("/feedback/replies", {
-								projectToken: shareToken,
-								commentId: comment.id,
-								content: reply.trim(),
-								authorName: identity.name,
-								authorEmail: identity.email,
-							});
-							setReply("");
-						}}
-					>
-						Reply
-					</Button>
-					<Button
-						size="sm"
-						variant="outline"
-						disabled={busy}
-						onClick={() =>
-							post("/feedback/resolve", {
-								projectToken: shareToken,
-								commentId: comment.id,
-								status: comment.status === "open" ? "resolved" : "open",
-							})
-						}
-					>
-						{comment.status === "open" ? "Resolve" : "Reopen"}
-					</Button>
-				</div>
+			{!readOnly && (
+			<div className="mt-3 flex items-end gap-2">
+				<Textarea
+					rows={1}
+					value={reply}
+					onChange={(e) => setReply(e.target.value)}
+					placeholder="Reply…"
+					className="min-h-9"
+				/>
+				<Button
+					size="sm"
+					disabled={busy || !reply.trim()}
+					onClick={async () => {
+						await post("/feedback/replies", {
+							projectToken: shareToken,
+							commentId: comment.id,
+							content: reply.trim(),
+							authorName: "",
+							authorEmail: "",
+						});
+						setReply("");
+					}}
+				>
+					Reply
+				</Button>
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={busy}
+					onClick={() =>
+						post("/feedback/resolve", {
+							projectToken: shareToken,
+							commentId: comment.id,
+							status: comment.status === "open" ? "resolved" : "open",
+						})
+					}
+				>
+					{comment.status === "open" ? "Resolve" : "Reopen"}
+				</Button>
+			</div>
 			)}
 		</li>
 	);

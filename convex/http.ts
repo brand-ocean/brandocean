@@ -98,8 +98,14 @@ function fbAnchor(obj: JsonObject): {
 	scrollY: number;
 	elementWidth: number;
 	elementHeight: number;
+	px?: number;
+	py?: number;
 } {
 	const a = fbObj(obj, "anchor");
+	const optN = (k: string) => {
+		const val = a[k];
+		return typeof val === "number" && Number.isFinite(val) ? val : undefined;
+	};
 	return {
 		selector: fbStr(a, "selector"),
 		xpath: fbStr(a, "xpath"),
@@ -108,6 +114,8 @@ function fbAnchor(obj: JsonObject): {
 		scrollY: fbNum(a, "scrollY"),
 		elementWidth: fbNum(a, "elementWidth"),
 		elementHeight: fbNum(a, "elementHeight"),
+		px: optN("px"),
+		py: optN("py"),
 	};
 }
 
@@ -142,6 +150,7 @@ for (const path of [
 	"/feedback/replies",
 	"/feedback/resolve",
 	"/feedback/move",
+	"/feedback/delete",
 	"/feedback/screenshot-upload-url",
 ]) {
 	http.route({ path, method: "OPTIONS", handler: fbPreflight });
@@ -155,10 +164,79 @@ http.route({
 			status: 200,
 			headers: {
 				"Content-Type": "application/javascript; charset=utf-8",
-				"Cache-Control": "public, max-age=300",
+				"Cache-Control": "public, max-age=30",
 				"Access-Control-Allow-Origin": "*",
 			},
 		});
+	}),
+});
+
+// Image proxy so html2canvas can draw cross-origin store images
+// (Shopify/CDN assets without CORS) instead of a solid-color fill.
+function fbIsBlockedHost(host: string): boolean {
+	const h = host.toLowerCase();
+	if (
+		h === "localhost" ||
+		h === "0.0.0.0" ||
+		h === "::1" ||
+		h.endsWith(".internal") ||
+		h.endsWith(".local")
+	)
+		return true;
+	if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h)) {
+		return true;
+	}
+	if (/^169\.254\./.test(h)) return true;
+	if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+	return false;
+}
+
+http.route({
+	path: "/feedback/img",
+	method: "GET",
+	handler: httpAction(async (ctx, request) => {
+		const url = new URL(request.url);
+		const target = url.searchParams.get("url");
+		const deny = (s: number) =>
+			new Response("", { status: s, headers: { "Vary": "Origin" } });
+		const token = url.searchParams.get("token");
+		if (!token) return deny(401);
+		const project = await ctx.runQuery(internal.feedback.resolveToken, {
+			token,
+		});
+		if (!project) return deny(403);
+		if (!target) return deny(400);
+		let parsed: URL;
+		try {
+			parsed = new URL(target);
+		} catch {
+			return deny(400);
+		}
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+			return deny(400);
+		}
+		if (fbIsBlockedHost(parsed.hostname)) return deny(403);
+		try {
+			const upstream = await fetch(parsed.toString(), {
+				headers: { Accept: "image/*" },
+				redirect: "follow",
+			});
+			if (!upstream.ok) return deny(upstream.status === 404 ? 404 : 502);
+			const ct = upstream.headers.get("Content-Type") || "";
+			if (!ct.startsWith("image/")) return deny(415);
+			const buf = await upstream.arrayBuffer();
+			if (buf.byteLength > 8 * 1024 * 1024) return deny(413);
+			return new Response(buf, {
+				status: 200,
+				headers: {
+					"Content-Type": ct,
+					"Cache-Control": "public, max-age=86400",
+					"Access-Control-Allow-Origin": "*",
+				},
+			});
+		} catch {
+			return deny(502);
+		}
 	}),
 });
 
@@ -204,6 +282,7 @@ http.route({
 					pagePath: fbStr(body, "pagePath") || "/",
 					anchor: fbAnchor(body),
 					content: fbStr(body, "content"),
+					clientKey: fbStr(body, "clientKey") || undefined,
 					kind:
 						body.kind === "bug" ||
 						body.kind === "idea" ||
@@ -293,6 +372,29 @@ http.route({
 				token,
 				commentId: fbStr(body, "commentId") as Id<"comments">,
 				anchor: fbAnchor(body),
+			});
+			return fbJson({ ok: true }, 200, origin);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			return fbJson({ error: msg }, fbErrorStatus(msg), origin);
+		}
+	}),
+});
+
+http.route({
+	path: "/feedback/delete",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const origin = request.headers.get("Origin");
+		const url = new URL(request.url);
+		const token = fbToken(request, url);
+		if (!token) return fbJson({ error: "missing_token" }, 401, origin);
+		const body = await fbReadJson(request);
+		if (!body) return fbJson({ error: "bad_body" }, 400, origin);
+		try {
+			await ctx.runMutation(internal.feedback.deleteCommentFromToken, {
+				token,
+				commentId: fbStr(body, "commentId") as Id<"comments">,
 			});
 			return fbJson({ ok: true }, 200, origin);
 		} catch (e) {

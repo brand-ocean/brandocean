@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { MessageSquareIcon, PlusIcon } from "lucide-react";
-import { useState } from "react";
+import { MessageSquareIcon, PlusIcon, Settings2Icon } from "lucide-react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,9 +43,30 @@ const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
 	archived: "outline",
 };
 
+function timeAgo(ts: number): string {
+	const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+	if (s < 60) return "just now";
+	const m = Math.floor(s / 60);
+	if (m < 60) return `${m}m ago`;
+	const h = Math.floor(m / 60);
+	if (h < 24) return `${h}h ago`;
+	const d = Math.floor(h / 24);
+	if (d < 7) return `${d}d ago`;
+	return new Date(ts).toLocaleDateString();
+}
+
 function FeedbackProjectsPage() {
 	const data = useQuery(api.feedback.listProjects);
 	const isOwner = data?.role === "owner";
+	const [q, setQ] = useState("");
+	const visibleProjects = (data?.projects ?? []).filter((p) => {
+		const t = q.trim().toLowerCase();
+		if (!t) return true;
+		return (
+			p.name.toLowerCase().includes(t) ||
+			(p.shopifyDomain ?? "").toLowerCase().includes(t)
+		);
+	});
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-10">
@@ -87,36 +108,62 @@ function FeedbackProjectsPage() {
 					</EmptyHeader>
 				</Empty>
 			) : (
+				<>
+					{data.projects.length > 4 && (
+						<input
+							value={q}
+							onChange={(e) => setQ(e.target.value)}
+							placeholder="Search projects…"
+							className="mb-3 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+						/>
+					)}
+					{visibleProjects.length === 0 ? (
+						<p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+							No projects match “{q}”.
+						</p>
+					) : (
 				<ul className="divide-y rounded-lg border bg-card">
-					{data.projects.map((p) => (
-						<li key={p.id}>
+					{visibleProjects.map((p) => (
+						<li
+							key={p.id}
+							className="flex items-center gap-3 px-6 py-5 hover:bg-muted/50"
+						>
 							<Link
 								to="/feedback/$projectId"
 								params={{ projectId: p.id }}
-								className="flex items-center justify-between gap-4 px-6 py-5 hover:bg-muted/50"
+								className="flex min-w-0 flex-1 flex-col gap-1"
 							>
-								<div className="flex min-w-0 flex-col gap-1">
-									<span className="truncate text-base font-medium">
-										{p.name}
-									</span>
-									<span className="text-sm text-muted-foreground">
-										{p.shopifyDomain || "—"}
-									</span>
-								</div>
-								<div className="flex items-center gap-2">
-									{p.openCount > 0 && (
-										<Badge>
-											{p.openCount >= 100 ? "99+" : p.openCount} open
-										</Badge>
-									)}
-									<Badge variant={statusVariant[p.status] ?? "secondary"}>
-										{p.status}
-									</Badge>
-								</div>
+								<span className="truncate text-base font-medium">
+									{p.name}
+								</span>
+								<span className="text-sm text-muted-foreground">
+									{p.shopifyDomain || "—"} · updated{" "}
+									{timeAgo(p.lastActivityAt)}
+								</span>
 							</Link>
+							{p.openCount > 0 && (
+								<Badge>
+									{p.openCount >= 100 ? "99+" : p.openCount} open
+								</Badge>
+							)}
+							<Badge variant={statusVariant[p.status] ?? "secondary"}>
+								{p.status}
+							</Badge>
+							{isOwner && (
+								<Link
+									to="/feedback/$projectId/install"
+									params={{ projectId: p.id }}
+									className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+									title="Install & share"
+								>
+									<Settings2Icon className="size-4" />
+								</Link>
+							)}
 						</li>
 					))}
 				</ul>
+					)}
+				</>
 			)}
 		</div>
 	);
@@ -130,6 +177,8 @@ function NewProjectDialog() {
 	const [shopifyDomain, setShopifyDomain] = useState("");
 	const [clientId, setClientId] = useState<string>("none");
 	const [creating, setCreating] = useState(false);
+	const nameId = useId();
+	const domainId = useId();
 
 	const reset = () => {
 		setName("");
@@ -183,18 +232,18 @@ function NewProjectDialog() {
 				</DialogHeader>
 				<FieldGroup>
 					<Field>
-						<FieldLabel htmlFor="fb-name">Name</FieldLabel>
+						<FieldLabel htmlFor={nameId}>Name</FieldLabel>
 						<Input
-							id="fb-name"
+							id={nameId}
 							value={name}
 							onChange={(e) => setName(e.target.value)}
 							placeholder="Acme storefront"
 						/>
 					</Field>
 					<Field>
-						<FieldLabel htmlFor="fb-domain">Shopify domain</FieldLabel>
+						<FieldLabel htmlFor={domainId}>Shopify domain</FieldLabel>
 						<Input
-							id="fb-domain"
+							id={domainId}
 							value={shopifyDomain}
 							onChange={(e) => setShopifyDomain(e.target.value)}
 							placeholder="acme.myshopify.com"

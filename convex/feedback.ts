@@ -35,6 +35,8 @@ const anchorValidator = v.object({
 	scrollY: v.number(),
 	elementWidth: v.number(),
 	elementHeight: v.number(),
+	px: v.optional(v.number()),
+	py: v.optional(v.number()),
 });
 
 const metadataValidator = v.object({
@@ -62,6 +64,8 @@ function sanitizeAnchor(a: Doc<"comments">["anchor"]): Doc<"comments">["anchor"]
 	const clamp01 = (n: number) =>
 		Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
 	const num = (n: number) => (Number.isFinite(n) ? n : 0);
+	const optNum = (n: number | undefined) =>
+		typeof n === "number" && Number.isFinite(n) ? n : undefined;
 	return {
 		selector: clampString(a.selector, 1000),
 		xpath: clampString(a.xpath, 2000),
@@ -70,6 +74,8 @@ function sanitizeAnchor(a: Doc<"comments">["anchor"]): Doc<"comments">["anchor"]
 		scrollY: num(a.scrollY),
 		elementWidth: num(a.elementWidth),
 		elementHeight: num(a.elementHeight),
+		px: optNum(a.px),
+		py: optNum(a.py),
 	};
 }
 
@@ -250,7 +256,10 @@ export const listForToken = internalQuery({
 			docs.map((d) => serializeComment(ctx, d)),
 		);
 		return {
-			project: { name: resolved.project.name },
+			project: {
+				name: resolved.project.name,
+				status: resolved.project.status,
+			},
 			comments,
 		};
 	},
@@ -263,6 +272,7 @@ export const createCommentFromToken = internalMutation({
 		pagePath: v.string(),
 		anchor: anchorValidator,
 		content: v.string(),
+		clientKey: v.optional(v.string()),
 		kind: kindValidator,
 		authorName: v.string(),
 		authorEmail: v.string(),
@@ -277,17 +287,35 @@ export const createCommentFromToken = internalMutation({
 		}
 		const content = args.content.trim();
 		if (!content) throw new ConvexError("empty_content");
+		// Idempotency: a retry after a network timeout must not duplicate.
+		if (args.clientKey) {
+			const recent = await ctx.db
+				.query("comments")
+				.withIndex("by_project", (q) =>
+					q.eq("projectId", resolved.project._id),
+				)
+				.order("desc")
+				.take(60);
+			const dup = recent.find((r) => r.clientKey === args.clientKey);
+			if (dup) return dup._id;
+		}
 		await enforceRateLimit(ctx, resolved.project._id);
+		let clientName = "Guest";
+		if (resolved.project.clientId) {
+			const cl = await ctx.db.get(resolved.project.clientId);
+			if (cl?.name) clientName = cl.name;
+		}
 		const commentId = await ctx.db.insert("comments", {
 			projectId: resolved.project._id,
 			pageUrl: clampString(args.pageUrl, 2000),
 			pagePath: clampString(args.pagePath, 1000),
 			anchor: sanitizeAnchor(args.anchor),
 			content: clampString(content, CONTENT_MAX),
+			clientKey: args.clientKey,
 			kind: args.kind,
 			status: "open",
 			authorType: "guest",
-			authorName: clampString(args.authorName, NAME_MAX) || "Guest",
+			authorName: clampString(args.authorName, NAME_MAX) || clientName,
 			authorEmail: clampString(args.authorEmail, EMAIL_MAX),
 			screenshotStorageId: args.screenshotStorageId,
 			metadata: {
@@ -317,6 +345,12 @@ export const getCommentNotice = internalQuery({
 		const project = await ctx.db.get(comment.projectId);
 		if (!project) return null;
 		const owner = await ctx.db.get(project.ownerUserId);
+		const open = await ctx.db
+			.query("comments")
+			.withIndex("by_project_status", (q) =>
+				q.eq("projectId", project._id).eq("status", "open"),
+			)
+			.take(100);
 		return {
 			ownerEmail: owner?.email ?? null,
 			projectId: project._id,
@@ -326,7 +360,35 @@ export const getCommentNotice = internalQuery({
 			authorName: comment.authorName,
 			pagePath: comment.pagePath,
 			pageUrl: comment.pageUrl,
+			openCount: open.length,
 		};
+	},
+});
+
+const NOTIFY_COOLDOWN_MS = 5 * 60 * 1000;
+
+// Returns true at most once per cooldown per project, so an active review
+// session doesn't spam the owner's inbox (dashboard still shows everything).
+export const claimNotify = internalMutation({
+	args: { projectId: v.id("feedbackProjects") },
+	handler: async (ctx, args): Promise<boolean> => {
+		const now = Date.now();
+		const state = await ctx.db
+			.query("feedbackNotifyState")
+			.withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+			.first();
+		if (!state) {
+			await ctx.db.insert("feedbackNotifyState", {
+				projectId: args.projectId,
+				lastAt: now,
+			});
+			return true;
+		}
+		if (now - state.lastAt >= NOTIFY_COOLDOWN_MS) {
+			await ctx.db.patch(state._id, { lastAt: now });
+			return true;
+		}
+		return false;
 	},
 });
 
@@ -344,10 +406,16 @@ export const notifyOwnerOfComment = internalAction({
 			authorName: string;
 			pagePath: string;
 			pageUrl: string;
+			openCount: number;
 		} | null = await ctx.runQuery(internal.feedback.getCommentNotice, {
 			commentId: args.commentId,
 		});
 		if (!notice || !notice.ownerEmail) return null;
+		const may: boolean = await ctx.runMutation(
+			internal.feedback.claimNotify,
+			{ projectId: notice.projectId },
+		);
+		if (!may) return null;
 		const from =
 			process.env.AUTH_EMAIL_FROM ?? "Feedback <onboarding@resend.dev>";
 		const site = (process.env.SITE_URL ?? "").replace(/\/$/, "");
@@ -363,15 +431,19 @@ export const notifyOwnerOfComment = internalAction({
 			body: JSON.stringify({
 				from,
 				to: [notice.ownerEmail],
-				subject: `${tag}New feedback on ${notice.projectName}`,
+				subject:
+					`${tag}New feedback on ${notice.projectName}` +
+					` (${notice.openCount} open)`,
 				text:
 					`${notice.authorName} commented on ${notice.pagePath}:\n\n` +
-					`${notice.content}\n\n${link}`,
+					`${notice.content}\n\n` +
+					`${notice.openCount} open on this project.\n${link}`,
 				html:
 					`<p><strong>${notice.authorName}</strong> commented on ` +
 					`<code>${notice.pagePath}</code>:</p>` +
 					`<blockquote>${notice.content}</blockquote>` +
-					`<p><a href="${link}">Open the feedback board →</a></p>`,
+					`<p>${notice.openCount} open on this project. ` +
+					`<a href="${link}">Open the feedback board →</a></p>`,
 			}),
 		});
 		if (!res.ok) {
@@ -402,12 +474,17 @@ export const addReplyFromToken = internalMutation({
 		const content = args.content.trim();
 		if (!content) throw new ConvexError("empty_content");
 		await enforceRateLimit(ctx, resolved.project._id);
+		let replyClientName = "Guest";
+		if (resolved.project.clientId) {
+			const cl = await ctx.db.get(resolved.project.clientId);
+			if (cl?.name) replyClientName = cl.name;
+		}
 		const replyId = await ctx.db.insert("commentReplies", {
 			commentId: args.commentId,
 			projectId: resolved.project._id,
 			content: clampString(content, CONTENT_MAX),
 			authorType: "guest",
-			authorName: clampString(args.authorName, NAME_MAX) || "Guest",
+			authorName: clampString(args.authorName, NAME_MAX) || replyClientName,
 			authorEmail: clampString(args.authorEmail, EMAIL_MAX),
 			createdAt: Date.now(),
 		});
@@ -426,12 +503,19 @@ export const getReplyNotice = internalQuery({
 		const project = await ctx.db.get(reply.projectId);
 		if (!project) return null;
 		const owner = await ctx.db.get(project.ownerUserId);
+		const open = await ctx.db
+			.query("comments")
+			.withIndex("by_project_status", (q) =>
+				q.eq("projectId", project._id).eq("status", "open"),
+			)
+			.take(100);
 		return {
 			ownerEmail: owner?.email ?? null,
 			projectId: project._id,
 			projectName: project.name,
 			content: reply.content,
 			authorName: reply.authorName,
+			openCount: open.length,
 		};
 	},
 });
@@ -447,10 +531,16 @@ export const notifyOwnerOfReply = internalAction({
 			projectName: string;
 			content: string;
 			authorName: string;
+			openCount: number;
 		} | null = await ctx.runQuery(internal.feedback.getReplyNotice, {
 			replyId: args.replyId,
 		});
 		if (!notice || !notice.ownerEmail) return null;
+		const mayReply: boolean = await ctx.runMutation(
+			internal.feedback.claimNotify,
+			{ projectId: notice.projectId },
+		);
+		if (!mayReply) return null;
 		const from =
 			process.env.AUTH_EMAIL_FROM ?? "Feedback <onboarding@resend.dev>";
 		const site = (process.env.SITE_URL ?? "").replace(/\/$/, "");
@@ -465,12 +555,17 @@ export const notifyOwnerOfReply = internalAction({
 			body: JSON.stringify({
 				from,
 				to: [notice.ownerEmail],
-				subject: `New reply on ${notice.projectName}`,
-				text: `${notice.authorName} replied:\n\n${notice.content}\n\n${link}`,
+				subject:
+					`New reply on ${notice.projectName}` +
+					` (${notice.openCount} open)`,
+				text:
+					`${notice.authorName} replied:\n\n${notice.content}\n\n` +
+					`${notice.openCount} open on this project.\n${link}`,
 				html:
 					`<p><strong>${notice.authorName}</strong> replied:</p>` +
 					`<blockquote>${notice.content}</blockquote>` +
-					`<p><a href="${link}">Open the feedback board →</a></p>`,
+					`<p>${notice.openCount} open on this project. ` +
+					`<a href="${link}">Open the feedback board →</a></p>`,
 			}),
 		});
 		if (!res.ok) console.error("feedback reply notify failed", await res.text());
@@ -514,6 +609,51 @@ export const setStatusFromToken = internalMutation({
 	},
 });
 
+export const pruneRateBuckets = internalMutation({
+	args: {},
+	handler: async (ctx): Promise<null> => {
+		const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+		// Oldest-first (by _creationTime ~ windowStart); stop at first fresh.
+		const batch = await ctx.db
+			.query("feedbackRateBuckets")
+			.order("asc")
+			.take(500);
+		let deleted = 0;
+		for (const b of batch) {
+			if (b.windowStart >= cutoff) break;
+			await ctx.db.delete(b._id);
+			deleted++;
+		}
+		if (deleted >= 500) {
+			await ctx.scheduler.runAfter(
+				0,
+				internal.feedback.pruneRateBuckets,
+				{},
+			);
+		}
+		return null;
+	},
+});
+
+export const deleteCommentFromToken = internalMutation({
+	args: { token: v.string(), commentId: v.id("comments") },
+	handler: async (ctx, args) => {
+		const resolved = await resolveProjectByToken(ctx, args.token);
+		if (!resolved) throw new ConvexError("invalid_token");
+		const comment = await ctx.db.get(args.commentId);
+		if (!comment || comment.projectId !== resolved.project._id) {
+			throw new ConvexError("not_found");
+		}
+		const replies = await ctx.db
+			.query("commentReplies")
+			.withIndex("by_comment", (q) => q.eq("commentId", args.commentId))
+			.take(500);
+		for (const r of replies) await ctx.db.delete(r._id);
+		await ctx.db.delete(args.commentId);
+		return null;
+	},
+});
+
 // --- Authenticated dashboard functions -------------------------------------
 
 export const listProjects = query({
@@ -542,6 +682,11 @@ export const listProjects = query({
 						q.eq("projectId", p._id).eq("status", "open"),
 					)
 					.take(100);
+				const newest = await ctx.db
+					.query("comments")
+					.withIndex("by_project", (q) => q.eq("projectId", p._id))
+					.order("desc")
+					.first();
 				return {
 					id: p._id,
 					name: p.name,
@@ -549,9 +694,11 @@ export const listProjects = query({
 					status: p.status,
 					createdAt: p.createdAt,
 					openCount: open.length,
+					lastActivityAt: newest?.createdAt ?? p.createdAt,
 				};
 			}),
 		);
+		projectsWithCounts.sort((a, b) => b.lastActivityAt - a.lastActivityAt);
 		return { role: role.role, projects: projectsWithCounts };
 	},
 });
@@ -732,6 +879,59 @@ export const setProjectStatus = mutation({
 	},
 });
 
+export const purgeProject = internalMutation({
+	args: { projectId: v.id("feedbackProjects") },
+	handler: async (ctx, args): Promise<null> => {
+		const comments = await ctx.db
+			.query("comments")
+			.withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+			.take(80);
+		for (const c of comments) {
+			const replies = await ctx.db
+				.query("commentReplies")
+				.withIndex("by_comment", (q) => q.eq("commentId", c._id))
+				.take(500);
+			for (const r of replies) await ctx.db.delete(r._id);
+			await ctx.db.delete(c._id);
+		}
+		if (comments.length === 80) {
+			await ctx.scheduler.runAfter(0, internal.feedback.purgeProject, {
+				projectId: args.projectId,
+			});
+			return null;
+		}
+		// No comments left — clean up auxiliary rows + the project itself.
+		const buckets = await ctx.db
+			.query("feedbackRateBuckets")
+			.withIndex("by_project_window", (q) =>
+				q.eq("projectId", args.projectId),
+			)
+			.take(500);
+		for (const b of buckets) await ctx.db.delete(b._id);
+		const notify = await ctx.db
+			.query("feedbackNotifyState")
+			.withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+			.collect();
+		for (const n of notify) await ctx.db.delete(n._id);
+		const project = await ctx.db.get(args.projectId);
+		if (project) await ctx.db.delete(args.projectId);
+		return null;
+	},
+});
+
+export const deleteProject = mutation({
+	args: { projectId: v.id("feedbackProjects") },
+	handler: async (ctx, args) => {
+		await assertOwner(ctx, args.projectId);
+		// feedbackAccess is keyed by client/email and may be shared with
+		// other projects, so it is intentionally left intact.
+		await ctx.scheduler.runAfter(0, internal.feedback.purgeProject, {
+			projectId: args.projectId,
+		});
+		return null;
+	},
+});
+
 export const addReply = mutation({
 	args: { commentId: v.id("comments"), content: v.string() },
 	handler: async (ctx, args) => {
@@ -765,6 +965,22 @@ export const setCommentStatus = mutation({
 		if (!comment) throw new ConvexError("not_found");
 		await assertProjectAccess(ctx, comment.projectId);
 		await ctx.db.patch(args.commentId, { status: args.status });
+		return null;
+	},
+});
+
+export const deleteComment = mutation({
+	args: { commentId: v.id("comments") },
+	handler: async (ctx, args) => {
+		const comment = await ctx.db.get(args.commentId);
+		if (!comment) throw new ConvexError("not_found");
+		await assertProjectAccess(ctx, comment.projectId);
+		const replies = await ctx.db
+			.query("commentReplies")
+			.withIndex("by_comment", (q) => q.eq("commentId", args.commentId))
+			.take(500);
+		for (const r of replies) await ctx.db.delete(r._id);
+		await ctx.db.delete(args.commentId);
 		return null;
 	},
 });

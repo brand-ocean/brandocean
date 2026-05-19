@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeftIcon, CheckIcon, RotateCcwIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, Settings2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -10,23 +10,30 @@ import {
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyTitle,
-} from "@/components/ui/empty";
+	DndContext,
+	DragOverlay,
+	PointerSensor,
+	closestCorners,
+	useDraggable,
+	useDroppable,
+	useSensor,
+	useSensors,
+	type DragEndEvent,
+	type DragStartEvent,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+	KanbanBoardColumnHeader,
+	KanbanBoardColumnList,
+	KanbanBoardColumnTitle,
+	KanbanColorCircle,
+	kanbanBoardColumnClassNames,
+	type KanbanBoardCircleColor,
+} from "@/components/ui/kanban";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "~convex/_generated/api";
@@ -36,38 +43,68 @@ export const Route = createFileRoute("/_authed/_app/feedback/$projectId")({
 	component: ProjectBoardPage,
 });
 
-const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL as string | undefined;
+type KindFilter = "all" | "bug" | "idea" | "question";
 
-type StatusFilter = "open" | "resolved" | "all";
+const FEEDBACK_COLUMNS: Array<{
+	id: "open" | "resolved";
+	title: string;
+	color: KanbanBoardCircleColor;
+}> = [
+	{ id: "open", title: "Open", color: "yellow" },
+	{ id: "resolved", title: "Resolved", color: "green" },
+];
+
+const KIND_CIRCLE: Record<string, KanbanBoardCircleColor> = {
+	bug: "red",
+	idea: "yellow",
+	question: "blue",
+};
 
 function ProjectBoardPage() {
 	const { projectId } = Route.useParams();
 	const id = projectId as Id<"feedbackProjects">;
 	const project = useQuery(api.feedback.getProject, { projectId: id });
-	const [filter, setFilter] = useState<StatusFilter>("open");
-	const [kindFilter, setKindFilter] = useState<
-		"all" | "bug" | "idea" | "question"
-	>("all");
-	const allComments = useQuery(api.feedback.listComments, {
-		projectId: id,
-		status: filter === "all" ? undefined : filter,
-	});
+	const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+	const [selected, setSelected] = useState<Id<"comments"> | null>(null);
+	const allComments = useQuery(api.feedback.listComments, { projectId: id });
+	const setStatus = useMutation(api.feedback.setCommentStatus);
+	const [dragId, setDragId] = useState<Id<"comments"> | null>(null);
+	const sensors = useSensors(
+		useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+	);
+
 	const comments =
 		allComments && kindFilter !== "all"
 			? allComments.filter((c) => c.kind === kindFilter)
 			: allComments;
+	const selectedComment =
+		comments?.find((c) => c.id === selected) ?? null;
+	const activeComment = comments?.find((c) => c.id === dragId) ?? null;
+
+	const onDragStart = (e: DragStartEvent) =>
+		setDragId(e.active.id as Id<"comments">);
+	const onDragEnd = (e: DragEndEvent) => {
+		setDragId(null);
+		const over = e.over?.id;
+		if (over !== "open" && over !== "resolved") return;
+		const cid = e.active.id as Id<"comments">;
+		const c = comments?.find((x) => x.id === cid);
+		if (c && c.status !== over) {
+			void setStatus({ commentId: cid, status: over });
+		}
+	};
 
 	if (project === undefined) {
 		return (
-			<div className="mx-auto w-full max-w-4xl space-y-4">
+			<div className="mx-auto w-full max-w-6xl space-y-4">
 				<Skeleton className="h-10 w-64" />
-				<Skeleton className="h-40" />
+				<Skeleton className="h-[60vh]" />
 			</div>
 		);
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-8">
+		<div className="mx-auto flex h-[calc(100dvh-3rem)] w-full max-w-6xl flex-col gap-6">
 			<div>
 				<Link
 					to="/feedback"
@@ -76,37 +113,63 @@ function ProjectBoardPage() {
 					<ArrowLeftIcon className="size-4" /> All projects
 				</Link>
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<h1 className="text-3xl font-semibold tracking-tight">
-						{project.name}
-					</h1>
-					<Badge variant="secondary">{project.status}</Badge>
-				</div>
-				<p className="mt-1 text-sm text-muted-foreground">
-					{project.shopifyDomain || "—"}
-				</p>
-			</div>
-
-			{project.role === "owner" && <InstallPanel projectId={id} />}
-
-			<div className="space-y-4">
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<Tabs
-						value={filter}
-						onValueChange={(v) => setFilter(v as StatusFilter)}
-					>
-						<TabsList>
-							<TabsTrigger value="open">Open</TabsTrigger>
-							<TabsTrigger value="resolved">Resolved</TabsTrigger>
-							<TabsTrigger value="all">All</TabsTrigger>
-						</TabsList>
-					</Tabs>
-					<div className="flex gap-1.5">
+					<div className="flex items-center gap-3">
+						<h1 className="text-2xl font-semibold tracking-tight">
+							{project.name}
+						</h1>
+						<Badge variant="secondary">{project.status}</Badge>
+					</div>
+					<div className="flex items-center gap-1.5">
+						{comments && comments.length > 0 && (
+							<button
+								type="button"
+								onClick={() => {
+									const esc = (v: string) =>
+										`"${String(v).replace(/"/g, '""')}"`;
+									const rows = [
+										[
+											"status",
+											"kind",
+											"author",
+											"page",
+											"content",
+											"replies",
+											"created",
+										].join(","),
+										...comments.map((c) =>
+											[
+												c.status,
+												c.kind ?? "",
+												c.authorName,
+												c.pagePath,
+												c.content,
+												String(c.replies.length),
+												new Date(c.createdAt).toISOString(),
+											]
+												.map(esc)
+												.join(","),
+										),
+									].join("\n");
+									const blob = new Blob([rows], {
+										type: "text/csv;charset=utf-8",
+									});
+									const a = document.createElement("a");
+									a.href = URL.createObjectURL(blob);
+									a.download = `${project.name || "feedback"}.csv`;
+									a.click();
+									URL.revokeObjectURL(a.href);
+								}}
+								className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+							>
+								Export CSV
+							</button>
+						)}
 						{(["all", "bug", "idea", "question"] as const).map((k) => (
 							<button
 								key={k}
 								type="button"
 								onClick={() => setKindFilter(k)}
-								className={`rounded-md px-2.5 py-1 text-xs font-semibold capitalize transition-colors ${
+								className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
 									kindFilter === k
 										? "bg-primary text-primary-foreground"
 										: "bg-muted text-muted-foreground hover:text-foreground"
@@ -117,40 +180,82 @@ function ProjectBoardPage() {
 						))}
 					</div>
 				</div>
+				<p className="mt-1 text-sm text-muted-foreground">
+					{project.shopifyDomain || "—"}
+				</p>
+			</div>
 
-				{comments === undefined ? (
-					<Skeleton className="h-32" />
-				) : comments.length === 0 ? (
-					<Empty>
-						<EmptyHeader>
-							<EmptyTitle>No {filter} comments</EmptyTitle>
-							<EmptyDescription>
-								Comments dropped on the store show up here.
-							</EmptyDescription>
-						</EmptyHeader>
-					</Empty>
-				) : (
-					<div className="space-y-6">
-						{groupByPage(comments).map(([page, list]) => (
-							<section key={page} className="space-y-3">
-								<div className="flex items-center gap-2">
-									<h3 className="font-mono text-xs text-muted-foreground">
-										{page}
-									</h3>
-									<Badge variant="secondary" className="text-xs">
-										{list.length}
-									</Badge>
-								</div>
-								<ul className="space-y-3">
-									{list.map((c) => (
-										<CommentCard key={c.id} comment={c} />
-									))}
-								</ul>
-							</section>
+			{project.role === "owner" && (
+				<Link
+					to="/feedback/$projectId/install"
+					params={{ projectId }}
+					className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+				>
+					<Settings2Icon className="size-4" /> Install &amp; share
+				</Link>
+			)}
+
+			{comments === undefined ? (
+				<Skeleton className="h-full min-h-[24rem] flex-grow" />
+			) : comments.length === 0 && kindFilter === "all" ? (
+				<div className="flex flex-grow flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-16 text-center">
+					<p className="text-sm font-medium">No feedback yet</p>
+					<p className="max-w-sm text-sm text-muted-foreground">
+						Add the widget snippet to the store so clients can leave
+						comments while reviewing.
+					</p>
+					{project.role === "owner" && (
+						<Link
+							to="/feedback/$projectId/install"
+							params={{ projectId }}
+							className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+						>
+							<Settings2Icon className="size-4" /> Install &amp; share
+						</Link>
+					)}
+				</div>
+			) : (
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCorners}
+					onDragStart={onDragStart}
+					onDragEnd={onDragEnd}
+				>
+					<div className="flex min-h-0 flex-grow gap-3 overflow-x-auto pb-2">
+						{FEEDBACK_COLUMNS.map((col) => (
+							<FeedbackColumn
+								key={col.id}
+								col={col}
+								items={comments.filter((c) => c.status === col.id)}
+								onOpen={setSelected}
+							/>
 						))}
 					</div>
-				)}
-			</div>
+					<DragOverlay dropAnimation={null}>
+						{activeComment && (
+							<div className={cn(CARD_CLS, "rotate-1 shadow-lg")}>
+								<FeedbackCardBody comment={activeComment} />
+							</div>
+						)}
+					</DragOverlay>
+				</DndContext>
+			)}
+
+			<Dialog
+				open={selectedComment !== null}
+				onOpenChange={(o) => {
+					if (!o) setSelected(null);
+				}}
+			>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>Comment</DialogTitle>
+					</DialogHeader>
+					{selectedComment && (
+						<CommentDetail comment={selectedComment} />
+					)}
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
@@ -158,6 +263,122 @@ function ProjectBoardPage() {
 type CommentItem = FunctionReturnType<
 	typeof api.feedback.listComments
 >[number];
+
+const CARD_CLS =
+	"rounded-lg border border-border bg-background p-3 text-start text-foreground shadow-sm flex w-full flex-col gap-2";
+
+function FeedbackColumn({
+	col,
+	items,
+	onOpen,
+}: {
+	col: { id: "open" | "resolved"; title: string; color: KanbanBoardCircleColor };
+	items: CommentItem[];
+	onOpen: (id: Id<"comments">) => void;
+}) {
+	const { setNodeRef, isOver } = useDroppable({ id: col.id });
+	return (
+		<section
+			ref={setNodeRef}
+			className={cn(
+				kanbanBoardColumnClassNames,
+				"transition-colors",
+				isOver && "border-primary bg-accent/40",
+			)}
+		>
+			<KanbanBoardColumnHeader>
+				<KanbanBoardColumnTitle columnId={col.id}>
+					<KanbanColorCircle color={col.color} />
+					{col.title}
+					<span className="ml-2 text-xs font-normal text-muted-foreground">
+						{items.length}
+					</span>
+				</KanbanBoardColumnTitle>
+			</KanbanBoardColumnHeader>
+			<KanbanBoardColumnList className="space-y-2 px-2">
+				{items.map((c) => (
+					<DraggableCard
+						key={c.id}
+						comment={c}
+						onOpen={() => onOpen(c.id)}
+					/>
+				))}
+				{items.length === 0 && (
+					<li className="px-2 py-8 text-center text-xs text-muted-foreground">
+						Nothing here
+					</li>
+				)}
+			</KanbanBoardColumnList>
+		</section>
+	);
+}
+
+function DraggableCard({
+	comment,
+	onOpen,
+}: {
+	comment: CommentItem;
+	onOpen: () => void;
+}) {
+	const { attributes, listeners, setNodeRef, transform, isDragging } =
+		useDraggable({ id: comment.id });
+	return (
+		<li
+			ref={setNodeRef}
+			style={{
+				transform: CSS.Translate.toString(transform),
+				opacity: isDragging ? 0 : 1,
+			}}
+			{...attributes}
+			{...listeners}
+			onClick={onOpen}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onOpen();
+				}
+			}}
+			className={cn(
+				CARD_CLS,
+				"cursor-grab touch-none transition-shadow hover:shadow-md active:cursor-grabbing",
+			)}
+		>
+			<FeedbackCardBody comment={comment} />
+		</li>
+	);
+}
+
+function FeedbackCardBody({ comment }: { comment: CommentItem }) {
+	return (
+		<>
+			<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+				<KanbanColorCircle
+					color={comment.kind ? KIND_CIRCLE[comment.kind] : "gray"}
+				/>
+				<span className="font-medium text-foreground">
+					{comment.authorName}
+				</span>
+				<span>· {timeAgo(comment.createdAt)}</span>
+			</div>
+			<p className="line-clamp-3 text-xs leading-5 whitespace-pre-wrap">
+				{comment.content}
+			</p>
+			{comment.screenshotUrl && (
+				<img
+					src={comment.screenshotUrl}
+					alt="context"
+					className="h-20 w-full rounded-md border object-cover"
+				/>
+			)}
+			<div className="flex items-center justify-between text-[11px] text-muted-foreground">
+				<span className="truncate">{comment.pagePath}</span>
+				{comment.replies.length > 0 && (
+					<span>{comment.replies.length} ↩</span>
+				)}
+			</div>
+		</>
+	);
+}
 
 const KIND_STYLE: Record<string, { label: string; cls: string }> = {
 	bug: { label: "🐞 Bug", cls: "bg-red-100 text-red-700" },
@@ -177,18 +398,6 @@ function timeAgo(ts: number): string {
 	return new Date(ts).toLocaleDateString();
 }
 
-function groupByPage(
-	comments: CommentItem[],
-): Array<[string, CommentItem[]]> {
-	const map = new Map<string, CommentItem[]>();
-	for (const c of comments) {
-		const arr = map.get(c.pagePath) ?? [];
-		arr.push(c);
-		map.set(c.pagePath, arr);
-	}
-	return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
-}
-
 function KindBadge({ kind }: { kind: "bug" | "idea" | "question" }) {
 	const s = KIND_STYLE[kind];
 	return (
@@ -200,9 +409,10 @@ function KindBadge({ kind }: { kind: "bug" | "idea" | "question" }) {
 	);
 }
 
-function CommentCard({ comment }: { comment: CommentItem }) {
+function CommentDetail({ comment }: { comment: CommentItem }) {
 	const setStatus = useMutation(api.feedback.setCommentStatus);
 	const addReply = useMutation(api.feedback.addReply);
+	const removeComment = useMutation(api.feedback.deleteComment);
 	const [reply, setReply] = useState("");
 	const [busy, setBusy] = useState(false);
 
@@ -234,72 +444,55 @@ function CommentCard({ comment }: { comment: CommentItem }) {
 	};
 
 	return (
-		<li className="rounded-lg border bg-card p-4">
-			<div className="flex items-start justify-between gap-3">
-				<div className="min-w-0">
-					<div className="flex items-center gap-2 text-sm">
-						<span className="font-medium">{comment.authorName}</span>
-						{comment.kind && <KindBadge kind={comment.kind} />}
-						<Badge variant="outline" className="text-xs">
-							{comment.authorType}
-						</Badge>
-						<span className="text-muted-foreground">
-							{timeAgo(comment.createdAt)}
-						</span>
-					</div>
-					<p className="mt-2 whitespace-pre-wrap text-sm">
-						{comment.content}
-					</p>
-					<p className="mt-2 truncate text-xs text-muted-foreground">
-						{comment.pagePath} · {comment.metadata?.browser ?? ""}{" "}
-						{comment.metadata?.os ?? ""} ·{" "}
-						{comment.metadata?.viewportWidth ?? "?"}×
-						{comment.metadata?.viewportHeight ?? "?"}
-					</p>
-				</div>
-				<div className="flex shrink-0 items-center gap-2">
-					{comment.screenshotUrl && (
-						<Dialog>
-							<DialogTrigger
-								render={
-									<button
-										type="button"
-										className="overflow-hidden rounded-md border transition-opacity hover:opacity-80"
-									/>
-								}
-							>
-								<img
-									src={comment.screenshotUrl}
-									alt="context"
-									className="h-14 w-20 object-cover"
-								/>
-							</DialogTrigger>
-							<DialogContent className="max-w-3xl">
-								<DialogHeader>
-									<DialogTitle>Screenshot</DialogTitle>
-								</DialogHeader>
-								<img
-									src={comment.screenshotUrl}
-									alt="Comment context"
-									className="w-full rounded-md border"
-								/>
-							</DialogContent>
-						</Dialog>
-					)}
-					<Button
-						variant={comment.status === "open" ? "default" : "outline"}
-						size="sm"
-						disabled={busy}
-						onClick={toggle}
-					>
-						<CheckIcon className="size-4" />
-						{comment.status === "open" ? "Resolve" : "Reopen"}
-					</Button>
-				</div>
+		<div className="space-y-4">
+			<div className="flex flex-wrap items-center gap-2 text-sm">
+				<span className="font-medium">{comment.authorName}</span>
+				{comment.kind && <KindBadge kind={comment.kind} />}
+				<Badge variant="outline" className="text-xs">
+					{comment.authorType}
+				</Badge>
+				<span className="text-muted-foreground">
+					{timeAgo(comment.createdAt)}
+				</span>
+				<Badge
+					variant={comment.status === "open" ? "default" : "secondary"}
+					className="ml-auto"
+				>
+					{comment.status}
+				</Badge>
 			</div>
 
+			<p className="whitespace-pre-wrap text-sm">{comment.content}</p>
+
+			<a
+				href={comment.pageUrl}
+				target="_blank"
+				rel="noreferrer"
+				className="block truncate text-xs text-muted-foreground hover:text-foreground"
+			>
+				{comment.pagePath} · {comment.metadata?.browser ?? ""}{" "}
+				{comment.metadata?.os ?? ""} ·{" "}
+				{comment.metadata?.viewportWidth ?? "?"}×
+				{comment.metadata?.viewportHeight ?? "?"} ↗
+			</a>
+
+			{comment.screenshotUrl && (
+				<a
+					href={comment.screenshotUrl}
+					target="_blank"
+					rel="noreferrer"
+					className="block overflow-hidden rounded-md border transition-opacity hover:opacity-90"
+				>
+					<img
+						src={comment.screenshotUrl}
+						alt="Comment context"
+						className="max-h-72 w-full object-cover"
+					/>
+				</a>
+			)}
+
 			{comment.replies.length > 0 && (
-				<ul className="mt-3 space-y-2 border-l pl-4">
+				<ul className="space-y-3 border-l pl-4">
 					{comment.replies.map((r) => (
 						<li key={r.id} className="text-sm">
 							<span className="font-medium">{r.authorName}</span>{" "}
@@ -312,11 +505,17 @@ function CommentCard({ comment }: { comment: CommentItem }) {
 				</ul>
 			)}
 
-			<div className="mt-3 flex items-end gap-2">
+			<div className="flex items-end gap-2">
 				<Textarea
 					value={reply}
 					onChange={(e) => setReply(e.target.value)}
-					placeholder="Reply…"
+					onKeyDown={(e) => {
+						if (e.key === "Enter" && !e.shiftKey) {
+							e.preventDefault();
+							if (!busy && reply.trim()) void sendReply();
+						}
+					}}
+					placeholder="Reply… (Enter to send)"
 					rows={1}
 					className="min-h-9"
 				/>
@@ -327,178 +526,38 @@ function CommentCard({ comment }: { comment: CommentItem }) {
 				>
 					Send
 				</Button>
-			</div>
-		</li>
-	);
-}
-
-function InstallPanel({ projectId }: { projectId: Id<"feedbackProjects"> }) {
-	const project = useQuery(api.feedback.getProject, { projectId });
-	const clients = useQuery(api.clients.listWithCounts);
-	const regenerate = useMutation(api.feedback.regenerateToken);
-	const linkClient = useMutation(api.feedback.linkClient);
-	const devAdd = useMutation(api.feedback.devAddTestComment);
-	const [clientId, setClientId] = useState("none");
-
-	if (!project || project.widgetToken === null) return null;
-
-	const base = SITE_URL ?? "https://YOUR-DEPLOYMENT.convex.site";
-	const snippet = `<script>
-(function () {
-  try {
-    var p = new URLSearchParams(location.search);
-    if (p.get("feedback") === "1") sessionStorage.setItem("bo_fb", "1");
-    if (p.get("feedback") === "0") sessionStorage.removeItem("bo_fb");
-    var tags = {% if customer %}{{ customer.tags | json }}{% else %}[]{% endif %};
-    var on =
-      sessionStorage.getItem("bo_fb") === "1" ||
-      (Array.isArray(tags) && tags.indexOf("feedback-reviewer") !== -1);
-    if (!on) return;
-    window.__FEEDBACK__ = { token: "${project.widgetToken}", base: "${base}" };
-    var s = document.createElement("script");
-    s.src = "${base}/feedback/widget.js";
-    s.async = true;
-    document.head.appendChild(s);
-  } catch (e) {}
-})();
-</script>`;
-	const shareUrl = `${window.location.origin}/share/${project.shareToken}`;
-
-	const copy = (text: string, label: string) => {
-		navigator.clipboard.writeText(text).then(
-			() => toast.success(`${label} copied`),
-			() => toast.error("Copy failed"),
-		);
-	};
-
-	return (
-		<div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-			<h2 className="text-sm font-semibold">Install &amp; share</h2>
-
-			<div>
-				<div className="mb-1 flex items-center justify-between">
-					<span className="text-xs font-medium text-muted-foreground">
-						Theme snippet — paste before &lt;/body&gt; in theme.liquid (inline,
-					safe for all visitors)
-					</span>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => copy(snippet, "Snippet")}
-					>
-						Copy
-					</Button>
-				</div>
-				<pre className="overflow-x-auto rounded-md border bg-background p-3 text-xs">
-					{snippet}
-				</pre>
-				<p className="mt-1 text-xs text-muted-foreground">
-					Add the tag <code>feedback-reviewer</code> to a Shopify customer, or
-					append <code>?feedback=1</code> to any store URL, to show the widget.
-				</p>
-			</div>
-
-			<div className="flex flex-wrap items-center gap-2">
-				<span className="text-xs font-medium text-muted-foreground">
-					Guest share link:
-				</span>
-				<code className="truncate rounded bg-background px-2 py-1 text-xs">
-					{shareUrl}
-				</code>
 				<Button
-					variant="ghost"
+					variant={comment.status === "open" ? "default" : "outline"}
 					size="sm"
-					onClick={() => copy(shareUrl, "Share link")}
+					disabled={busy}
+					onClick={toggle}
 				>
-					Copy
-				</Button>
-			</div>
-
-			<div className="flex flex-wrap items-center gap-2">
-				<span className="w-full text-xs text-muted-foreground">
-					Danger zone — only revoke a token if a link leaked. This does NOT
-					affect linked client accounts. You must re-paste the snippet after.
-				</span>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={async () => {
-						if (
-							!window.confirm(
-								"Revoke the current widget token? The snippet already in the store theme will stop working until you paste the new one.",
-							)
-						)
-							return;
-						await regenerate({ projectId, which: "widget" });
-						toast.success("Widget token regenerated — re-paste the snippet");
-					}}
-				>
-					<RotateCcwIcon className="size-4" /> Revoke widget token
-				</Button>
-				<Button
-					variant="outline"
-					size="sm"
-					onClick={async () => {
-						if (
-							!window.confirm(
-								"Revoke the current share token? The old /share link will stop working.",
-							)
-						)
-							return;
-						await regenerate({ projectId, which: "share" });
-						toast.success("Share token regenerated");
-					}}
-				>
-					<RotateCcwIcon className="size-4" /> Revoke share token
+					<CheckIcon className="size-4" />
+					{comment.status === "open" ? "Resolve" : "Reopen"}
 				</Button>
 				<Button
 					variant="ghost"
 					size="sm"
+					disabled={busy}
+					className="text-destructive hover:text-destructive"
 					onClick={async () => {
-						await devAdd({ projectId, content: "Test comment from dashboard" });
-						toast.success("Test comment added");
-					}}
-				>
-					+ Test comment
-				</Button>
-			</div>
-
-			<div className="flex flex-wrap items-center gap-2">
-				<span className="text-xs font-medium text-muted-foreground">
-					Give a client login access:
-				</span>
-				<Select
-					value={clientId}
-					onValueChange={(v) => setClientId(v ?? "none")}
-				>
-					<SelectTrigger className="w-56">
-						<SelectValue placeholder="Select client" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="none">Select client</SelectItem>
-						{clients?.map((c) => (
-							<SelectItem key={c._id} value={c._id}>
-								{c.name} {c.email ? `(${c.email})` : "— no email"}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<Button
-					size="sm"
-					disabled={clientId === "none"}
-					onClick={async () => {
+						if (
+							!window.confirm(
+								"Delete this comment and its replies? This cannot be undone.",
+							)
+						)
+							return;
+						setBusy(true);
 						try {
-							await linkClient({
-								projectId,
-								clientId: clientId as Id<"clients">,
-							});
-							toast.success("Client linked — they can log in with their email");
+							await removeComment({ commentId: comment.id });
+							toast.success("Comment deleted");
 						} catch {
-							toast.error("Could not link client (needs an email)");
+							toast.error("Could not delete");
+							setBusy(false);
 						}
 					}}
 				>
-					Link
+					Delete
 				</Button>
 			</div>
 		</div>

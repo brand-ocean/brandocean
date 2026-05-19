@@ -34,6 +34,7 @@ import { Route as AuthedAppInvoicesInvoiceIdRouteImport } from './routes/_authed
 import { Route as AuthedAppFeedbackProjectIdRouteImport } from './routes/_authed/_app/feedback/$projectId'
 import { Route as AuthedAppClientsClientIdRouteImport } from './routes/_authed/_app/clients/$clientId'
 import { Route as AuthedAppBackupSplatRouteImport } from './routes/_authed/_app/backup/$'
+import { Route as AuthedAppFeedbackProjectIdInstallRouteImport } from './routes/_authed/_app/feedback/$projectId.install'
 
 const MarketingRoute = MarketingRouteImport.update({
   id: '/_marketing',
@@ -161,6 +162,12 @@ const AuthedAppBackupSplatRoute = AuthedAppBackupSplatRouteImport.update({
   path: '/backup/$',
   getParentRoute: () => AuthedAppRoute,
 } as any)
+const AuthedAppFeedbackProjectIdInstallRoute =
+  AuthedAppFeedbackProjectIdInstallRouteImport.update({
+    id: '/install',
+    path: '/install',
+    getParentRoute: () => AuthedAppFeedbackProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -174,7 +181,7 @@ export interface FileRoutesByFullPath {
   '/og/o/$slug': typeof OgOSlugRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
-  '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRoute
+  '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/clients/': typeof AuthedAppClientsIndexRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/portfolio/': typeof AuthedAppPortfolioIndexRoute
   '/settings/': typeof AuthedAppSettingsIndexRoute
   '/tasks/': typeof AuthedAppTasksIndexRoute
+  '/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,7 +206,7 @@ export interface FileRoutesByTo {
   '/og/o/$slug': typeof OgOSlugRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
-  '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRoute
+  '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/clients': typeof AuthedAppClientsIndexRoute
@@ -209,6 +217,7 @@ export interface FileRoutesByTo {
   '/portfolio': typeof AuthedAppPortfolioIndexRoute
   '/settings': typeof AuthedAppSettingsIndexRoute
   '/tasks': typeof AuthedAppTasksIndexRoute
+  '/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -226,7 +235,7 @@ export interface FileRoutesById {
   '/og/o/$slug': typeof OgOSlugRoute
   '/_authed/_app/backup/$': typeof AuthedAppBackupSplatRoute
   '/_authed/_app/clients/$clientId': typeof AuthedAppClientsClientIdRoute
-  '/_authed/_app/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRoute
+  '/_authed/_app/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/_authed/_app/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/_authed/_app/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/_authed/_app/clients/': typeof AuthedAppClientsIndexRoute
@@ -237,6 +246,7 @@ export interface FileRoutesById {
   '/_authed/_app/portfolio/': typeof AuthedAppPortfolioIndexRoute
   '/_authed/_app/settings/': typeof AuthedAppSettingsIndexRoute
   '/_authed/_app/tasks/': typeof AuthedAppTasksIndexRoute
+  '/_authed/_app/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/portfolio/'
     | '/settings/'
     | '/tasks/'
+    | '/feedback/$projectId/install'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/portfolio'
     | '/settings'
     | '/tasks'
+    | '/feedback/$projectId/install'
   id:
     | '__root__'
     | '/'
@@ -314,6 +326,7 @@ export interface FileRouteTypes {
     | '/_authed/_app/portfolio/'
     | '/_authed/_app/settings/'
     | '/_authed/_app/tasks/'
+    | '/_authed/_app/feedback/$projectId/install'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -504,13 +517,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppBackupSplatRouteImport
       parentRoute: typeof AuthedAppRoute
     }
+    '/_authed/_app/feedback/$projectId/install': {
+      id: '/_authed/_app/feedback/$projectId/install'
+      path: '/install'
+      fullPath: '/feedback/$projectId/install'
+      preLoaderRoute: typeof AuthedAppFeedbackProjectIdInstallRouteImport
+      parentRoute: typeof AuthedAppFeedbackProjectIdRoute
+    }
   }
 }
+
+interface AuthedAppFeedbackProjectIdRouteChildren {
+  AuthedAppFeedbackProjectIdInstallRoute: typeof AuthedAppFeedbackProjectIdInstallRoute
+}
+
+const AuthedAppFeedbackProjectIdRouteChildren: AuthedAppFeedbackProjectIdRouteChildren =
+  {
+    AuthedAppFeedbackProjectIdInstallRoute:
+      AuthedAppFeedbackProjectIdInstallRoute,
+  }
+
+const AuthedAppFeedbackProjectIdRouteWithChildren =
+  AuthedAppFeedbackProjectIdRoute._addFileChildren(
+    AuthedAppFeedbackProjectIdRouteChildren,
+  )
 
 interface AuthedAppRouteChildren {
   AuthedAppBackupSplatRoute: typeof AuthedAppBackupSplatRoute
   AuthedAppClientsClientIdRoute: typeof AuthedAppClientsClientIdRoute
-  AuthedAppFeedbackProjectIdRoute: typeof AuthedAppFeedbackProjectIdRoute
+  AuthedAppFeedbackProjectIdRoute: typeof AuthedAppFeedbackProjectIdRouteWithChildren
   AuthedAppInvoicesInvoiceIdRoute: typeof AuthedAppInvoicesInvoiceIdRoute
   AuthedAppOffertesOfferteIdRoute: typeof AuthedAppOffertesOfferteIdRoute
   AuthedAppClientsIndexRoute: typeof AuthedAppClientsIndexRoute
@@ -526,7 +561,7 @@ interface AuthedAppRouteChildren {
 const AuthedAppRouteChildren: AuthedAppRouteChildren = {
   AuthedAppBackupSplatRoute: AuthedAppBackupSplatRoute,
   AuthedAppClientsClientIdRoute: AuthedAppClientsClientIdRoute,
-  AuthedAppFeedbackProjectIdRoute: AuthedAppFeedbackProjectIdRoute,
+  AuthedAppFeedbackProjectIdRoute: AuthedAppFeedbackProjectIdRouteWithChildren,
   AuthedAppInvoicesInvoiceIdRoute: AuthedAppInvoicesInvoiceIdRoute,
   AuthedAppOffertesOfferteIdRoute: AuthedAppOffertesOfferteIdRoute,
   AuthedAppClientsIndexRoute: AuthedAppClientsIndexRoute,
