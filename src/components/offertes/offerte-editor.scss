@@ -1,0 +1,194 @@
+// Scoped wrapper styles for OfferteEditor. Avoids the simple-editor template's
+// global body / html resets so the editor embeds inside the dashboard layout.
+//
+// Both light and dark modes are driven entirely by the project's shadcn
+// tokens (--color-card / --color-background / --color-foreground / etc.) which
+// flip when the `.dark` class lands on <html>. We map a few tiptap tokens
+// (--tt-bg-color, --tt-theme-text) onto those tokens so the toolbar / editor
+// stay consistent with the rest of the dashboard.
+
+.offerte-editor-wrapper {
+	--tt-bg-color: var(--color-card);
+	--tt-theme-text: var(--color-foreground);
+
+	border: 1px solid var(--color-border);
+	border-radius: 0.75rem;
+	background: var(--color-card);
+	color: var(--color-foreground);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+
+	.tiptap-toolbar {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		border-bottom: 1px solid var(--color-border);
+		background: var(--color-background);
+		color: var(--color-foreground);
+	}
+}
+
+.offerte-editor-content {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	background: var(--color-card);
+}
+
+.offerte-editor-content .tiptap.ProseMirror.offerte-editor {
+	min-height: 320px;
+	padding: 2.5rem 2.5rem;
+	outline: none;
+	color: var(--color-foreground);
+	background: transparent;
+	--horizontal-rule-color: var(--color-border);
+
+	h1 {
+		font-family: "Barlow Condensed", sans-serif;
+		font-weight: 600;
+		letter-spacing: -0.005em;
+		text-transform: uppercase;
+		font-size: clamp(2.5rem, 4vw, 3.5rem);
+		line-height: 1.05;
+	}
+
+	a {
+		color: var(--color-primary);
+	}
+
+	code {
+		background: var(--color-muted);
+		color: var(--color-foreground);
+	}
+
+	pre {
+		background: var(--color-muted);
+		color: var(--color-foreground);
+	}
+
+	blockquote {
+		border-left-color: var(--color-border);
+		color: var(--color-muted-foreground);
+	}
+
+	hr {
+		border: none;
+		height: 1px;
+		background-color: var(--color-border);
+	}
+}
+
+@media screen and (max-width: 640px) {
+	.offerte-editor-content .tiptap.ProseMirror.offerte-editor {
+		padding: 1.25rem 1.25rem;
+	}
+}
+
+// Static renderer (used on /o/$slug, /c/$slug share pages):
+// no editor chrome, no inner padding so the content aligns with the page nav.
+.offerte-editor-content .tiptap.ProseMirror.offerte-editor.offerte-editor--static {
+	padding: 0;
+	min-height: 0;
+	background: transparent;
+}
+
+// Read-only view (used on /o/$slug): drop the bordered card chrome.
+.offerte-editor-wrapper:has(.tiptap.ProseMirror[contenteditable="false"]) {
+	border: none;
+	border-radius: 0;
+	background: transparent;
+
+	.offerte-editor-content {
+		background: transparent;
+	}
+
+	.offerte-editor-content .tiptap.ProseMirror.offerte-editor {
+		padding: 0;
+		min-height: 0;
+	}
+}
+
+// Tables (Markdown-imported or manually inserted).
+.offerte-editor-content .tiptap.ProseMirror.offerte-editor {
+	table {
+		border-collapse: collapse;
+		margin: 1rem 0;
+		width: 100%;
+		table-layout: fixed;
+		overflow: hidden;
+	}
+	table td,
+	table th {
+		border: 1px solid var(--color-border);
+		padding: 0.5rem 0.75rem;
+		vertical-align: top;
+		min-width: 4rem;
+		position: relative;
+	}
+	table th {
+		background: color-mix(in oklch, var(--color-foreground) 6%, transparent);
+		font-weight: 600;
+		text-align: left;
+	}
+	table .selectedCell::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: color-mix(in oklch, var(--color-primary) 18%, transparent);
+		pointer-events: none;
+	}
+	table .column-resize-handle {
+		position: absolute;
+		right: -2px;
+		top: 0;
+		bottom: 0;
+		width: 4px;
+		background: var(--color-primary);
+		opacity: 0;
+	}
+	table:hover .column-resize-handle {
+		opacity: 0.4;
+	}
+}
+
+// Mobile: make tables horizontally scrollable so columns keep readable
+// widths instead of squeezing each word onto its own line.
+@media (max-width: 640px) {
+	.offerte-editor-content .tiptap.ProseMirror.offerte-editor {
+		table {
+			display: block;
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+			width: 100%;
+			table-layout: auto;
+
+			// TipTap stores resized column widths in <colgroup>; on mobile
+			// we ignore them so cell min-width can take over.
+			colgroup,
+			col {
+				width: auto !important;
+			}
+
+			tbody,
+			thead {
+				display: table;
+				width: max-content;
+				min-width: 100%;
+				table-layout: auto;
+			}
+			tr {
+				display: table-row;
+			}
+		}
+		table td,
+		table th {
+			min-width: 10rem;
+			max-width: 18rem;
+			white-space: normal;
+			word-break: normal;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+	}
+}

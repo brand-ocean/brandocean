@@ -1,0 +1,122 @@
+.bo-footer {
+	position: relative;
+	width: 100vw;
+	height: 60svh;
+	min-height: 480px;
+	color: var(--bo-footer-bg, #edf1e8);
+	padding: 2em;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: center;
+	overflow: hidden;
+}
+
+.bo-footer .footer-container {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background-color: var(--bo-footer-fg, #141414);
+	padding: 2em;
+	border-radius: 2em;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	overflow: hidden;
+}
+
+.bo-footer .footer-header {
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.bo-footer .footer-row {
+	display: flex;
+	gap: 2em;
+	margin-bottom: 2em;
+}
+
+.bo-footer .footer-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1em;
+}
+
+.bo-footer .footer-col p,
+.bo-footer .copyright-info p {
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.125;
+	margin: 0;
+}
+
+.bo-footer .footer-col a,
+.bo-footer .copyright-info a {
+	color: var(--bo-footer-bg, #edf1e8);
+	text-decoration: none;
+	transition: opacity 0.2s ease;
+}
+
+.bo-footer .footer-col a:hover,
+.bo-footer .copyright-info a:hover {
+	opacity: 0.7;
+}
+
+.bo-footer .footer-col p:not(:first-child) {
+	opacity: 0.35;
+}
+
+.bo-footer .copyright-info {
+	position: relative;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.bo-footer .explosion-container {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 200%;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.bo-footer .explosion-particle-img {
+	position: absolute;
+	bottom: -200px;
+	left: 50%;
+	width: 150px;
+	border-radius: 1rem;
+	height: auto;
+	object-fit: cover;
+	transform: translateX(-50%);
+	will-change: transform;
+}
+
+@media (max-width: 1000px) {
+	.bo-footer {
+		height: auto;
+		min-height: 0;
+	}
+
+	.bo-footer .footer-row {
+		flex-direction: column;
+		margin-bottom: 2em;
+	}
+
+	.bo-footer .footer-row .footer-col:nth-child(2),
+	.bo-footer .footer-row .footer-col:nth-child(4) {
+		display: none;
+	}
+
+	.bo-footer .explosion-container {
+		display: none;
+	}
+}

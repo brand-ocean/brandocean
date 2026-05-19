@@ -1,0 +1,33 @@
+.navlink-wrapper {
+  position: relative;
+  display: block;
+}
+
+.navlink-flip {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  line-height: 0.85;
+}
+
+.navlink-flip .navlink-row {
+  display: inline-block;
+  white-space: pre;
+}
+
+.navlink-flip .navlink-row--ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.navlink-flip .navlink-char {
+  position: relative;
+  display: inline-block;
+  will-change: transform;
+}
+
+.navlink-flip .navlink-row--ghost {
+  color: var(--color-accent);
+}

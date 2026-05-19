@@ -1,0 +1,63 @@
+<!doctype html>
+<!--
+  Cross-origin widget test harness.
+
+  1. Sign in to the app (http://localhost:2222), open Feedback → create a
+     project, and copy its widget token.
+  2. Serve THIS file from a different origin than Convex, e.g.:
+       python3 -m http.server 5500   (run inside the scripts/ folder)
+  3. Open: http://localhost:5500/feedback-test-store.html#TOKEN=<widgetToken>
+  The page simulates a Shopify storefront so you can drop pins on real DOM.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fake Store — Feedback Widget Test</title>
+    <style>
+      body { font: 16px/1.6 system-ui, sans-serif; margin: 0; color: #0f172a; }
+      header { background: #0f172a; color: #fff; padding: 24px 32px; }
+      section { padding: 40px 32px; max-width: 900px; margin: 0 auto; }
+      .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 16px 0; }
+      img { max-width: 100%; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <header><h1>Acme Storefront (test)</h1></header>
+    <section>
+      <div class="card" data-section-type="hero">
+        <h2>Spring collection</h2>
+        <p>Click the “Feedback” button (bottom-right), then click any element.</p>
+      </div>
+      <div class="card" id="product-grid">
+        <h3>Products</h3>
+        <p>This block has an id, so the anchor selector should be stable.</p>
+      </div>
+      <div class="card">
+        <img
+          crossorigin="anonymous"
+          src="https://cdn.shopify.com/static/sample-images/bath.jpeg"
+          alt="sample"
+        />
+        <p>Shopify CDN image (CORS-enabled) — screenshot should capture it.</p>
+      </div>
+    </section>
+    <script>
+      var token = (location.hash.match(/TOKEN=([^&]+)/) || [])[1];
+      if (!token) {
+        document.body.insertAdjacentHTML(
+          "afterbegin",
+          "<p style='background:#fee;padding:12px'>Add #TOKEN=&lt;widgetToken&gt; to the URL.</p>"
+        );
+      } else {
+        window.__FEEDBACK__ = {
+          token: decodeURIComponent(token),
+          base: "https://flippant-peccary-310.eu-west-1.convex.site",
+        };
+        var s = document.createElement("script");
+        s.src = window.__FEEDBACK__.base + "/feedback/widget.js";
+        s.async = true;
+        document.head.appendChild(s);
+      }
+    </script>
+  </body>
+</html>
