@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MarketingRouteImport } from './routes/_marketing'
 import { Route as AuthedRouteImport } from './routes/_authed'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketingIndexRouteImport } from './routes/_marketing/index'
 import { Route as ShareShareTokenRouteImport } from './routes/share/$shareToken'
 import { Route as OSlugRouteImport } from './routes/o/$slug'
 import { Route as ISlugRouteImport } from './routes/i/$slug'
@@ -34,6 +34,7 @@ import { Route as AuthedAppInvoicesInvoiceIdRouteImport } from './routes/_authed
 import { Route as AuthedAppFeedbackProjectIdRouteImport } from './routes/_authed/_app/feedback/$projectId'
 import { Route as AuthedAppClientsClientIdRouteImport } from './routes/_authed/_app/clients/$clientId'
 import { Route as AuthedAppBackupSplatRouteImport } from './routes/_authed/_app/backup/$'
+import { Route as AuthedAppFeedbackProjectIdIndexRouteImport } from './routes/_authed/_app/feedback/$projectId.index'
 import { Route as AuthedAppFeedbackProjectIdInstallRouteImport } from './routes/_authed/_app/feedback/$projectId.install'
 
 const MarketingRoute = MarketingRouteImport.update({
@@ -44,10 +45,10 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const MarketingIndexRoute = MarketingIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => MarketingRoute,
 } as any)
 const ShareShareTokenRoute = ShareShareTokenRouteImport.update({
   id: '/share/$shareToken',
@@ -162,6 +163,12 @@ const AuthedAppBackupSplatRoute = AuthedAppBackupSplatRouteImport.update({
   path: '/backup/$',
   getParentRoute: () => AuthedAppRoute,
 } as any)
+const AuthedAppFeedbackProjectIdIndexRoute =
+  AuthedAppFeedbackProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedAppFeedbackProjectIdRoute,
+  } as any)
 const AuthedAppFeedbackProjectIdInstallRoute =
   AuthedAppFeedbackProjectIdInstallRouteImport.update({
     id: '/install',
@@ -170,7 +177,7 @@ const AuthedAppFeedbackProjectIdInstallRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof MarketingIndexRoute
   '/signin': typeof AuthedSigninRoute
   '/full': typeof MarketingFullRoute
   '/c/$slug': typeof CSlugRoute
@@ -193,9 +200,10 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthedAppSettingsIndexRoute
   '/tasks/': typeof AuthedAppTasksIndexRoute
   '/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
+  '/feedback/$projectId/': typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof MarketingIndexRoute
   '/signin': typeof AuthedSigninRoute
   '/full': typeof MarketingFullRoute
   '/c/$slug': typeof CSlugRoute
@@ -206,7 +214,6 @@ export interface FileRoutesByTo {
   '/og/o/$slug': typeof OgOSlugRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
-  '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/clients': typeof AuthedAppClientsIndexRoute
@@ -218,10 +225,10 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedAppSettingsIndexRoute
   '/tasks': typeof AuthedAppTasksIndexRoute
   '/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
+  '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/_marketing': typeof MarketingRouteWithChildren
   '/_authed/_app': typeof AuthedAppRouteWithChildren
@@ -231,6 +238,7 @@ export interface FileRoutesById {
   '/i/$slug': typeof ISlugRoute
   '/o/$slug': typeof OSlugRoute
   '/share/$shareToken': typeof ShareShareTokenRoute
+  '/_marketing/': typeof MarketingIndexRoute
   '/_marketing/work/$slug': typeof MarketingWorkSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/_authed/_app/backup/$': typeof AuthedAppBackupSplatRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/_authed/_app/settings/': typeof AuthedAppSettingsIndexRoute
   '/_authed/_app/tasks/': typeof AuthedAppTasksIndexRoute
   '/_authed/_app/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
+  '/_authed/_app/feedback/$projectId/': typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/feedback/$projectId/install'
+    | '/feedback/$projectId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -287,7 +297,6 @@ export interface FileRouteTypes {
     | '/og/o/$slug'
     | '/backup/$'
     | '/clients/$clientId'
-    | '/feedback/$projectId'
     | '/invoices/$invoiceId'
     | '/offertes/$offerteId'
     | '/clients'
@@ -299,9 +308,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/feedback/$projectId/install'
+    | '/feedback/$projectId'
   id:
     | '__root__'
-    | '/'
     | '/_authed'
     | '/_marketing'
     | '/_authed/_app'
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/i/$slug'
     | '/o/$slug'
     | '/share/$shareToken'
+    | '/_marketing/'
     | '/_marketing/work/$slug'
     | '/og/o/$slug'
     | '/_authed/_app/backup/$'
@@ -327,10 +337,10 @@ export interface FileRouteTypes {
     | '/_authed/_app/settings/'
     | '/_authed/_app/tasks/'
     | '/_authed/_app/feedback/$projectId/install'
+    | '/_authed/_app/feedback/$projectId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   MarketingRoute: typeof MarketingRouteWithChildren
   CSlugRoute: typeof CSlugRoute
@@ -356,12 +366,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_marketing/': {
+      id: '/_marketing/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof MarketingIndexRouteImport
+      parentRoute: typeof MarketingRoute
     }
     '/share/$shareToken': {
       id: '/share/$shareToken'
@@ -517,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppBackupSplatRouteImport
       parentRoute: typeof AuthedAppRoute
     }
+    '/_authed/_app/feedback/$projectId/': {
+      id: '/_authed/_app/feedback/$projectId/'
+      path: '/'
+      fullPath: '/feedback/$projectId/'
+      preLoaderRoute: typeof AuthedAppFeedbackProjectIdIndexRouteImport
+      parentRoute: typeof AuthedAppFeedbackProjectIdRoute
+    }
     '/_authed/_app/feedback/$projectId/install': {
       id: '/_authed/_app/feedback/$projectId/install'
       path: '/install'
@@ -529,12 +546,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthedAppFeedbackProjectIdRouteChildren {
   AuthedAppFeedbackProjectIdInstallRoute: typeof AuthedAppFeedbackProjectIdInstallRoute
+  AuthedAppFeedbackProjectIdIndexRoute: typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 
 const AuthedAppFeedbackProjectIdRouteChildren: AuthedAppFeedbackProjectIdRouteChildren =
   {
     AuthedAppFeedbackProjectIdInstallRoute:
       AuthedAppFeedbackProjectIdInstallRoute,
+    AuthedAppFeedbackProjectIdIndexRoute: AuthedAppFeedbackProjectIdIndexRoute,
   }
 
 const AuthedAppFeedbackProjectIdRouteWithChildren =
@@ -593,11 +612,13 @@ const AuthedRouteWithChildren =
 
 interface MarketingRouteChildren {
   MarketingFullRoute: typeof MarketingFullRoute
+  MarketingIndexRoute: typeof MarketingIndexRoute
   MarketingWorkSlugRoute: typeof MarketingWorkSlugRoute
 }
 
 const MarketingRouteChildren: MarketingRouteChildren = {
   MarketingFullRoute: MarketingFullRoute,
+  MarketingIndexRoute: MarketingIndexRoute,
   MarketingWorkSlugRoute: MarketingWorkSlugRoute,
 }
 
@@ -606,7 +627,6 @@ const MarketingRouteWithChildren = MarketingRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   MarketingRoute: MarketingRouteWithChildren,
   CSlugRoute: CSlugRoute,

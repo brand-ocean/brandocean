@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { RotatingButton } from "@/components/brand";
 import { fragmentShader, vertexShader } from "./shaders";
+import { useGentleRain } from "./useGentleRain";
 
 const CONFIG = {
 	spread: 0.5,
@@ -30,6 +31,8 @@ function getCSSVariableColor(varName: string): string {
 
 export function Hero() {
 	const heroRef = useRef<HTMLElement>(null);
+	const rainViewportRef = useRef<HTMLDivElement>(null);
+	const rainCanvasRef = useRef<HTMLCanvasElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const animeTextRef = useRef<HTMLDivElement>(null);
 	const [isMounted, setIsMounted] = useState(false);
@@ -37,6 +40,13 @@ export function Hero() {
 	useEffect(() => {
 		setIsMounted(true);
 	}, []);
+
+	useGentleRain({
+		canvasRef: rainCanvasRef,
+		containerRef: rainViewportRef,
+		imageSrc: "/hero-img.jpg",
+		enabled: isMounted,
+	});
 
 	useEffect(() => {
 		if (typeof window === "undefined" || !isMounted) return;
@@ -239,42 +249,43 @@ export function Hero() {
 				}}
 			>
 				<div
+					ref={rainViewportRef}
 					style={{
 						position: "absolute",
 						top: 0,
 						width: "100%",
 						height: "100svh",
 						minHeight: "100vh",
+						overflow: "hidden",
 					}}
 				>
-					<img
-						src="/hero-img.jpg"
-						alt="Brandocean studio workspace showcasing digital craftsmanship"
+					<canvas
+						ref={rainCanvasRef}
+						aria-hidden
 						style={{
+							position: "absolute",
+							inset: 0,
 							width: "100%",
 							height: "100%",
-							objectFit: "cover",
+							display: "block",
 						}}
 					/>
-				</div>
-
-				<div
-					style={{
-						position: "absolute",
-						top: 0,
-						width: "100%",
-						height: "100svh",
-						minHeight: "100vh",
-						display: "flex",
-						flexDirection: "column",
-						justifyContent: "center",
-						alignItems: "center",
-						gap: "0.5rem",
-						textAlign: "center",
-						color: "var(--color-accent)",
-						zIndex: 1,
-					}}
-				>
+					<div
+						style={{
+							position: "relative",
+							zIndex: 1,
+							width: "100%",
+							height: "100%",
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "center",
+							alignItems: "center",
+							gap: "0.5rem",
+							textAlign: "center",
+							color: "var(--color-accent)",
+							pointerEvents: "none",
+						}}
+					>
 					<h1
 						className="max-w-4xl"
 						style={{
@@ -300,10 +311,11 @@ export function Hero() {
 					>
 						Apps • E-commerce • AI • Marketing
 					</p>
-					<div style={{ marginTop: "1.5rem" }}>
+					<div style={{ marginTop: "1.5rem", pointerEvents: "auto" }}>
 						<RotatingButton href="/studio" variant="light">
 							Read the theory
 						</RotatingButton>
+					</div>
 					</div>
 				</div>
 

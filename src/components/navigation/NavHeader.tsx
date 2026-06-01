@@ -29,8 +29,8 @@ export function NavHeader({ isOpen, onToggle }: NavHeaderProps) {
 					color: "var(--color-base-100)",
 				}}
 			>
-				<Brandmark size={36} />
-				<Logotype height={18} />
+				<Brandmark size={42} />
+				<Logotype height={28} />
 			</Link>
 
 			<div

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { convexSiteUrl } from "@/lib/convex";
 
 export const Route = createFileRoute("/share/$shareToken")({
 	component: ShareBoardPage,
@@ -14,7 +15,6 @@ export const Route = createFileRoute("/share/$shareToken")({
 	}),
 });
 
-const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL as string | undefined;
 
 type Reply = {
 	id: string;
@@ -37,7 +37,7 @@ type Comment = {
 };
 function ShareBoardPage() {
 	const { shareToken } = Route.useParams();
-	const base = (SITE_URL ?? "").replace(/\/$/, "");
+	const base = convexSiteUrl.replace(/\/$/, "");
 	const [comments, setComments] = useState<Comment[] | null>(null);
 	const [projectName, setProjectName] = useState("Feedback");
 	const [projectStatus, setProjectStatus] = useState<string>("active");

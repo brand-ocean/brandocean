@@ -11,10 +11,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { convexSiteUrl } from "@/lib/convex";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
-
-const SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL as string | undefined;
 
 export function InstallPanel({
 	projectId,
@@ -33,21 +32,14 @@ export function InstallPanel({
 
 	if (!project || project.widgetToken === null) return null;
 
-	const base = SITE_URL ?? "https://YOUR-DEPLOYMENT.convex.site";
+	const base = convexSiteUrl;
 	const snippet = `<script>
 (function () {
   try {
     var p = new URLSearchParams(location.search);
-    var on1 = p.get("feedback") === "1" ||
-      location.hash.indexOf("feedback") !== -1;
-    try {
-      if (on1) localStorage.setItem("bo_fb", "1");
-      if (p.get("feedback") === "0") localStorage.removeItem("bo_fb");
-    } catch (e) {}
-    var saved = false;
-    try { saved = localStorage.getItem("bo_fb") === "1"; } catch (e) {}
+    var on1 = p.has("feedback") || location.hash === "#feedback";
     var tags = {% if customer %}{{ customer.tags | json }}{% else %}[]{% endif %};
-    var on = on1 || saved ||
+    var on = on1 ||
       (Array.isArray(tags) && tags.indexOf("feedback-reviewer") !== -1);
     if (!on) return;
     window.__FEEDBACK__ = { token: "${project.widgetToken}", base: "${base}" };
@@ -55,7 +47,9 @@ export function InstallPanel({
     s.src = "${base}/feedback/widget.js?v=" + Math.floor(Date.now() / 60000);
     s.async = true;
     document.head.appendChild(s);
-  } catch (e) {}
+  } catch (e) {
+    if (window.console && console.warn) console.warn("feedback widget failed", e);
+  }
 })();
 </script>`;
 	const shareUrl = `${window.location.origin}/share/${project.shareToken}`;
@@ -116,7 +110,7 @@ export function InstallPanel({
 				</pre>
 				<p className="mt-1 text-xs text-muted-foreground">
 					Add the tag <code>feedback-reviewer</code> to a Shopify customer,
-					or append <code>?feedback=1</code> to any store URL, to show the
+					or append <code>?feedback</code> to any store URL, to show the
 					widget.
 				</p>
 			</div>

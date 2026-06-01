@@ -9,3 +9,12 @@ if (!url) {
 }
 
 export const convex = new ConvexReactClient(url);
+
+// The Convex `*.site` origin (HTTP actions, feedback widget) for the SAME
+// deployment as the app. ALWAYS derived from VITE_CONVEX_URL so it can never
+// point at a different deployment — a stale VITE_CONVEX_SITE_URL in .env.local
+// previously leaked the dev URL into a prod build.
+export const convexSiteUrl: string = url.replace(
+	".convex.cloud",
+	".convex.site",
+);

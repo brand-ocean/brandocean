@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "deploy": "bun run build && wrangler deploy",
+    "deploy": "convex deploy --cmd-url-env-var-name VITE_CONVEX_URL --cmd 'vite build && wrangler deploy'",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"

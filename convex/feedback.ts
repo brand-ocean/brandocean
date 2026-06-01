@@ -586,6 +586,7 @@ export const moveCommentFromToken = internalMutation({
 		if (!comment || comment.projectId !== resolved.project._id) {
 			throw new ConvexError("not_found");
 		}
+		await enforceRateLimit(ctx, resolved.project._id);
 		await ctx.db.patch(args.commentId, { anchor: sanitizeAnchor(args.anchor) });
 		return null;
 	},
@@ -604,6 +605,7 @@ export const setStatusFromToken = internalMutation({
 		if (!comment || comment.projectId !== resolved.project._id) {
 			throw new ConvexError("not_found");
 		}
+		await enforceRateLimit(ctx, resolved.project._id);
 		await ctx.db.patch(args.commentId, { status: args.status });
 		return null;
 	},
@@ -644,6 +646,7 @@ export const deleteCommentFromToken = internalMutation({
 		if (!comment || comment.projectId !== resolved.project._id) {
 			throw new ConvexError("not_found");
 		}
+		await enforceRateLimit(ctx, resolved.project._id);
 		const replies = await ctx.db
 			.query("commentReplies")
 			.withIndex("by_comment", (q) => q.eq("commentId", args.commentId))

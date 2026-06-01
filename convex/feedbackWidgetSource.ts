@@ -454,8 +454,6 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       elementWidth: vw, elementHeight: vh,
       px: sx + vw / 2, py: sy + 80
     };
-    // Screenshot the current viewport for context.
-    a._shot = { rect: { x: sx, y: sy, w: vw, h: vh } };
     openComposer(vw / 2 - 160, Math.min(vh - 80, 120), a);
   };
   pCancel.onclick = function () { closeOverlays(); setMode(null); };
@@ -702,81 +700,8 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     S.suppress = false;
   }
 
-  // --- Screenshot ----------------------------------------------------------
-  function loadH2C() {
-    return new Promise(function (res) {
-      if (window.html2canvas) { res(window.html2canvas); return; }
-      var srcs = [
-        "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
-        "https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"
-      ];
-      var done = false;
-      function finish(v) { if (!done) { done = true; res(v); } }
-      function load(idx) {
-        if (done) return;
-        if (idx >= srcs.length) { finish(null); return; }
-        var s = document.createElement("script");
-        s.src = srcs[idx];
-        s.onload = function () {
-          if (window.html2canvas) finish(window.html2canvas);
-          else load(idx + 1);
-        };
-        s.onerror = function () { load(idx + 1); };
-        document.head.appendChild(s);
-      }
-      load(0);
-      setTimeout(function () {
-        finish(window.html2canvas || null);
-      }, 8000);
-    });
-  }
-  function shoot(opts) {
-    // Never let a hung html2canvas leave the composer stuck "Capturing…".
-    var timeout = new Promise(function (r) {
-      setTimeout(function () { r(null); }, 12000);
-    });
-    return Promise.race([timeout, shootInner(opts)]);
-  }
-  function shootInner(opts) {
-    return loadH2C().then(function (h2c) {
-      if (!h2c) return null;
-      var node = opts.el || document.body;
-      var o = {
-        logging: false,
-        useCORS: true,
-        allowTaint: false,
-        imageTimeout: 6000,
-        proxy: BASE + "/feedback/img?token=" + encodeURIComponent(TOKEN),
-        scale: Math.min(2, window.devicePixelRatio || 1),
-        backgroundColor: "#ffffff",
-        ignoreElements: function (n) {
-          return n && n.id === "bo-feedback-host";
-        }
-      };
-      if (opts.rect) {
-        o.x = opts.rect.x; o.y = opts.rect.y;
-        o.width = opts.rect.w; o.height = opts.rect.h;
-        o.windowWidth = document.documentElement.scrollWidth;
-        o.windowHeight = document.documentElement.scrollHeight;
-        node = document.body;
-      }
-      return h2c(node, o).then(function (cv) {
-        return new Promise(function (r) {
-          try { cv.toBlob(function (b) { r(b); }, "image/png", 0.92); }
-          catch (e) { r(null); }
-        });
-      })["catch"](function () { return null; });
-    })["catch"](function () { return null; });
-  }
-  function uploadShot(blob) {
-    if (!blob) return Promise.resolve(undefined);
-    return api("/feedback/screenshot-upload-url", "POST", { projectToken: TOKEN })
-      .then(function (j) {
-        return fetch(j.uploadUrl, { method: "POST", headers: { "Content-Type": "image/png" }, body: blob })
-          .then(function (r) { return r.json(); });
-      })
-      .then(function (j) { return j.storageId; })["catch"](function () { return undefined; });
-  }
+  // (Screenshot capture removed — comments are text-only so the composer
+  //  opens instantly; no html2canvas download or full-page render.)
 
   // --- Composer ------------------------------------------------------------
   function openComposer(px, py, anchor) {
@@ -812,12 +737,11 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       kinds.appendChild(b);
     });
     inr.appendChild(kinds);
-    var thumbWrap = el("div"); inr.appendChild(thumbWrap);
     exp.appendChild(inr); box.appendChild(row); box.appendChild(exp);
     wrap.appendChild(dot); wrap.appendChild(box);
     root.appendChild(wrap);
     S.cmp = wrap;
-    var anchEl = (anchor._shot && anchor._shot.el) || resolveEl(anchor);
+    var anchEl = resolveEl(anchor);
     if (anchEl && anchEl.getBoundingClientRect) {
       var ar = anchEl.getBoundingClientRect();
       if (ar.width && ar.height) {
@@ -851,76 +775,24 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       }
     } catch (e) {}
 
-    // Capture screenshot in the background, with a clear status.
-    var shotOpts = anchor._shot || { el: resolveEl(anchor) || document.body };
-    var note = el("div");
-    note.style.cssText =
-      "color:#667085;font:500 11px -apple-system,system-ui,sans-serif;" +
-      "margin-bottom:8px;display:flex;align-items:center;gap:6px";
-    note.textContent = "\\u23F3 Capturing screenshot\\u2026";
-    thumbWrap.appendChild(note);
+    // No screenshot capture — the dashboard already shows the selected
+    // element via the anchor, so just open the kind picker instantly.
     expand();
-    function showShot(blob) {
-      if (S.cmp !== wrap || !blob) return;
-      if (note.parentNode) note.remove();
-      if (S.shotURL) { URL.revokeObjectURL(S.shotURL); S.shotURL = null; }
-      thumbWrap.innerHTML = "";
-      S.shotBlob = blob;
-      S.shotURL = URL.createObjectURL(blob);
-      var tw = el("div", "fb-thumb");
-      var im = el("img"); im.src = S.shotURL;
-      var x = el("button", "x"); x.innerHTML = "\\u2715";
-      x.onclick = function () {
-        S.shotBlob = null;
-        if (S.shotURL) { URL.revokeObjectURL(S.shotURL); S.shotURL = null; }
-        tw.remove();
-      };
-      tw.appendChild(im); tw.appendChild(x);
-      thumbWrap.appendChild(tw);
-    }
-    shoot(shotOpts).then(function (blob) {
-      if (S.cmp !== wrap) return;
-      if (!blob) {
-        if (note.parentNode) {
-          note.textContent =
-            "\\uD83D\\uDCF7 Screenshot unavailable \\u2014 comment still sends";
-        }
-        return;
-      }
-      // Don't overwrite a screenshot the reviewer pasted in the meantime.
-      if (!S.shotBlob) showShot(blob);
-    });
-    inp.addEventListener("paste", function (e) {
-      var items = (e.clipboardData && e.clipboardData.items) || [];
-      for (var pk = 0; pk < items.length; pk++) {
-        if (items[pk].type && items[pk].type.indexOf("image/") === 0) {
-          var f = items[pk].getAsFile();
-          if (f) {
-            e.preventDefault();
-            showShot(f);
-            fbToast("Pasted image attached");
-            return;
-          }
-        }
-      }
-    });
 
     function submit() {
       var content = (inp.value || "").trim();
       if (!content) return;
       snd.disabled = true; snd.innerHTML = "\\u22EF";
-      uploadShot(S.shotBlob).then(function (sid) {
-        return api("/feedback/comments", "POST", {
-          projectToken: TOKEN, pageUrl: location.href, pagePath: path(),
-          anchor: { selector: anchor.selector, xpath: anchor.xpath, nx: anchor.nx,
-            ny: anchor.ny, scrollY: anchor.scrollY,
-            elementWidth: anchor.elementWidth, elementHeight: anchor.elementHeight,
-            px: anchor.px, py: anchor.py },
-          content: content, kind: S.kind || undefined,
-          clientKey: clientKey,
-          authorName: "", authorEmail: "",
-          metadata: uaInfo(), screenshotStorageId: sid
-        });
+      api("/feedback/comments", "POST", {
+        projectToken: TOKEN, pageUrl: location.href, pagePath: path(),
+        anchor: { selector: anchor.selector, xpath: anchor.xpath, nx: anchor.nx,
+          ny: anchor.ny, scrollY: anchor.scrollY,
+          elementWidth: anchor.elementWidth, elementHeight: anchor.elementHeight,
+          px: anchor.px, py: anchor.py },
+        content: content, kind: S.kind || undefined,
+        clientKey: clientKey,
+        authorName: "", authorEmail: "",
+        metadata: uaInfo()
       }).then(function (j) {
         try { sessionStorage.removeItem("bo_fb_draft"); } catch (e) {}
         if (j && j.id) addMine(j.id);
@@ -1295,14 +1167,6 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       document.removeEventListener("click", click, true);
       hl.remove(); lab.remove(); S.hl = null; S.hlLab = null;
       var a = makeAnchor(e.clientX, e.clientY, t);
-      // Capture the actual visible page cropped to the selected element's
-      // box (WYSIWYG) instead of an isolated re-render of the node.
-      var er = t.getBoundingClientRect();
-      a._shot = { rect: {
-        x: er.left + (window.scrollX || 0),
-        y: er.top + (window.scrollY || 0),
-        w: Math.max(1, er.width), h: Math.max(1, er.height)
-      } };
       openComposer(e.clientX + 14, e.clientY, a);
     }
     document.addEventListener("mousemove", move, true);
@@ -1341,7 +1205,6 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       var t = document.elementFromPoint(cx, cy) || document.body;
       cap.style.display = "";
       var a = makeAnchor(cx, cy, t);
-      a._shot = { rect: { x: x + (window.scrollX || 0), y: y + (window.scrollY || 0), w: w, h: h } };
       cap.remove(); S.cap = null;
       openComposer(x + w + 14, y, a);
     });
