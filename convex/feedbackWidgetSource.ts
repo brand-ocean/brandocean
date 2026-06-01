@@ -184,7 +184,8 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     ".fb-panel{position:fixed;right:20px;bottom:20px;pointer-events:auto;width:212px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #e4e7ec;border-radius:14px;box-shadow:0 12px 32px rgba(16,24,40,.16);font:600 12px/1 -apple-system,system-ui,sans-serif;overflow:hidden;animation:fbpop .18s ease-out;user-select:none}" +
     ".fb-phead{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 12px;cursor:grab;background:#fff;border-bottom:1px solid #f1f3f7}" +
     ".fb-phead:active{cursor:grabbing}" +
-    ".fb-phead .dotb{width:8px;height:8px;border-radius:50%;background:" + BRAND + "}" +
+    ".fb-phead .dotb{display:inline-flex;align-items:center;width:17px;height:16px}" +
+    ".fb-phead .dotb svg{display:block;width:100%;height:100%}" +
     ".fb-pttl{flex:1;color:#1a2433;font-weight:700}" +
     ".fb-pct{background:rgba(21,112,239,.10);color:" + BRAND + ";border-radius:999px;min-width:18px;height:18px;padding:0 5px;font:700 11px/18px -apple-system,system-ui,sans-serif;text-align:center}" +
     ".fb-pmin{width:22px;height:22px;border:none;background:#f2f4f7;color:#667085;border-radius:6px;cursor:pointer;font-size:13px;line-height:22px}" +
@@ -280,7 +281,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     hoverHL: null, hoverTip: null, cmpHL: null,
     pendingAnchor: null, shotBlob: null, shotURL: null, kind: null,
     dragging: false, suppress: false, coach: null, listHL: null,
-    allComments: []
+    allComments: [], pins: null, pinSig: "", posRaf: 0
   };
 
   function el(t, c) { var e = document.createElement(t); if (c) e.className = c; return e; }
@@ -305,6 +306,14 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   var panel = el("div", "fb-panel" + (startMin ? " min" : ""));
   var phead = el("div", "fb-phead");
   var pdot = el("span", "dotb");
+  pdot.innerHTML =
+    "<svg width='17' height='16' viewBox='0 0 1145 1107' fill='none' " +
+    "xmlns='http://www.w3.org/2000/svg'>" +
+    "<path d='M1137.71 664.851C1111.1 688.267 1093.42 703.828 1053.95 703.828C1014.48 703.828 997.049 688.218 970.439 664.851C939.018 637.312 896.109 599.464 816.919 599.464C737.729 599.464 694.869 637.312 663.399 664.851C636.79 688.267 619.116 703.828 579.889 703.828C540.662 703.828 522.988 688.218 496.379 664.851C464.958 637.312 422.049 599.464 342.859 599.464C263.669 599.464 220.809 637.312 189.339 664.851C162.729 688.267 145.055 703.828 105.828 703.828C66.6016 703.828 48.9274 688.218 22.3179 664.851C17.5066 660.629 12.3517 656.113 6.85303 651.597C16.9666 705.694 34.6408 757.09 58.7464 804.707C72.9348 807.898 88.5961 809.813 106.074 809.813C185.215 809.813 228.124 771.964 259.594 744.425C286.203 721.01 303.877 705.448 343.104 705.448C382.331 705.448 400.005 721.059 426.615 744.425C458.035 771.964 500.944 809.813 580.135 809.813C659.325 809.813 702.185 771.964 733.654 744.425C760.264 721.01 777.938 705.448 817.165 705.448C856.392 705.448 874.066 721.059 900.675 744.425C932.096 771.964 975.005 809.813 1054.2 809.813C1066.13 809.813 1077.17 808.88 1087.53 807.309C1110.36 762.736 1127.54 714.775 1138.15 664.458C1138 664.606 1137.85 664.753 1137.71 664.851Z' fill='#1552EE'/>" +
+    "<path d='M812.843 895.967C733.711 895.967 690.807 933.851 659.341 961.415C632.735 984.853 615.062 1000.43 575.84 1000.43C536.618 1000.43 518.946 984.804 492.339 961.415C460.922 933.851 418.018 895.967 338.837 895.967C259.656 895.967 216.801 933.851 185.335 961.415C182.782 963.676 180.328 965.838 177.873 967.95C204.283 992.42 232.951 1014.43 263.534 1033.64C285.919 1014.29 303.738 1001.8 338.788 1001.8C378.01 1001.8 395.682 1017.43 422.289 1040.82C453.706 1068.38 496.61 1106.27 575.791 1106.27C654.972 1106.27 697.876 1068.38 729.293 1040.82C755.9 1017.38 773.572 1001.8 812.794 1001.8C845.095 1001.8 862.767 1012.37 882.845 1029.17C913.133 1009.57 941.457 987.162 967.425 962.398C967.033 962.054 966.689 961.71 966.297 961.366C934.879 933.801 891.975 895.918 812.794 895.918L812.843 895.967Z' fill='#1552EE'/>" +
+    "<path d='M341.65 102.158C380.874 102.158 398.547 117.762 425.154 141.118C456.573 168.644 499.478 206.475 578.662 206.475C657.847 206.475 700.752 168.644 732.171 141.118C758.778 117.713 776.451 102.158 815.675 102.158C854.899 102.158 872.572 117.762 899.179 141.118C928.879 167.123 968.84 202.256 1039.83 206.083C972.325 113.051 877.579 41.0203 767.32 1.52109C717.64 12.8066 686.32 40.2843 661.97 61.5795C635.363 84.9846 617.69 100.539 578.466 100.539C539.242 100.539 521.569 84.9356 494.962 61.5795C469.484 39.2539 436.445 10.206 382.641 0C270.37 39.1557 173.954 112.021 105.472 206.475C184.067 206.23 226.826 168.595 258.146 141.167C284.753 117.762 302.426 102.207 341.65 102.207V102.158Z' fill='#1552EE'/>" +
+    "<path d='M257.936 433.229C284.544 409.78 302.218 394.197 341.443 394.197C380.668 394.197 398.342 409.829 424.95 433.229C456.37 460.807 499.278 498.709 578.465 498.709C657.652 498.709 700.51 460.807 731.979 433.229C758.588 409.78 776.261 394.197 815.487 394.197C854.712 394.197 872.386 409.829 898.994 433.229C930.414 460.807 973.321 498.709 1052.51 498.709C1090.95 498.709 1120.8 489.762 1145 477.423C1140.58 439.275 1132.43 402.259 1120.9 366.766C1101.55 382.693 1083.93 392.624 1052.46 392.624C1012.99 392.624 995.56 376.991 968.952 353.591C937.532 326.013 894.625 288.111 815.438 288.111C736.25 288.111 693.392 326.013 661.923 353.591C635.315 377.04 617.641 392.624 578.416 392.624C539.19 392.624 521.517 376.991 494.908 353.591C463.489 326.013 420.581 288.111 341.394 288.111C262.207 288.111 219.348 326.013 187.88 353.591C161.271 377.04 143.598 392.624 104.372 392.624C67.7486 392.624 49.9278 379.006 26.1176 358.163C13.7952 394.246 4.95841 431.902 0 470.836C26.1176 486.468 59.4027 498.758 104.421 498.758C183.559 498.758 226.467 460.856 257.936 433.278V433.229Z' fill='#1552EE'/>" +
+    "</svg>";
   var pgrip = el("span");
   pgrip.textContent = "\\u2059";
   pgrip.title = "Drag to move";
@@ -314,7 +323,8 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   var pttl = el("span", "fb-pttl"); pttl.textContent = "Feedback";
   var pct = el("span", "fb-pct"); pct.style.display = "none"; pct.textContent = "0";
   var pmin = el("button", "fb-pmin");
-  pmin.textContent = startMin ? "\\u2197" : "\\u2013";
+  pmin.textContent = startMin ? "\\u25BE" : "\\u25B4";
+  pmin.title = startMin ? "Expand" : "Minimize";
   phead.appendChild(pgrip); phead.appendChild(pdot); phead.appendChild(pttl);
   phead.appendChild(pct); phead.appendChild(pmin);
   var pbody = el("div", "fb-pbody");
@@ -417,6 +427,61 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     return "Couldn\\u2019t send \\u2014 try again";
   }
 
+  // Styled in-widget confirm (replaces native window.confirm so it matches
+  // the widget and never shows the store's domain).
+  function fbConfirm(msg, onOk) {
+    var ov = el("div");
+    ov.style.cssText =
+      "position:fixed;inset:0;z-index:2147483647;pointer-events:auto;" +
+      "background:rgba(16,24,40,.45);display:flex;align-items:center;" +
+      "justify-content:center;animation:fbpop .15s ease-out";
+    var card = el("div");
+    card.style.cssText =
+      "background:#fff;border-radius:14px;border:1px solid #e4e7ec;" +
+      "box-shadow:0 20px 48px rgba(16,24,40,.24);width:300px;" +
+      "max-width:calc(100vw - 48px);padding:18px;color:#1a2433;" +
+      "font:13px/1.5 -apple-system,system-ui,sans-serif";
+    var msgEl = el("div");
+    msgEl.textContent = msg;
+    msgEl.style.cssText = "margin-bottom:16px;color:#344054";
+    var rowb = el("div");
+    rowb.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+    var cancel = el("button");
+    cancel.textContent = "Cancel";
+    cancel.style.cssText =
+      "background:#f2f4f7;color:#1a2433;border:none;border-radius:9px;" +
+      "padding:8px 14px;cursor:pointer;" +
+      "font:600 12px -apple-system,system-ui,sans-serif";
+    var ok = el("button");
+    ok.textContent = "Delete";
+    ok.style.cssText =
+      "background:#b42318;color:#fff;border:none;border-radius:9px;" +
+      "padding:8px 14px;cursor:pointer;" +
+      "font:600 12px -apple-system,system-ui,sans-serif";
+    function close() {
+      ov.remove();
+      document.removeEventListener("keydown", onKey, true);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.preventDefault(); e.stopPropagation(); close();
+      } else if (e.key === "Enter") {
+        e.preventDefault(); e.stopPropagation(); close(); onOk();
+      }
+    }
+    cancel.onclick = close;
+    ok.onclick = function () { close(); onOk(); };
+    ov.addEventListener("pointerdown", function (e) {
+      if (e.target === ov) close();
+    });
+    document.addEventListener("keydown", onKey, true);
+    rowb.appendChild(cancel); rowb.appendChild(ok);
+    card.appendChild(msgEl); card.appendChild(rowb);
+    ov.appendChild(card);
+    root.appendChild(ov);
+    setTimeout(function () { ok.focus(); }, 20);
+  }
+
   // --- First-run coachmark ------------------------------------------------
   function dismissCoach() {
     if (S.coach) { S.coach.remove(); S.coach = null; }
@@ -461,7 +526,8 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     e.stopPropagation();
     var min = !panel.classList.contains("min");
     panel.classList.toggle("min", min);
-    pmin.textContent = min ? "\\u2197" : "\\u2013";
+    pmin.textContent = min ? "\\u25BE" : "\\u25B4";
+    pmin.title = min ? "Expand" : "Minimize";
     pstate.min = min; savePanelState(pstate);
   };
 
@@ -610,15 +676,14 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       row.addEventListener("mouseleave", rowHLClear);
       row.onclick = function () {
         rowHLClear();
-        var samePage = c.pagePath === here;
-        var t = samePage ? resolveEl(c.anchor) : null;
-        if (t && t.scrollIntoView) {
-          t.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (c.pagePath !== path()) {
+          // Comment lives on another page: remember it and navigate there;
+          // the widget reopens it on arrival (see maybeOpenPending).
+          try { sessionStorage.setItem("bo_fb_open", c.id); } catch (e) {}
+          location.href = location.origin + c.pagePath + "?feedback";
+          return;
         }
-        setTimeout(function () {
-          openThread(c, window.innerWidth / 2 - 160,
-            Math.max(20, window.innerHeight / 2 - 180));
-        }, t ? 320 : 0);
+        openComment(c);
       };
       plist.appendChild(row);
     });
@@ -905,14 +970,13 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
         "-apple-system,system-ui,sans-serif;cursor:pointer;display:block;" +
         "margin:0 auto 12px";
       del.onclick = function () {
-        if (!window.confirm("Delete this comment? This cannot be undone.")) {
-          return;
-        }
-        api("/feedback/delete", "POST", {
-          projectToken: TOKEN, commentId: c.id
-        }).then(function () {
-          closeOverlays(); refresh(); fbToast("Comment deleted");
-        })["catch"](function (er) { fbToast(fbErrMsg(er), true); });
+        fbConfirm("Delete this comment? This cannot be undone.", function () {
+          api("/feedback/delete", "POST", {
+            projectToken: TOKEN, commentId: c.id
+          }).then(function () {
+            closeOverlays(); refresh(); fbToast("Comment deleted");
+          })["catch"](function (er) { fbToast(fbErrMsg(er), true); });
+        });
       };
       card.appendChild(del);
     }
@@ -962,50 +1026,79 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     };
   }
 
-  // --- Pins (render + drag) ------------------------------------------------
-  function pinXY(c) {
-    var a = c.anchor || {};
-    // Absolute page coords win: pin is fixed to the spot you clicked and
-    // does not move when content/images reflow the layout.
-    if (typeof a.px === "number" && typeof a.py === "number") {
-      return {
-        x: a.px - (window.scrollX || 0),
-        y: a.py - (window.scrollY || 0)
-      };
+  // Open a comment's thread anchored at its pin (used by the list rows and
+  // by cross-page deep-links) so it shows where the tag is, not screen-center.
+  function openComment(c) {
+    var t = c.pagePath === path() ? resolveEl(c.anchor) : null;
+    if (t && t.scrollIntoView) {
+      t.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-    var t = resolveEl(a), x, y;
-    if (t) {
-      var r = t.getBoundingClientRect();
-      x = r.left + (a.nx == null ? 0.5 : a.nx) * r.width;
-      y = r.top + (a.ny == null ? 0.5 : a.ny) * r.height;
-    } else {
-      x = 24; y = (a.scrollY || 0) - (window.scrollY || 0) + 90;
-    }
-    return { x: x, y: y };
+    setTimeout(function () {
+      var p = pinXY(c);
+      openThread(c, p.x, p.y);
+    }, t ? 320 : 0);
   }
+
+  // --- Pins (render + drag) ------------------------------------------------
+  function pinXY(rec) {
+    // Accept a pin record {c, el2,...} or a bare comment (openComment).
+    var c = rec.c || rec;
+    var a = c.anchor || {};
+    // Element-first: track the live element so the pin follows reflow,
+    // lazy images, font settle, viewport changes — instead of freezing to a
+    // pixel that drifts off-target. Absolute px/py is only the fallback.
+    var t = rec.el2;
+    if (t && !document.contains(t)) t = null;       // detached since build
+    if (!t) {
+      t = resolveEl(a);
+      if (rec.el2 !== undefined) rec.el2 = t;        // refresh cache (records)
+    }
+    if (t && t.getBoundingClientRect) {
+      var r = t.getBoundingClientRect();
+      if (r.width || r.height) {
+        return {
+          x: r.left + (a.nx == null ? 0.5 : a.nx) * r.width,
+          y: r.top + (a.ny == null ? 0.5 : a.ny) * r.height
+        };
+      }
+    }
+    if (typeof a.px === "number" && typeof a.py === "number") {
+      return { x: a.px - (window.scrollX || 0), y: a.py - (window.scrollY || 0) };
+    }
+    return { x: 24, y: (a.scrollY || 0) - (window.scrollY || 0) + 90 };
+  }
+  // Signature of the *visible set* (ids/status/number/new-dot) — NOT position.
+  // When it's unchanged we skip the DOM rebuild and just reposition.
+  function pinSig() {
+    if (pstate.hidePins) return "hidden";
+    var nmap = numberMap();
+    var parts = [pstate.showResolved ? "1" : "0"];
+    S.comments.forEach(function (c) {
+      if (c.status === "resolved" && !pstate.showResolved) return;
+      var a = c.anchor || {};
+      // Include the anchor so a server-side move (e.g. dragged in another tab)
+      // forces a rebuild + reposition. Scroll never recomputes this, so the
+      // flicker fix is unaffected.
+      parts.push(c.id + ":" + c.status + ":" +
+        (hasNewReplies(c) ? "n" : "") + ":" + (nmap[c.id] || "") + ":" +
+        a.selector + ":" + a.nx + "," + a.ny + ":" + a.px + "," + a.py);
+    });
+    return parts.join("|");
+  }
+  // Build DOM only when the visible set changes; otherwise just reposition.
+  // This is the flicker fix: scrolling no longer tears down + rebuilds pins.
   function renderPins() {
     if (S.dragging || S.suppress) return;
+    var sig = pinSig();
+    if (S.pins && sig === S.pinSig) { positionPins(); return; }
+    S.pinSig = sig;
     clearHover();
     pinLayer.innerHTML = "";
+    S.pins = [];
     if (pstate.hidePins) return;
-    var placed = [];
     var nmap = numberMap();
     S.comments.forEach(function (c, i) {
       if (c.status === "resolved" && !pstate.showResolved) return;
-      var p = pinXY(c);
-      if (p.y < -50 || p.y > window.innerHeight + 50) return;
-      // Fan out near-overlapping pins so each stays readable & clickable.
-      var px = p.x, py = p.y, guard = 0;
-      while (guard < 12) {
-        var hit = false;
-        for (var q = 0; q < placed.length; q++) {
-          if (Math.abs(placed[q].x - px) < 22 &&
-              Math.abs(placed[q].y - py) < 22) { hit = true; break; }
-        }
-        if (!hit) break;
-        px += 18; py -= 6; guard++;
-      }
-      placed.push({ x: px, y: py });
       var pin = el("div", "fb-pin" +
         (c.status === "resolved" ? " res" : "") +
         (hasNewReplies(c) ? " new" : ""));
@@ -1026,15 +1119,53 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
           openThread(c, r.left, r.top);
         }
       });
-      // Place so the teardrop tip (local ~2,28) sits exactly on the point.
-      pin.style.left = (px - 2) + "px";
-      pin.style.top = (py - 28) + "px";
       pin.addEventListener("mouseenter", function () {
         if (!S.dragging) showHover(c, pin);
       });
       pin.addEventListener("mouseleave", clearHover);
       attachDrag(pin, c);
       pinLayer.appendChild(pin);
+      // Cache the resolved target so positionPins doesn't re-query each frame.
+      S.pins.push({ id: c.id, c: c, el: pin, el2: resolveEl(c.anchor) });
+    });
+    positionPins();
+  }
+  // Cheap per-frame repositioning of the persistent pin elements: no DOM
+  // teardown, no listener churn. Owns the overlap fan-out (position-dependent).
+  function positionPins() {
+    if (!S.pins || S.dragging || S.suppress) return;
+    var placed = [];
+    for (var i = 0; i < S.pins.length; i++) {
+      var rec = S.pins[i], pinEl = rec.el;
+      var p = pinXY(rec);
+      // Fan out near-overlapping pins so each stays readable & clickable.
+      var px = p.x, py = p.y, guard = 0;
+      while (guard < 12) {
+        var hit = false;
+        for (var q = 0; q < placed.length; q++) {
+          if (Math.abs(placed[q].x - px) < 22 &&
+              Math.abs(placed[q].y - py) < 22) { hit = true; break; }
+        }
+        if (!hit) break;
+        px += 18; py -= 6; guard++;
+      }
+      placed.push({ x: px, y: py });   // keep off-screen pins for fan-out parity
+      if (py < -50 || py > window.innerHeight + 50) {
+        pinEl.style.display = "none";
+      } else {
+        if (pinEl.style.display === "none") pinEl.style.display = "";
+        // Place so the teardrop tip (local ~2,28) sits exactly on the point.
+        pinEl.style.left = (px - 2) + "px";
+        pinEl.style.top = (py - 28) + "px";
+      }
+    }
+  }
+  // Collapse a burst of scroll/resize events into one positionPins per frame.
+  function schedulePosition() {
+    if (S.posRaf) return;
+    S.posRaf = requestAnimationFrame(function () {
+      S.posRaf = 0;
+      positionPins();
     });
   }
   // KISS drag: the teardrop tip tracks the cursor exactly; on drop we keep
@@ -1046,7 +1177,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       pin.setPointerCapture(e.pointerId);
       pin.classList.add("drag"); S.dragging = true;
       function mv(ev) {
-        if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 4) {
+        // 7px deadzone so a click (open thread) isn't mistaken for a drag on
+        // trackpads/touch where the pointer wobbles a few px.
+        if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 7) {
           moved = true;
         }
         pin.style.left = (ev.clientX - 2) + "px";
@@ -1065,6 +1198,11 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
         var a = makeAnchor(x, y, tgt);
         var idx = S.comments.indexOf(c);
         if (idx >= 0) S.comments[idx].anchor = a;
+        // Point the cached element at the drop target so the next reposition
+        // lands on it immediately (no one-frame stale jump).
+        for (var pi = 0; S.pins && pi < S.pins.length; pi++) {
+          if (S.pins[pi].c === c) { S.pins[pi].el2 = tgt; break; }
+        }
         // Pin is already at the drop point — leave it; next poll reconciles.
         api("/feedback/move", "POST", {
           projectToken: TOKEN, commentId: c.id,
@@ -1091,16 +1229,30 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       document.documentElement.appendChild(host);
     }
   }
+  // After a cross-page deep-link navigation, reopen the targeted comment
+  // once this page's comments have loaded (one-shot; clears the marker).
+  function maybeOpenPending() {
+    var id = null;
+    try { id = sessionStorage.getItem("bo_fb_open"); } catch (e) {}
+    if (!id) return;
+    try { sessionStorage.removeItem("bo_fb_open"); } catch (e) {}
+    for (var i = 0; i < S.comments.length; i++) {
+      if (S.comments[i].id === id) { openComment(S.comments[i]); return; }
+    }
+  }
+
   function refresh() {
     ensureMounted();
-    if (S.dragging || document.hidden) return;
+    // Don't repaint pins out from under an open composer/thread or active
+    // selection mode; the next poll (or setMode(null) on close) catches up.
+    if (S.dragging || document.hidden || S.cmp || S.card || S.mode) return;
     api("/feedback/comments?token=" + encodeURIComponent(TOKEN) +
         "&pagePath=" + encodeURIComponent(path()), "GET")
       .then(function (j) {
         S.comments = (j && j.comments) || [];
         var st = j && j.project && j.project.status;
         setPaused(st && st !== "active");
-        renderPins(); updateFab(); renderList();
+        renderPins(); updateFab(); renderList(); maybeOpenPending();
       })
       ["catch"](function () {});
   }
@@ -1135,6 +1287,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
 
   function startElement() {
     S.suppress = true; clearHover(); pinLayer.innerHTML = "";
+    S.pins = null; S.pinSig = "";   // DOM cleared — force a fresh build on exit
     var hl = el("div", "fb-hl"); hl.style.display = "none";
     var lab = el("div", "fb-hl-lab"); lab.style.display = "none";
     root.appendChild(hl); root.appendChild(lab);
@@ -1181,6 +1334,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
 
   function startRegion() {
     S.suppress = true; clearHover(); pinLayer.innerHTML = "";
+    S.pins = null; S.pinSig = "";   // DOM cleared — force a fresh build on exit
     var cap = el("div", "fb-cap"); root.appendChild(cap); S.cap = cap;
     var rg = null, sx, sy;
     cap.addEventListener("pointerdown", function (e) {
@@ -1240,9 +1394,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     else if (k === "r") setMode("region");
     else if (k === "g") pGen.onclick();
   });
-  window.addEventListener("scroll", function () { renderPins(); }, { passive: true });
+  window.addEventListener("scroll", schedulePosition, { passive: true });
   window.addEventListener("resize", function () {
-    renderPins();
+    schedulePosition();
     // Keep a moved panel reachable if the viewport shrank/rotated.
     if (panel.style.left) {
       var r = panel.getBoundingClientRect();

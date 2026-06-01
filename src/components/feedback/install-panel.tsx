@@ -37,9 +37,18 @@ export function InstallPanel({
 (function () {
   try {
     var p = new URLSearchParams(location.search);
-    var on1 = p.has("feedback") || location.hash === "#feedback";
+    var fb = p.get("feedback");
+    var on1 = (p.has("feedback") && fb !== "0") ||
+      location.hash === "#feedback";
+    // Stay on across page navigation once turned on, until ?feedback=0.
+    try {
+      if (on1) localStorage.setItem("bo_fb", "1");
+      if (fb === "0") localStorage.removeItem("bo_fb");
+    } catch (e) {}
+    var saved = false;
+    try { saved = localStorage.getItem("bo_fb") === "1"; } catch (e) {}
     var tags = {% if customer %}{{ customer.tags | json }}{% else %}[]{% endif %};
-    var on = on1 ||
+    var on = on1 || saved ||
       (Array.isArray(tags) && tags.indexOf("feedback-reviewer") !== -1);
     if (!on) return;
     window.__FEEDBACK__ = { token: "${project.widgetToken}", base: "${base}" };
@@ -110,8 +119,8 @@ export function InstallPanel({
 				</pre>
 				<p className="mt-1 text-xs text-muted-foreground">
 					Add the tag <code>feedback-reviewer</code> to a Shopify customer,
-					or append <code>?feedback</code> to any store URL, to show the
-					widget.
+					or append <code>?feedback</code> to any store URL. It then stays
+					on as you browse the store; add <code>?feedback=0</code> to turn it off.
 				</p>
 			</div>
 
