@@ -14,6 +14,8 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as MarketingIndexRouteImport } from './routes/_marketing/index'
 import { Route as ShareShareTokenRouteImport } from './routes/share/$shareToken'
 import { Route as OSlugRouteImport } from './routes/o/$slug'
+import { Route as NsSlugRouteImport } from './routes/ns/$slug'
+import { Route as NSlugRouteImport } from './routes/n/$slug'
 import { Route as ISlugRouteImport } from './routes/i/$slug'
 import { Route as CSlugRouteImport } from './routes/c/$slug'
 import { Route as MarketingFullRouteImport } from './routes/_marketing/full'
@@ -25,11 +27,13 @@ import { Route as AuthedAppTasksIndexRouteImport } from './routes/_authed/_app/t
 import { Route as AuthedAppSettingsIndexRouteImport } from './routes/_authed/_app/settings/index'
 import { Route as AuthedAppPortfolioIndexRouteImport } from './routes/_authed/_app/portfolio/index'
 import { Route as AuthedAppOffertesIndexRouteImport } from './routes/_authed/_app/offertes/index'
+import { Route as AuthedAppNdasIndexRouteImport } from './routes/_authed/_app/ndas/index'
 import { Route as AuthedAppInvoicesIndexRouteImport } from './routes/_authed/_app/invoices/index'
 import { Route as AuthedAppFeedbackIndexRouteImport } from './routes/_authed/_app/feedback/index'
 import { Route as AuthedAppDashboardIndexRouteImport } from './routes/_authed/_app/dashboard/index'
 import { Route as AuthedAppClientsIndexRouteImport } from './routes/_authed/_app/clients/index'
 import { Route as AuthedAppOffertesOfferteIdRouteImport } from './routes/_authed/_app/offertes/$offerteId'
+import { Route as AuthedAppNdasNdaIdRouteImport } from './routes/_authed/_app/ndas/$ndaId'
 import { Route as AuthedAppInvoicesInvoiceIdRouteImport } from './routes/_authed/_app/invoices/$invoiceId'
 import { Route as AuthedAppFeedbackProjectIdRouteImport } from './routes/_authed/_app/feedback/$projectId'
 import { Route as AuthedAppClientsClientIdRouteImport } from './routes/_authed/_app/clients/$clientId'
@@ -58,6 +62,16 @@ const ShareShareTokenRoute = ShareShareTokenRouteImport.update({
 const OSlugRoute = OSlugRouteImport.update({
   id: '/o/$slug',
   path: '/o/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NsSlugRoute = NsSlugRouteImport.update({
+  id: '/ns/$slug',
+  path: '/ns/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NSlugRoute = NSlugRouteImport.update({
+  id: '/n/$slug',
+  path: '/n/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ISlugRoute = ISlugRouteImport.update({
@@ -114,6 +128,11 @@ const AuthedAppOffertesIndexRoute = AuthedAppOffertesIndexRouteImport.update({
   path: '/offertes/',
   getParentRoute: () => AuthedAppRoute,
 } as any)
+const AuthedAppNdasIndexRoute = AuthedAppNdasIndexRouteImport.update({
+  id: '/ndas/',
+  path: '/ndas/',
+  getParentRoute: () => AuthedAppRoute,
+} as any)
 const AuthedAppInvoicesIndexRoute = AuthedAppInvoicesIndexRouteImport.update({
   id: '/invoices/',
   path: '/invoices/',
@@ -140,6 +159,11 @@ const AuthedAppOffertesOfferteIdRoute =
     path: '/offertes/$offerteId',
     getParentRoute: () => AuthedAppRoute,
   } as any)
+const AuthedAppNdasNdaIdRoute = AuthedAppNdasNdaIdRouteImport.update({
+  id: '/ndas/$ndaId',
+  path: '/ndas/$ndaId',
+  getParentRoute: () => AuthedAppRoute,
+} as any)
 const AuthedAppInvoicesInvoiceIdRoute =
   AuthedAppInvoicesInvoiceIdRouteImport.update({
     id: '/invoices/$invoiceId',
@@ -182,6 +206,8 @@ export interface FileRoutesByFullPath {
   '/full': typeof MarketingFullRoute
   '/c/$slug': typeof CSlugRoute
   '/i/$slug': typeof ISlugRoute
+  '/n/$slug': typeof NSlugRoute
+  '/ns/$slug': typeof NsSlugRoute
   '/o/$slug': typeof OSlugRoute
   '/share/$shareToken': typeof ShareShareTokenRoute
   '/work/$slug': typeof MarketingWorkSlugRoute
@@ -190,11 +216,13 @@ export interface FileRoutesByFullPath {
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
+  '/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/clients/': typeof AuthedAppClientsIndexRoute
   '/dashboard/': typeof AuthedAppDashboardIndexRoute
   '/feedback/': typeof AuthedAppFeedbackIndexRoute
   '/invoices/': typeof AuthedAppInvoicesIndexRoute
+  '/ndas/': typeof AuthedAppNdasIndexRoute
   '/offertes/': typeof AuthedAppOffertesIndexRoute
   '/portfolio/': typeof AuthedAppPortfolioIndexRoute
   '/settings/': typeof AuthedAppSettingsIndexRoute
@@ -208,6 +236,8 @@ export interface FileRoutesByTo {
   '/full': typeof MarketingFullRoute
   '/c/$slug': typeof CSlugRoute
   '/i/$slug': typeof ISlugRoute
+  '/n/$slug': typeof NSlugRoute
+  '/ns/$slug': typeof NsSlugRoute
   '/o/$slug': typeof OSlugRoute
   '/share/$shareToken': typeof ShareShareTokenRoute
   '/work/$slug': typeof MarketingWorkSlugRoute
@@ -215,11 +245,13 @@ export interface FileRoutesByTo {
   '/backup/$': typeof AuthedAppBackupSplatRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
+  '/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/clients': typeof AuthedAppClientsIndexRoute
   '/dashboard': typeof AuthedAppDashboardIndexRoute
   '/feedback': typeof AuthedAppFeedbackIndexRoute
   '/invoices': typeof AuthedAppInvoicesIndexRoute
+  '/ndas': typeof AuthedAppNdasIndexRoute
   '/offertes': typeof AuthedAppOffertesIndexRoute
   '/portfolio': typeof AuthedAppPortfolioIndexRoute
   '/settings': typeof AuthedAppSettingsIndexRoute
@@ -236,6 +268,8 @@ export interface FileRoutesById {
   '/_marketing/full': typeof MarketingFullRoute
   '/c/$slug': typeof CSlugRoute
   '/i/$slug': typeof ISlugRoute
+  '/n/$slug': typeof NSlugRoute
+  '/ns/$slug': typeof NsSlugRoute
   '/o/$slug': typeof OSlugRoute
   '/share/$shareToken': typeof ShareShareTokenRoute
   '/_marketing/': typeof MarketingIndexRoute
@@ -245,11 +279,13 @@ export interface FileRoutesById {
   '/_authed/_app/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/_authed/_app/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/_authed/_app/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
+  '/_authed/_app/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/_authed/_app/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
   '/_authed/_app/clients/': typeof AuthedAppClientsIndexRoute
   '/_authed/_app/dashboard/': typeof AuthedAppDashboardIndexRoute
   '/_authed/_app/feedback/': typeof AuthedAppFeedbackIndexRoute
   '/_authed/_app/invoices/': typeof AuthedAppInvoicesIndexRoute
+  '/_authed/_app/ndas/': typeof AuthedAppNdasIndexRoute
   '/_authed/_app/offertes/': typeof AuthedAppOffertesIndexRoute
   '/_authed/_app/portfolio/': typeof AuthedAppPortfolioIndexRoute
   '/_authed/_app/settings/': typeof AuthedAppSettingsIndexRoute
@@ -265,6 +301,8 @@ export interface FileRouteTypes {
     | '/full'
     | '/c/$slug'
     | '/i/$slug'
+    | '/n/$slug'
+    | '/ns/$slug'
     | '/o/$slug'
     | '/share/$shareToken'
     | '/work/$slug'
@@ -273,11 +311,13 @@ export interface FileRouteTypes {
     | '/clients/$clientId'
     | '/feedback/$projectId'
     | '/invoices/$invoiceId'
+    | '/ndas/$ndaId'
     | '/offertes/$offerteId'
     | '/clients/'
     | '/dashboard/'
     | '/feedback/'
     | '/invoices/'
+    | '/ndas/'
     | '/offertes/'
     | '/portfolio/'
     | '/settings/'
@@ -291,6 +331,8 @@ export interface FileRouteTypes {
     | '/full'
     | '/c/$slug'
     | '/i/$slug'
+    | '/n/$slug'
+    | '/ns/$slug'
     | '/o/$slug'
     | '/share/$shareToken'
     | '/work/$slug'
@@ -298,11 +340,13 @@ export interface FileRouteTypes {
     | '/backup/$'
     | '/clients/$clientId'
     | '/invoices/$invoiceId'
+    | '/ndas/$ndaId'
     | '/offertes/$offerteId'
     | '/clients'
     | '/dashboard'
     | '/feedback'
     | '/invoices'
+    | '/ndas'
     | '/offertes'
     | '/portfolio'
     | '/settings'
@@ -318,6 +362,8 @@ export interface FileRouteTypes {
     | '/_marketing/full'
     | '/c/$slug'
     | '/i/$slug'
+    | '/n/$slug'
+    | '/ns/$slug'
     | '/o/$slug'
     | '/share/$shareToken'
     | '/_marketing/'
@@ -327,11 +373,13 @@ export interface FileRouteTypes {
     | '/_authed/_app/clients/$clientId'
     | '/_authed/_app/feedback/$projectId'
     | '/_authed/_app/invoices/$invoiceId'
+    | '/_authed/_app/ndas/$ndaId'
     | '/_authed/_app/offertes/$offerteId'
     | '/_authed/_app/clients/'
     | '/_authed/_app/dashboard/'
     | '/_authed/_app/feedback/'
     | '/_authed/_app/invoices/'
+    | '/_authed/_app/ndas/'
     | '/_authed/_app/offertes/'
     | '/_authed/_app/portfolio/'
     | '/_authed/_app/settings/'
@@ -345,6 +393,8 @@ export interface RootRouteChildren {
   MarketingRoute: typeof MarketingRouteWithChildren
   CSlugRoute: typeof CSlugRoute
   ISlugRoute: typeof ISlugRoute
+  NSlugRoute: typeof NSlugRoute
+  NsSlugRoute: typeof NsSlugRoute
   OSlugRoute: typeof OSlugRoute
   ShareShareTokenRoute: typeof ShareShareTokenRoute
   OgOSlugRoute: typeof OgOSlugRoute
@@ -385,6 +435,20 @@ declare module '@tanstack/react-router' {
       path: '/o/$slug'
       fullPath: '/o/$slug'
       preLoaderRoute: typeof OSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ns/$slug': {
+      id: '/ns/$slug'
+      path: '/ns/$slug'
+      fullPath: '/ns/$slug'
+      preLoaderRoute: typeof NsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/n/$slug': {
+      id: '/n/$slug'
+      path: '/n/$slug'
+      fullPath: '/n/$slug'
+      preLoaderRoute: typeof NSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/i/$slug': {
@@ -464,6 +528,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppOffertesIndexRouteImport
       parentRoute: typeof AuthedAppRoute
     }
+    '/_authed/_app/ndas/': {
+      id: '/_authed/_app/ndas/'
+      path: '/ndas'
+      fullPath: '/ndas/'
+      preLoaderRoute: typeof AuthedAppNdasIndexRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
     '/_authed/_app/invoices/': {
       id: '/_authed/_app/invoices/'
       path: '/invoices'
@@ -497,6 +568,13 @@ declare module '@tanstack/react-router' {
       path: '/offertes/$offerteId'
       fullPath: '/offertes/$offerteId'
       preLoaderRoute: typeof AuthedAppOffertesOfferteIdRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
+    '/_authed/_app/ndas/$ndaId': {
+      id: '/_authed/_app/ndas/$ndaId'
+      path: '/ndas/$ndaId'
+      fullPath: '/ndas/$ndaId'
+      preLoaderRoute: typeof AuthedAppNdasNdaIdRouteImport
       parentRoute: typeof AuthedAppRoute
     }
     '/_authed/_app/invoices/$invoiceId': {
@@ -566,11 +644,13 @@ interface AuthedAppRouteChildren {
   AuthedAppClientsClientIdRoute: typeof AuthedAppClientsClientIdRoute
   AuthedAppFeedbackProjectIdRoute: typeof AuthedAppFeedbackProjectIdRouteWithChildren
   AuthedAppInvoicesInvoiceIdRoute: typeof AuthedAppInvoicesInvoiceIdRoute
+  AuthedAppNdasNdaIdRoute: typeof AuthedAppNdasNdaIdRoute
   AuthedAppOffertesOfferteIdRoute: typeof AuthedAppOffertesOfferteIdRoute
   AuthedAppClientsIndexRoute: typeof AuthedAppClientsIndexRoute
   AuthedAppDashboardIndexRoute: typeof AuthedAppDashboardIndexRoute
   AuthedAppFeedbackIndexRoute: typeof AuthedAppFeedbackIndexRoute
   AuthedAppInvoicesIndexRoute: typeof AuthedAppInvoicesIndexRoute
+  AuthedAppNdasIndexRoute: typeof AuthedAppNdasIndexRoute
   AuthedAppOffertesIndexRoute: typeof AuthedAppOffertesIndexRoute
   AuthedAppPortfolioIndexRoute: typeof AuthedAppPortfolioIndexRoute
   AuthedAppSettingsIndexRoute: typeof AuthedAppSettingsIndexRoute
@@ -582,11 +662,13 @@ const AuthedAppRouteChildren: AuthedAppRouteChildren = {
   AuthedAppClientsClientIdRoute: AuthedAppClientsClientIdRoute,
   AuthedAppFeedbackProjectIdRoute: AuthedAppFeedbackProjectIdRouteWithChildren,
   AuthedAppInvoicesInvoiceIdRoute: AuthedAppInvoicesInvoiceIdRoute,
+  AuthedAppNdasNdaIdRoute: AuthedAppNdasNdaIdRoute,
   AuthedAppOffertesOfferteIdRoute: AuthedAppOffertesOfferteIdRoute,
   AuthedAppClientsIndexRoute: AuthedAppClientsIndexRoute,
   AuthedAppDashboardIndexRoute: AuthedAppDashboardIndexRoute,
   AuthedAppFeedbackIndexRoute: AuthedAppFeedbackIndexRoute,
   AuthedAppInvoicesIndexRoute: AuthedAppInvoicesIndexRoute,
+  AuthedAppNdasIndexRoute: AuthedAppNdasIndexRoute,
   AuthedAppOffertesIndexRoute: AuthedAppOffertesIndexRoute,
   AuthedAppPortfolioIndexRoute: AuthedAppPortfolioIndexRoute,
   AuthedAppSettingsIndexRoute: AuthedAppSettingsIndexRoute,
@@ -631,6 +713,8 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingRoute: MarketingRouteWithChildren,
   CSlugRoute: CSlugRoute,
   ISlugRoute: ISlugRoute,
+  NSlugRoute: NSlugRoute,
+  NsSlugRoute: NsSlugRoute,
   OSlugRoute: OSlugRoute,
   ShareShareTokenRoute: ShareShareTokenRoute,
   OgOSlugRoute: OgOSlugRoute,

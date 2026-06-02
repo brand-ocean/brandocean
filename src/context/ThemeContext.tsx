@@ -7,25 +7,48 @@ import {
 } from "react";
 import { useThemeTransition } from "../hooks/useThemeTransition";
 
-type Theme = "light" | "dark";
+/** What the user picked. "system" follows the OS. */
+type ThemePreference = "light" | "dark" | "system";
+/** What is actually painted on the document. */
+type ResolvedTheme = "light" | "dark";
 
 interface ThemeContextValue {
-	theme: Theme;
+	/** The resolved theme applied to <html> (system already collapsed to light/dark). */
+	theme: ResolvedTheme;
+	/** The raw preference, including "system". Use this to drive theme pickers. */
+	preference: ThemePreference;
+	/** Toggle between light and dark. Always sets an explicit preference. */
 	toggleTheme: () => void;
+	/** Set the preference directly. Animates only when the painted theme changes. */
+	setTheme: (
+		preference: ThemePreference,
+		options?: { animate?: boolean },
+	) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = "theme";
 
-function getInitialTheme(): Theme {
-	if (typeof window === "undefined") return "light";
+function prefersDark(): boolean {
+	return (
+		typeof window !== "undefined" &&
+		window.matchMedia("(prefers-color-scheme: dark)").matches
+	);
+}
 
+function getInitialPreference(): ThemePreference {
+	if (typeof window === "undefined") return "system";
 	const stored = localStorage.getItem(STORAGE_KEY);
-	if (stored === "light" || stored === "dark") return stored;
+	if (stored === "light" || stored === "dark" || stored === "system") {
+		return stored;
+	}
+	return "system";
+}
 
-	const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-	return prefersDark ? "dark" : "light";
+function resolveTheme(preference: ThemePreference): ResolvedTheme {
+	if (preference === "system") return prefersDark() ? "dark" : "light";
+	return preference;
 }
 
 interface ThemeProviderProps {
@@ -33,31 +56,60 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-	const [theme, setTheme] = useState<Theme>("light");
+	const [preference, setPreference] = useState<ThemePreference>("system");
+	const [theme, setResolvedTheme] = useState<ResolvedTheme>("light");
 	const [mounted, setMounted] = useState(false);
 	const { runTransition } = useThemeTransition();
 
+	// Read the persisted preference once we're on the client.
 	useEffect(() => {
-		setTheme(getInitialTheme());
+		const initial = getInitialPreference();
+		setPreference(initial);
+		setResolvedTheme(resolveTheme(initial));
 		setMounted(true);
 	}, []);
 
+	// Apply the resolved theme to the document and persist the preference.
 	useEffect(() => {
 		if (!mounted) return;
 		document.documentElement.setAttribute("data-theme", theme);
 		document.documentElement.classList.toggle("dark", theme === "dark");
-		localStorage.setItem(STORAGE_KEY, theme);
-	}, [theme, mounted]);
+		localStorage.setItem(STORAGE_KEY, preference);
+	}, [theme, preference, mounted]);
+
+	// While following the OS, react to system theme changes live.
+	useEffect(() => {
+		if (!mounted || preference !== "system") return;
+		const mq = window.matchMedia("(prefers-color-scheme: dark)");
+		const onChange = () => setResolvedTheme(mq.matches ? "dark" : "light");
+		mq.addEventListener("change", onChange);
+		return () => mq.removeEventListener("change", onChange);
+	}, [preference, mounted]);
+
+	const setTheme = useCallback(
+		(next: ThemePreference, options?: { animate?: boolean }) => {
+			if (!mounted) return;
+			const resolved = resolveTheme(next);
+			const apply = () => {
+				setPreference(next);
+				setResolvedTheme(resolved);
+			};
+			// Only run the liquid transition when the painted color actually flips.
+			if (options?.animate !== false && resolved !== theme) {
+				runTransition(apply);
+			} else {
+				apply();
+			}
+		},
+		[mounted, theme, runTransition],
+	);
 
 	const toggleTheme = useCallback(() => {
-		if (!mounted) return;
-		runTransition(() => {
-			setTheme((prev) => (prev === "light" ? "dark" : "light"));
-		});
-	}, [runTransition, mounted]);
+		setTheme(theme === "light" ? "dark" : "light");
+	}, [theme, setTheme]);
 
 	return (
-		<ThemeContext.Provider value={{ theme, toggleTheme }}>
+		<ThemeContext.Provider value={{ theme, preference, toggleTheme, setTheme }}>
 			{children}
 		</ThemeContext.Provider>
 	);

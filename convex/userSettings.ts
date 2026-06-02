@@ -32,6 +32,8 @@ export const update = mutation({
 		defaultVatRate: v.optional(v.number()),
 		businessName: v.optional(v.string()),
 		businessAddress: v.optional(v.string()),
+		signatureDataUrl: v.optional(v.string()),
+		signatureName: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
 		const userId = await getAuthUserId(ctx);
@@ -76,6 +78,18 @@ export const update = mutation({
 				: {}),
 			...(args.businessAddress !== undefined
 				? { businessAddress: args.businessAddress }
+				: {}),
+			...(args.signatureDataUrl !== undefined
+				? {
+						signatureDataUrl:
+							args.signatureDataUrl === "" ? undefined : args.signatureDataUrl,
+					}
+				: {}),
+			...(args.signatureName !== undefined
+				? {
+						signatureName:
+							args.signatureName === "" ? undefined : args.signatureName,
+					}
 				: {}),
 		});
 	},

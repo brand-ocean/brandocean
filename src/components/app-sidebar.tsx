@@ -7,6 +7,7 @@ import {
 	MessageSquareIcon,
 	ReceiptIcon,
 	SettingsIcon,
+	ShieldCheckIcon,
 	UsersIcon,
 } from "lucide-react";
 import type * as React from "react";
@@ -35,6 +36,7 @@ const primaryNav = [
 		exact: false,
 	},
 	{ title: "Offertes", to: "/offertes", icon: FileTextIcon, exact: false },
+	{ title: "NDAs", to: "/ndas", icon: ShieldCheckIcon, exact: false },
 	{ title: "Clients", to: "/clients", icon: UsersIcon, exact: false },
 	{ title: "Invoices", to: "/invoices", icon: ReceiptIcon, exact: false },
 	{ title: "Tasks", to: "/tasks", icon: ListChecksIcon, exact: false },

@@ -495,3 +495,11 @@ body {
     flex: 1 1 auto;
   }
 }
+
+/* NDA documents: keep the embedded signature image at a sensible size
+   (both on screen and in the exported PDF). */
+.nda-doc img {
+  max-height: 110px !important;
+  width: auto !important;
+  object-fit: contain;
+}

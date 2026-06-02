@@ -62,6 +62,10 @@ export default defineSchema({
 		businessName: v.optional(v.string()),
 		businessAddress: v.optional(v.string()),
 		nextInvoiceNumber: v.optional(v.number()),
+		// Owner's handwritten signature (downscaled PNG data URI) + the name shown
+		// beneath it. Auto-applied to owner-signed NDAs.
+		signatureDataUrl: v.optional(v.string()),
+		signatureName: v.optional(v.string()),
 	}).index("by_user", ["userId"]),
 
 	invoices: defineTable({
@@ -123,6 +127,61 @@ export default defineSchema({
 		slug: v.string(),
 	})
 		.index("by_offerte", ["offerteId"])
+		.index("by_owner", ["ownerId"])
+		.index("by_client", ["clientId"])
+		.index("by_slug", ["slug"]),
+
+	// --- NDAs (one-way non-disclosure agreements) ---
+
+	ndas: defineTable({
+		ownerId: v.id("users"),
+		clientId: v.optional(v.id("clients")),
+		title: v.string(),
+		// "one_way" today; kept as a field so a future "mutual" type can be added
+		// without a breaking migration.
+		kind: v.union(v.literal("one_way")),
+		// Who promises confidentiality and signs:
+		//  - owner_signs: the owner (BRANDOCEAN) receives the client's info and
+		//    signs (auto-signed with the stored signature).
+		//  - client_signs: the client receives the owner's info and signs online.
+		// Optional for back-compat with NDAs created before this field existed
+		// (treated as client_signs on read).
+		direction: v.optional(
+			v.union(v.literal("owner_signs"), v.literal("client_signs")),
+		),
+		language: v.union(v.literal("nl"), v.literal("en")),
+		body: v.optional(v.any()),
+		slug: v.string(),
+		shareToken: v.string(),
+		published: v.boolean(),
+		publicReadable: v.boolean(),
+		// Set to the signed copy's slug once the NDA has been signed. Used to
+		// lock the public page and stop a second signature.
+		signedSlug: v.optional(v.string()),
+		schemaVersion: v.number(),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_slug", ["slug"])
+		.index("by_owner", ["ownerId"])
+		.index("by_owner_updated", ["ownerId", "updatedAt"]),
+
+	signedNdas: defineTable({
+		ndaId: v.id("ndas"),
+		ownerId: v.id("users"),
+		clientId: v.optional(v.id("clients")),
+		title: v.string(),
+		language: v.union(v.literal("nl"), v.literal("en")),
+		bodySnapshot: v.optional(v.any()),
+		signedAt: v.number(),
+		signedByName: v.string(),
+		signedByEmail: v.optional(v.string()),
+		signedByCompany: v.optional(v.string()),
+		// Lightweight signing audit trail.
+		signedUserAgent: v.optional(v.string()),
+		slug: v.string(),
+	})
+		.index("by_nda", ["ndaId"])
 		.index("by_owner", ["ownerId"])
 		.index("by_client", ["clientId"])
 		.index("by_slug", ["slug"]),
