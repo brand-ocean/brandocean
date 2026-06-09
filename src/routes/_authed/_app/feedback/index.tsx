@@ -191,6 +191,10 @@ function NewProjectDialog() {
 			toast.error("Name is required");
 			return;
 		}
+		if (!shopifyDomain.trim()) {
+			toast.error("Store domain is required");
+			return;
+		}
 		setCreating(true);
 		try {
 			await create({
@@ -204,8 +208,13 @@ function NewProjectDialog() {
 			toast.success("Project created");
 			reset();
 			setOpen(false);
-		} catch {
-			toast.error("Could not create project");
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			toast.error(
+				msg.includes("invalid_domain")
+					? "Enter a valid store domain like yourstore.myshopify.com (no https://, no path)"
+					: "Could not create project",
+			);
 		} finally {
 			setCreating(false);
 		}

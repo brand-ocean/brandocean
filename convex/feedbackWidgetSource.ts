@@ -15,7 +15,24 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
 
   var BASE = CFG.base.replace(/\\/$/, "");
   var TOKEN = CFG.token;
+  // When this instance runs inside a srcdoc mobile-preview snapshot, the real
+  // page URL is passed in (the iframe's own location is "about:srcdoc"), so
+  // comments still associate with the correct page.
+  var OVERRIDE = (CFG.pageOverride && String(CFG.pageOverride)) || null;
   var BRAND = "#1570ef";
+  // Embedded = running inside our own device-preview iframe (or any iframe).
+  // Used to hide the device switcher so a preview can't nest inside itself,
+  // even after the reviewer clicks an internal link within the preview.
+  var EMBED = location.search.indexOf("feedback_embed") !== -1 ||
+    (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  // Device presets for the responsive preview. Desktop = the page as-is;
+  // Mobile renders the page in a real 375px iframe so the theme's actual
+  // mobile media queries fire. Add { id, label, ico, w } here to extend
+  // (e.g. Tablet 768) later.
+  var DEVICES = [
+    { id: "desktop", label: "Desktop", ico: "\\uD83D\\uDDA5", w: 0 },
+    { id: "mobile", label: "Mobile", ico: "\\uD83D\\uDCF1", w: 375 }
+  ];
   var KINDS = [
     { k: "bug", label: "Bug", ico: "\\uD83D\\uDC1E" },
     { k: "idea", label: "Idea", ico: "\\uD83D\\uDCA1" },
@@ -53,32 +70,36 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   }
 
   // Comment ids created from this browser — lets the client delete own notes.
+  // Both stores are read per-comment on every render + 10s poll, so cache the
+  // parsed value in memory and only touch localStorage on writes.
+  var mineCache = null;
   function getMine() {
+    if (mineCache) return mineCache;
     try {
       var a = JSON.parse(localStorage.getItem("bo_fb_mine") || "[]");
-      return a && a.length ? a : [];
-    } catch (e) { return []; }
+      mineCache = a && a.length ? a : [];
+    } catch (e) { mineCache = []; }
+    return mineCache;
   }
   function addMine(id) {
-    try {
-      var a = getMine();
-      a.push(id);
-      if (a.length > 300) a = a.slice(-300);
-      localStorage.setItem("bo_fb_mine", JSON.stringify(a));
-    } catch (e) {}
+    var a = getMine();
+    a.push(id);
+    if (a.length > 300) { a = a.slice(-300); mineCache = a; }
+    try { localStorage.setItem("bo_fb_mine", JSON.stringify(a)); } catch (e) {}
   }
   function isMine(id) { return getMine().indexOf(id) !== -1; }
   // Track seen reply counts so a new agency reply flags the pin.
+  var seenCache = null;
   function getSeen() {
-    try { return JSON.parse(localStorage.getItem("bo_fb_seen_r") || "{}") || {}; }
-    catch (e) { return {}; }
+    if (seenCache) return seenCache;
+    try { seenCache = JSON.parse(localStorage.getItem("bo_fb_seen_r") || "{}") || {}; }
+    catch (e) { seenCache = {}; }
+    return seenCache;
   }
   function markSeen(id, count) {
-    try {
-      var m = getSeen();
-      m[id] = count;
-      localStorage.setItem("bo_fb_seen_r", JSON.stringify(m));
-    } catch (e) {}
+    var m = getSeen();
+    m[id] = count;
+    try { localStorage.setItem("bo_fb_seen_r", JSON.stringify(m)); } catch (e) {}
   }
   function hasNewReplies(c) {
     var rc = (c.replies && c.replies.length) || 0;
@@ -181,8 +202,8 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     "*{box-sizing:border-box}" +
     // Clean SaaS theme — matches the app kanban: white surfaces,
     // #e4e7ec borders, #1a2433 / #667085 text, soft shadows, brand accent.
-    ".fb-panel{position:fixed;right:20px;bottom:20px;pointer-events:auto;width:212px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #e4e7ec;border-radius:14px;box-shadow:0 12px 32px rgba(16,24,40,.16);font:600 12px/1 -apple-system,system-ui,sans-serif;overflow:hidden;animation:fbpop .18s ease-out;user-select:none}" +
-    ".fb-phead{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 12px;cursor:grab;background:#fff;border-bottom:1px solid #f1f3f7}" +
+    ".fb-panel{position:fixed;right:20px;bottom:20px;pointer-events:auto;width:212px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #e4e7ec;border-radius:14px;box-shadow:0 12px 32px rgba(16,24,40,.16);font:600 12px/1 -apple-system,system-ui,sans-serif;overflow:hidden;animation:fbpop .32s cubic-bezier(.34,1.45,.64,1);user-select:none}" +
+    ".fb-phead{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 12px;cursor:grab;background:#fff;border-bottom:1px solid #f1f3f7;touch-action:none}" +
     ".fb-phead:active{cursor:grabbing}" +
     ".fb-phead .dotb{display:inline-flex;align-items:center;width:17px;height:16px}" +
     ".fb-phead .dotb svg{display:block;width:100%;height:100%}" +
@@ -222,20 +243,24 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     ".fb-tip b{display:block;margin-bottom:2px;font-size:11px;color:#667085}" +
     ".fb-hl{position:fixed;pointer-events:none;border:2px solid " + BRAND + ";background:rgba(21,112,239,.08);border-radius:6px;z-index:10;transition:all .06s linear}" +
     ".fb-hl-lab{position:fixed;pointer-events:none;background:" + BRAND + ";color:#fff;font:600 11px/1 ui-monospace,monospace;padding:4px 7px;border-radius:5px;z-index:11;white-space:nowrap}" +
-    ".fb-cap{position:fixed;inset:0;pointer-events:auto;cursor:crosshair;z-index:9}" +
+    ".fb-cap{position:fixed;inset:0;pointer-events:auto;cursor:crosshair;z-index:9;touch-action:none}" +
     ".fb-rg{position:fixed;pointer-events:none;border:2px solid " + BRAND + ";background:rgba(21,112,239,.10);border-radius:6px;z-index:10}" +
     ".fb-pin{position:fixed;pointer-events:auto;touch-action:none;width:28px;height:28px;border-radius:50% 50% 50% 2px;background:" + BRAND + ";color:#fff;font:700 12px/28px -apple-system,system-ui,sans-serif;text-align:center;cursor:grab;box-shadow:0 3px 10px rgba(16,24,40,.22);transition:box-shadow .12s,opacity .15s;z-index:12}" +
     ".fb-pin.res{background:#12b76a;opacity:.7}" +
     ".fb-pin.new::after{content:'';position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#f79009;border:2px solid #fff;box-shadow:0 1px 3px rgba(16,24,40,.3)}" +
     ".fb-pin.drag{cursor:grabbing;box-shadow:0 10px 24px rgba(16,24,40,.30)}" +
-    ".fb-card{position:fixed;pointer-events:auto;width:320px;max-width:calc(100vw - 24px);background:#fff;color:#1a2433;border-radius:14px;border:1px solid #e4e7ec;box-shadow:0 16px 44px rgba(16,24,40,.16);font:13px/1.45 -apple-system,system-ui,sans-serif;z-index:13;overflow:hidden;animation:fbin .16s cubic-bezier(.2,.8,.2,1)}" +
-    ".fb-cmp{position:fixed;pointer-events:auto;display:flex;align-items:center;gap:8px;z-index:13;max-width:calc(100vw - 16px);animation:fbin .16s cubic-bezier(.2,.8,.2,1)}" +
+    ".fb-pin.drop{animation:fbdrop .34s cubic-bezier(.34,1.56,.64,1) backwards;transform-origin:7% 100%}" +
+    "@keyframes fbdrop{from{opacity:0;transform:scale(.3) translateY(-8px)}to{opacity:1;transform:none}}" +
+    ".fb-pin:focus-visible{outline:2px solid #fff;box-shadow:0 0 0 4px rgba(21,112,239,.5),0 3px 10px rgba(16,24,40,.22)}" +
+    ".fb-pbtn:focus-visible,.fb-ptog:focus-visible,.fb-kind:focus-visible,.fb-snd:focus-visible,.fb-rvc-kind:focus-visible,.fb-rvc-send:focus-visible{outline:2px solid " + BRAND + ";outline-offset:2px}" +
+    ".fb-card{position:fixed;pointer-events:auto;width:320px;max-width:calc(100vw - 24px);background:#fff;color:#1a2433;border-radius:14px;border:1px solid #e4e7ec;box-shadow:0 16px 44px rgba(16,24,40,.16);font:13px/1.45 -apple-system,system-ui,sans-serif;z-index:13;overflow:hidden;animation:fbin .26s cubic-bezier(.34,1.4,.64,1)}" +
+    ".fb-cmp{position:fixed;pointer-events:auto;display:flex;align-items:center;gap:8px;z-index:13;max-width:calc(100vw - 16px);animation:fbin .26s cubic-bezier(.34,1.4,.64,1)}" +
     ".fb-cmp .dot{width:26px;height:26px;border-radius:50% 50% 50% 2px;background:" + BRAND + ";flex:none;box-shadow:0 3px 10px rgba(16,24,40,.22)}" +
     ".fb-box{background:#fff;border-radius:14px;border:1px solid #e4e7ec;box-shadow:0 16px 44px rgba(16,24,40,.16);width:320px;max-width:calc(100vw - 48px);overflow:hidden;transition:width .18s}" +
     ".fb-row{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px}" +
     ".fb-row .main{flex:1;background:transparent;border:none;outline:none;color:#1a2433;font:14px/1.4 -apple-system,system-ui,sans-serif;resize:none;max-height:120px;padding:4px 0;overflow-y:auto}" +
     ".fb-row .main::placeholder{color:#98a2b3}" +
-    ".fb-snd{width:30px;height:30px;border-radius:50%;border:none;background:#f2f4f7;color:#475467;cursor:pointer;flex:none;font-size:15px;transition:background .12s,color .12s,transform .12s}" +
+    ".fb-snd{width:30px;height:30px;border-radius:50%;border:none;background:#f2f4f7;color:#475467;cursor:pointer;flex:none;font-size:15px;transition:background .12s,color .12s,transform .28s cubic-bezier(.34,1.56,.64,1)}" +
     ".fb-snd:enabled:hover{background:" + BRAND + ";color:#fff;transform:scale(1.08)}" +
     ".fb-snd:disabled{opacity:.5;cursor:default}" +
     ".fb-exp{max-height:0;opacity:0;overflow:hidden;transition:max-height .22s ease,opacity .18s}" +
@@ -259,16 +284,82 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     ".fb-foot input:focus{border-color:" + BRAND + ";background:#fff}" +
     ".fb-foot button,.fb-res{background:" + BRAND + ";color:#fff;border:none;border-radius:9px;padding:8px 12px;font:600 12px -apple-system,system-ui,sans-serif;cursor:pointer}" +
     ".fb-res{background:#f2f4f7;color:#1a2433;width:calc(100% - 24px);margin:0 12px 12px;padding:9px}" +
-    ".fb-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:#0b1220;color:#fff;font:600 12px -apple-system,system-ui,sans-serif;padding:10px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,40,.28);z-index:2147483647;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}" +
+    ".fb-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:#0b1220;color:#fff;font:600 12px -apple-system,system-ui,sans-serif;padding:10px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(16,24,40,.28);z-index:2147483647;opacity:0;transition:opacity .2s,transform .34s cubic-bezier(.34,1.56,.64,1);pointer-events:none}" +
     ".fb-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}" +
     ".fb-toast.err{background:#b42318}" +
-    ".fb-coach{position:fixed;right:20px;bottom:88px;pointer-events:auto;max-width:236px;background:#fff;color:#1a2433;border:1px solid #e4e7ec;border-radius:12px;box-shadow:0 16px 40px rgba(16,24,40,.18);padding:12px 14px;font:500 12px/1.5 -apple-system,system-ui,sans-serif;z-index:14;animation:fbpop .2s ease-out}" +
+    ".fb-coach{position:fixed;right:20px;bottom:88px;pointer-events:auto;max-width:236px;background:#fff;color:#1a2433;border:1px solid #e4e7ec;border-radius:12px;box-shadow:0 16px 40px rgba(16,24,40,.18);padding:12px 14px;font:500 12px/1.5 -apple-system,system-ui,sans-serif;z-index:14;animation:fbpop .32s cubic-bezier(.34,1.45,.64,1)}" +
     ".fb-coach b{display:block;margin-bottom:3px;font-size:13px;color:#0b1220}" +
     ".fb-coach button{margin-top:9px;background:" + BRAND + ";color:#fff;border:none;border-radius:8px;padding:6px 12px;font:600 11px -apple-system,system-ui,sans-serif;cursor:pointer}" +
     "@keyframes fbpop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}" +
     ".fb-hlp.pulse{animation:fbpulse .9s ease-out 2}" +
     "@keyframes fbpulse{0%{box-shadow:0 0 0 0 rgba(21,112,239,.45)}70%{box-shadow:0 0 0 10px rgba(21,112,239,0)}100%{box-shadow:0 0 0 0 rgba(21,112,239,0)}}" +
-    "@keyframes fbin{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}";
+    ".fb-pdev{display:flex;gap:4px;background:#f2f4f7;border-radius:9px;padding:3px;margin-bottom:2px}" +
+    ".fb-pdev button{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:none;border:none;border-radius:7px;padding:6px 4px;font:600 11px -apple-system,system-ui,sans-serif;color:#667085;cursor:pointer;transition:.12s}" +
+    ".fb-pdev button:hover{color:#1a2433}" +
+    ".fb-pdev button.on{background:#fff;color:#1a2433;box-shadow:0 1px 2px rgba(16,24,40,.12)}" +
+    ".fb-rv{position:fixed;inset:0;pointer-events:auto;background:#eceef2;z-index:2147483640;display:flex;flex-direction:column;animation:fbpop .2s ease-out}" +
+    ".fb-rv-bar{display:flex;align-items:center;gap:12px;padding:9px 14px;background:#fff;border-bottom:1px solid #e4e7ec}" +
+    ".fb-rv-ttl{flex:1;display:flex;align-items:center;gap:7px;font:700 13px -apple-system,system-ui,sans-serif;color:#1a2433;min-width:0}" +
+    ".fb-rv-ttl .dotb{display:inline-flex;align-items:center;width:17px;height:16px}" +
+    ".fb-rv-ttl .dotb svg{display:block;width:100%;height:100%}" +
+    ".fb-rv-seg{flex:none;display:flex;gap:3px;background:#f2f4f7;border-radius:10px;padding:3px}" +
+    ".fb-rv-seg button{display:flex;align-items:center;gap:6px;background:none;border:none;border-radius:8px;padding:7px 13px;font:600 12px -apple-system,system-ui,sans-serif;color:#667085;cursor:pointer;transition:.15s}" +
+    ".fb-rv-seg button:hover{color:#1a2433}" +
+    ".fb-rv-seg button.on{background:#fff;color:#1a2433;box-shadow:0 1px 2px rgba(16,24,40,.14)}" +
+    ".fb-rv-act{flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px}" +
+    ".fb-rv-dim{font:600 11px ui-monospace,monospace;color:#98a2b3}" +
+    ".fb-rv-ic{display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#f2f4f7;color:#475467;border:none;border-radius:8px;cursor:pointer;font-size:15px;transition:.12s}" +
+    ".fb-rv-ic:hover{background:#e4e7ec;color:#1a2433}" +
+    ".fb-rv-exit{display:flex;align-items:center;gap:6px;background:#1a2433;color:#fff;border:none;border-radius:8px;padding:8px 13px;font:600 12px -apple-system,system-ui,sans-serif;cursor:pointer}" +
+    ".fb-rv-exit:hover{background:#0b1220}" +
+    ".fb-rv-stage{flex:1;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px}" +
+    ".fb-rv-frame{flex:none;background:#fff;border-radius:20px;box-shadow:0 18px 50px rgba(16,24,40,.20);overflow:hidden;border:1px solid #dfe3ea;transition:width .32s cubic-bezier(.4,0,.2,1),height .32s cubic-bezier(.4,0,.2,1)}" +
+    ".fb-rv-if{width:100%;height:100%;border:none;display:block;background:#fff}" +
+    ".fb-rv-body{flex:1;display:flex;min-height:0}" +
+    ".fb-rv-side{flex:none;width:300px;background:#fff;border-right:1px solid #e4e7ec;display:flex;flex-direction:column;min-height:0}" +
+    ".fb-rv-side h4{margin:0;padding:14px 16px 8px;font:700 11px -apple-system,system-ui,sans-serif;color:#667085;text-transform:uppercase;letter-spacing:.05em}" +
+    ".fb-rv-tools{display:flex;flex-direction:column;gap:6px;padding:0 12px 10px;border-bottom:1px solid #f1f3f7}" +
+    ".fb-rv-tbtn{display:flex;align-items:center;gap:8px;background:#f8fafc;color:#1a2433;border:1px solid #e4e7ec;border-radius:9px;padding:9px 11px;cursor:pointer;font:600 12px -apple-system,system-ui,sans-serif;text-align:left;transition:.12s}" +
+    ".fb-rv-tbtn:hover{border-color:" + BRAND + ";background:#fff}" +
+    ".fb-rv-tbtn:disabled{opacity:.5;cursor:default}" +
+    ".fb-rv-tbtn.on{background:" + BRAND + ";border-color:" + BRAND + ";color:#fff}" +
+    ".fb-rv-list{flex:1;overflow-y:auto;padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}" +
+    ".fb-rv-li{display:flex;align-items:center;gap:7px;padding:7px 8px;border:1px solid #eef1f7;border-radius:8px;background:#fff;cursor:pointer;transition:.12s}" +
+    ".fb-rv-li:hover{border-color:" + BRAND + ";background:#f8fafc}" +
+    ".fb-rv-li .n{flex:none;width:18px;height:18px;border-radius:50%;background:" + BRAND + ";color:#fff;font:700 10px/18px ui-monospace,monospace;text-align:center}" +
+    ".fb-rv-li.res .n{background:#12b76a}" +
+    ".fb-rv-li .c{flex:1;min-width:0;color:#1a2433;font:500 11px/1.35 -apple-system,system-ui,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".fb-rv-li.res .c{color:#98a2b3;text-decoration:line-through}" +
+    ".fb-rv-empty{padding:16px 8px;text-align:center;color:#98a2b3;font:500 11px -apple-system,system-ui,sans-serif}" +
+    ".fb-rv-frame.desk{border-radius:10px}" +
+    ".fb-rv-ctx{padding:10px 12px;border-bottom:1px solid #f1f3f7;display:flex;flex-direction:column;gap:7px}" +
+    ".fb-rv-ctxrow{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;font:600 11px -apple-system,system-ui,sans-serif;color:#667085}" +
+    ".fb-rv-ctxrow span{color:#98a2b3;flex:none}" +
+    ".fb-rv-ctxrow b{color:#1a2433;font-weight:600;max-width:185px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    "a.fb-rv-ctxrow:hover b{color:" + BRAND + "}" +
+    ".fb-rvc{position:fixed;width:344px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #e4e7ec;border-radius:14px;box-shadow:0 22px 56px rgba(16,24,40,.26);z-index:2147483646;overflow:hidden;animation:fbin .26s cubic-bezier(.34,1.4,.64,1)}" +
+    ".fb-rvc-h{display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:1px solid #f1f3f7;font:700 14px -apple-system,system-ui,sans-serif;color:#1a2433}" +
+    ".fb-rvc-h .dot{width:22px;height:22px;border-radius:50% 50% 50% 2px;background:" + BRAND + ";flex:none;box-shadow:0 3px 10px rgba(16,24,40,.22)}" +
+    ".fb-rvc-dev{margin-left:auto;font:700 10px -apple-system,system-ui,sans-serif;color:#475467;background:#f2f4f7;border-radius:999px;padding:4px 9px}" +
+    ".fb-rvc-b{padding:13px 15px;display:flex;flex-direction:column;gap:11px}" +
+    ".fb-rvc textarea{width:100%;min-height:70px;max-height:160px;resize:none;border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px;font:14px/1.5 -apple-system,system-ui,sans-serif;color:#1a2433;outline:none}" +
+    ".fb-rvc textarea:focus{border-color:" + BRAND + "}" +
+    ".fb-rvc textarea::placeholder{color:#98a2b3}" +
+    ".fb-rvc-kinds{display:flex;gap:6px}" +
+    ".fb-rvc-kind{flex:1;background:#f2f4f7;color:#667085;border:1px solid transparent;border-radius:9px;padding:8px 4px;font:600 12px -apple-system,system-ui,sans-serif;cursor:pointer;transition:.12s}" +
+    ".fb-rvc-kind:hover{color:#1a2433}" +
+    ".fb-rvc-kind.on{background:rgba(21,112,239,.10);border-color:" + BRAND + ";color:" + BRAND + "}" +
+    ".fb-rvc-f{display:flex;gap:8px;justify-content:flex-end;align-items:center}" +
+    ".fb-rvc-cancel{background:none;color:#667085;border:none;border-radius:9px;padding:9px 12px;font:600 12px -apple-system,system-ui,sans-serif;cursor:pointer}" +
+    ".fb-rvc-cancel:hover{color:#1a2433}" +
+    ".fb-rvc-send{background:" + BRAND + ";color:#fff;border:none;border-radius:9px;padding:9px 18px;font:600 12px -apple-system,system-ui,sans-serif;cursor:pointer}" +
+    ".fb-rvc-send:disabled{opacity:.5;cursor:default}" +
+    "@keyframes fbin{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}" +
+    // iOS Safari zooms the page when focusing any input under 16px — keep
+    // composer/reply text at 16px on touch devices so typing never zooms.
+    "@media (pointer:coarse){.fb-row .main{font-size:16px}.fb-foot input{font-size:16px}.fb-rvc textarea{font-size:16px}.fb-pin{width:32px;height:32px;font:700 13px/32px -apple-system,system-ui,sans-serif}}" +
+    // Respect OS-level reduced-motion: kill all entrance/spring animation.
+    "@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}";
   root.appendChild(st);
 
   var pinLayer = document.createElement("div");
@@ -281,12 +372,61 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     hoverHL: null, hoverTip: null, cmpHL: null,
     pendingAnchor: null, shotBlob: null, shotURL: null, kind: null,
     dragging: false, suppress: false, coach: null, listHL: null,
-    allComments: [], pins: null, pinSig: "", posRaf: 0
+    allComments: [], pins: null, pinSig: "", posRaf: 0,
+    mobile: false, mscrim: null, mTimer: 0,
+    rvFrame: null, rvDim: null, rvLandscape: false, rvPoll: 0,
+    rvDevice: "desktop", rvSeg: null, rvRot: null, rvc: null, rvUrl: null,
+    viewDevice: window.innerWidth <= 768 ? "mobile" : "desktop",
+    rvIfr: null, liveBlocked: false, liveTimer: 0,
+    _paused: false, _embedSub: null, _embedCompose: null, _embedNav: null
   };
 
   function el(t, c) { var e = document.createElement(t); if (c) e.className = c; return e; }
-  function path() { return location.pathname; }
+  function path() {
+    if (OVERRIDE) { try { return new URL(OVERRIDE).pathname; } catch (e) {} }
+    return location.pathname;
+  }
+  function pageHref() { return OVERRIDE || location.href; }
+  function pageOrigin() {
+    if (OVERRIDE) { try { return new URL(OVERRIDE).origin; } catch (e) {} }
+    return location.origin;
+  }
   function clamp(v, mn, mx) { return Math.min(mx, Math.max(mn, v)); }
+  // Touch devices get a 32px pin (easier tap target, see pointer:coarse CSS);
+  // the teardrop tip sits at the pin's bottom-left, so offsets follow size.
+  var COARSE = !!(window.matchMedia &&
+    window.matchMedia("(pointer:coarse)").matches);
+  var PIN_TIP_Y = COARSE ? 32 : 28;
+  // Keep a fixed-position card visible above the mobile on-screen keyboard:
+  // when the visual viewport shrinks/scrolls, nudge the card up. Returns an
+  // unsubscribe so closeOverlays can detach the listeners.
+  function fitToKeyboard(card) {
+    var vv = window.visualViewport;
+    if (!vv) return function () {};
+    function fit() {
+      var r = card.getBoundingClientRect();
+      var limit = vv.offsetTop + vv.height;
+      if (r.bottom > limit - 8) {
+        card.style.top = Math.max(8, limit - r.height - 8) + "px";
+      }
+    }
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    return function () {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+    };
+  }
+  // Device-separated feedback: a comment belongs to the device it was left on,
+  // and each view only shows its own (mobile pins on mobile, desktop on desktop).
+  function deviceFromWidth(w) { return w <= 768 ? "mobile" : "desktop"; }
+  function curDevice() { return S.viewDevice === "mobile" ? "mobile" : "desktop"; }
+  function commentDevice(c) {
+    if (c.device) return c.device === "mobile" ? "mobile" : "desktop";
+    var vw = c.metadata && c.metadata.viewportWidth;
+    return typeof vw === "number" && vw <= 768 ? "mobile" : "desktop";
+  }
+  function deviceMatch(c) { return commentDevice(c) === curDevice(); }
 
   // --- Persistent draggable control panel ----------------------------------
   var PKEY = "bo_fb_panel";
@@ -301,8 +441,12 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
 
   // Default to minimized on small screens (still present, out of the way);
   // expanded on desktop. An explicit user choice always wins.
-  var startMin = pstate.min === true ||
-    (typeof pstate.min !== "boolean" && window.innerWidth < 640);
+  // In an embedded preview the frame is narrow; start expanded (unless the
+  // reviewer explicitly minimized) so the comment tools are immediately visible.
+  var startMin = EMBED
+    ? pstate.min === true
+    : pstate.min === true ||
+      (typeof pstate.min !== "boolean" && window.innerWidth < 640);
   var panel = el("div", "fb-panel" + (startMin ? " min" : ""));
   var phead = el("div", "fb-phead");
   var pdot = el("span", "dotb");
@@ -363,12 +507,23 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     "border-radius:8px;padding:7px 9px;margin-bottom:8px;" +
     "font:600 11px -apple-system,system-ui,sans-serif";
   var plist = el("div", "fb-plist");
+  // NOTE: the in-widget "review mode" / device preview was intentionally
+  // removed. It loaded the store in an iframe to simulate devices, but Shopify
+  // sends \`Content-Security-Policy: frame-ancestors 'none'\`, so the storefront
+  // can never be framed (not even same-origin); the static-snapshot fallback
+  // stripped the theme's <script>s, which breaks any JS-driven nav such as
+  // Shopify Horizon (overlapping menu + dead dropdowns). Device previews now
+  // live server-side in the dashboard "Review" tab (Cloudflare Browser
+  // Rendering full-page screenshots). The widget keeps in-page commenting on
+  // the live, fully-interactive store. openMobilePreview()/setDevice() remain
+  // below as dead code, reachable only from within the removed workspace.
   pbody.appendChild(ppause);
   pbody.appendChild(pEl); pbody.appendChild(pReg);
   pbody.appendChild(pGen); pbody.appendChild(pCancel);
   pbody.appendChild(ptools); pbody.appendChild(psite);
   pbody.appendChild(psearch); pbody.appendChild(plist);
   function setPaused(paused) {
+    S._paused = !!paused;
     ppause.style.display = paused ? "" : "none";
     if (paused) {
       ppause.textContent = "\\u23F8 Feedback is paused \\u2014 new comments " +
@@ -391,11 +546,15 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     panel.style.top = clamp(pstate.y, 0, window.innerHeight - 40) + "px";
     panel.style.right = "auto"; panel.style.bottom = "auto";
   }
-  root.appendChild(panel);
+  // In an embedded snapshot the launcher + list live in the outer Review-mode
+  // rail instead (driven via __FB_EMBED_API__), so keep the panel out of frame.
+  if (!EMBED) root.appendChild(panel);
   S.panel = panel;
 
   // --- Toast --------------------------------------------------------------
   var toastEl = el("div", "fb-toast");
+  toastEl.setAttribute("role", "status");
+  toastEl.setAttribute("aria-live", "polite");
   root.appendChild(toastEl);
   var toastT = 0;
   function fbToast(msg, isErr) {
@@ -431,6 +590,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   // the widget and never shows the store's domain).
   function fbConfirm(msg, onOk) {
     var ov = el("div");
+    ov.setAttribute("role", "dialog");
+    ov.setAttribute("aria-modal", "true");
+    ov.setAttribute("aria-label", msg);
     ov.style.cssText =
       "position:fixed;inset:0;z-index:2147483647;pointer-events:auto;" +
       "background:rgba(16,24,40,.45);display:flex;align-items:center;" +
@@ -488,6 +650,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     try { localStorage.setItem("bo_fb_seen", "1"); } catch (e) {}
   }
   (function maybeCoach() {
+    if (EMBED) return;
     var seen = false;
     try { seen = localStorage.getItem("bo_fb_seen") === "1"; } catch (e) {}
     if (seen) return;
@@ -555,6 +718,402 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     });
   })();
 
+  // --- Responsive device preview ------------------------------------------
+  // Mobile uses a real same-origin iframe at 375px: the page reloads inside it
+  // and boots its own (embedded) widget instance, so the theme's true mobile
+  // layout renders and feedback left there records a ~375px viewport — no
+  // cross-iframe pin math needed.
+  function setDevice(id) {
+    if (S.mobile) { reviewSetDevice(id); return; }
+    openMobilePreview(id);
+  }
+  // Build a self-contained HTML snapshot of the live, already-rendered page for
+  // the mobile preview. Loaded via iframe srcdoc (inline content, no HTTP
+  // response) so the store's X-Frame-Options / frame-ancestors headers don't
+  // apply — this is what makes preview work even on password-protected stores.
+  // A <base> resolves relative assets; the widget is re-injected so feedback
+  // can be left in the mobile view.
+  function snapshotFromRoot(rootEl, baseHref) {
+    var clone = rootEl.cloneNode(true);
+    // Drop our own host, the store's scripts (static snapshot — avoids
+    // frame-bust/errors), and any inline CSP that would block asset/widget load.
+    var kill = clone.querySelectorAll(
+      "#bo-feedback-host, script, " +
+      "meta[http-equiv='Content-Security-Policy'], " +
+      "meta[http-equiv='content-security-policy']"
+    );
+    Array.prototype.forEach.call(kill, function (n) {
+      if (n.parentNode) n.parentNode.removeChild(n);
+    });
+    var head = clone.querySelector("head") || clone;
+    var oldBase = head.querySelectorAll("base");
+    Array.prototype.forEach.call(oldBase, function (b) {
+      if (b.parentNode) b.parentNode.removeChild(b);
+    });
+    var base = document.createElement("base");
+    base.setAttribute("href", baseHref);
+    head.insertBefore(base, head.firstChild);
+    // Re-inject the widget: it boots as EMBED (it's framed), so no nested
+    // device switcher, and uses pageOverride for the real page URL.
+    var boot = document.createElement("script");
+    boot.textContent = "window.__FEEDBACK__={token:" + JSON.stringify(TOKEN) +
+      ",base:" + JSON.stringify(BASE) + ",pageOverride:" +
+      JSON.stringify(baseHref) + "};";
+    head.appendChild(boot);
+    var wjs = document.createElement("script");
+    // Cache-bust per load so the snapshot always boots the CURRENT widget build
+    // (Convex CDN caches widget.js ~hours regardless of its max-age).
+    wjs.src = BASE + "/feedback/widget.js?v=" + Date.now();
+    head.appendChild(wjs);
+    return "<!doctype html>" + clone.outerHTML;
+  }
+  // Snapshot the live, already-rendered page (best fidelity — JS already ran).
+  function buildSnapshot() {
+    return snapshotFromRoot(document.documentElement, location.href);
+  }
+  // Snapshot fetched HTML (used for in-review navigation — no tab reload).
+  function buildSnapshotFromHTML(html, url) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    return snapshotFromRoot(doc.documentElement, url);
+  }
+  function mobileKey(e) {
+    if (e.key === "Escape" && S.mobile) {
+      e.preventDefault(); e.stopPropagation(); closeMobilePreview();
+    }
+  }
+  // Chrome to subtract when sizing the canvas: toolbar+padding vertically,
+  // sidebar+padding horizontally (desktop fills the remaining width).
+  var RV_CHROME = 104;
+  var RV_SIDE = 300;
+  function applyFrameSize() {
+    if (!S.rvFrame) return;
+    var availH = Math.max(480, window.innerHeight - RV_CHROME);
+    var w, h;
+    if (S.rvDevice === "desktop") {
+      w = Math.max(360, window.innerWidth - RV_SIDE - 48);
+      h = availH;
+    } else {
+      var portrait = !S.rvLandscape;
+      w = portrait ? 375 : 812;
+      h = portrait ? Math.max(480, Math.min(812, availH)) : 375;
+    }
+    S.rvFrame.style.width = w + "px";
+    S.rvFrame.style.height = h + "px";
+    if (S.rvDim) S.rvDim.textContent = w + " \\u00D7 " + h;
+  }
+  function rvApiFromState() {
+    try {
+      return (S.rvIfr && S.rvIfr.contentWindow.__FB_EMBED_API__) || null;
+    } catch (e) { return null; }
+  }
+  // Switch the canvas device in place (no leaving the workspace, no reload —
+  // resizing the same snapshot re-fires the theme's media queries) and tell the
+  // in-frame widget so it shows + tags only this device's feedback.
+  function reviewSetDevice(id) {
+    S.rvDevice = id;
+    if (id === "desktop") S.rvLandscape = false;
+    try { sessionStorage.setItem("bo_fb_dev", id); } catch (e) {}
+    if (S.rvSeg) {
+      Array.prototype.forEach.call(S.rvSeg.children, function (b) {
+        b.className = b.getAttribute("data-dev") === id ? "on" : "";
+      });
+    }
+    if (S.rvRot) S.rvRot.style.display = id === "mobile" ? "" : "none";
+    if (S.rvFrame) {
+      S.rvFrame.className = "fb-rv-frame" + (id === "desktop" ? " desk" : "");
+    }
+    applyFrameSize();
+    var a = rvApiFromState();
+    if (a && a.setViewDevice) a.setViewDevice(id);
+  }
+  function openMobilePreview(device) {
+    if (S.mobile) return;
+    S.mobile = true; S.rvLandscape = false;
+    closeOverlays(); setMode(null);
+    if (S.posRaf) { cancelAnimationFrame(S.posRaf); S.posRaf = 0; }
+    pinLayer.innerHTML = ""; S.pins = null; S.pinSig = "";
+
+    // Integrated, DevTools-style review workspace (not a modal): docked top
+    // toolbar + a device frame on a light canvas. The frame holds a real
+    // same-origin iframe of the page, so the theme's true mobile layout renders.
+    var rv = el("div", "fb-rv");
+    var bar = el("div", "fb-rv-bar");
+
+    var ttl = el("div", "fb-rv-ttl");
+    var dotb = el("span", "dotb"); dotb.innerHTML = pdot.innerHTML;
+    var tlab = el("span"); tlab.textContent = "Review mode";
+    ttl.appendChild(dotb); ttl.appendChild(tlab);
+
+    var seg = el("div", "fb-rv-seg");
+    DEVICES.forEach(function (d) {
+      var b = el("button");
+      b.type = "button";
+      b.setAttribute("data-dev", d.id);
+      b.innerHTML = d.ico + " " + d.label + (d.w ? " " + d.w : "");
+      b.onclick = function () { setDevice(d.id); };
+      seg.appendChild(b);
+    });
+    S.rvSeg = seg;
+
+    var act = el("div", "fb-rv-act");
+    var dim = el("span", "fb-rv-dim");
+    var rot = el("button", "fb-rv-ic");
+    rot.type = "button";
+    rot.innerHTML = "\\u21BB"; rot.title = "Rotate";
+    rot.onclick = function () { S.rvLandscape = !S.rvLandscape; applyFrameSize(); };
+    S.rvRot = rot;
+    var exit = el("button", "fb-rv-exit");
+    exit.type = "button";
+    exit.innerHTML = "\\u2715 Exit";
+    exit.title = "Exit review mode (Esc)";
+    exit.onclick = function () { closeMobilePreview(); };
+    act.appendChild(dim); act.appendChild(rot); act.appendChild(exit);
+
+    bar.appendChild(ttl); bar.appendChild(seg); bar.appendChild(act);
+
+    // Docked comments rail (outside the device frame). The frame's snapshot
+    // re-injects the widget for in-canvas pins + the comment card; this rail
+    // surfaces the launcher + list outside the phone and drives the in-frame
+    // widget through a same-origin bridge (window.__FB_EMBED_API__).
+    var body = el("div", "fb-rv-body");
+    var side = el("aside", "fb-rv-side");
+    var sh = el("h4"); sh.textContent = "Feedback";
+    var tools = el("div", "fb-rv-tools");
+    var tEl = el("button", "fb-rv-tbtn"); tEl.type = "button";
+    tEl.innerHTML = "\\uD83D\\uDCAC Comment an element";
+    var tReg = el("button", "fb-rv-tbtn"); tReg.type = "button";
+    tReg.innerHTML = "\\u2B1A Select a region";
+    var tGen = el("button", "fb-rv-tbtn"); tGen.type = "button";
+    tGen.innerHTML = "\\uD83D\\uDCDD Comment the page";
+    tools.appendChild(tEl); tools.appendChild(tReg); tools.appendChild(tGen);
+    // Context section — seed for handy info (extend with more rows over time).
+    var ctx = el("div", "fb-rv-ctx");
+    var cpage = el("a", "fb-rv-ctxrow");
+    cpage.href = pageHref(); cpage.target = "_blank"; cpage.rel = "noreferrer";
+    cpage.innerHTML = "<span>Page</span><b></b>";
+    cpage.querySelector("b").textContent = path();
+    ctx.appendChild(cpage);
+    var rlist = el("div", "fb-rv-list");
+    side.appendChild(sh); side.appendChild(tools);
+    side.appendChild(ctx); side.appendChild(rlist);
+
+    var stage = el("div", "fb-rv-stage");
+    var frame = el("div", "fb-rv-frame");
+    var ifr = el("iframe", "fb-rv-if");
+    ifr.setAttribute("title", "Mobile preview");
+    frame.appendChild(ifr);
+    stage.appendChild(frame);
+    body.appendChild(side); body.appendChild(stage);
+    rv.appendChild(bar); rv.appendChild(body);
+    root.appendChild(rv);
+    S.mscrim = rv; S.rvFrame = frame; S.rvDim = dim; S.rvIfr = ifr;
+    reviewSetDevice(device || "desktop");
+
+    // Bridge to the in-frame widget (same-origin srcdoc → contentWindow is
+    // reachable). The injected widget exposes __FB_EMBED_API__ once it boots.
+    S.rvUrl = location.href;
+    function rvApi() {
+      try { return ifr.contentWindow.__FB_EMBED_API__ || null; } catch (e) { return null; }
+    }
+    tEl.onclick = function () { var a = rvApi(); if (a) a.setMode("element"); };
+    tReg.onclick = function () { var a = rvApi(); if (a) a.setMode("region"); };
+    tGen.onclick = function () { var a = rvApi(); if (a) a.genComment(); };
+    function rvRenderList() {
+      var a = rvApi();
+      var cs = a ? a.getComments() : [];
+      var paused = a ? a.isPaused() : false;
+      var off = paused || !a;
+      tEl.disabled = off; tReg.disabled = off; tGen.disabled = off;
+      rlist.innerHTML = "";
+      if (!cs.length) {
+        var em = el("div", "fb-rv-empty");
+        em.textContent = paused ? "Feedback is paused for this site"
+          : "No comments on this page yet";
+        rlist.appendChild(em);
+        return;
+      }
+      cs.slice().sort(function (x, y) {
+        return (x.createdAt || 0) - (y.createdAt || 0);
+      }).forEach(function (c, i) {
+        var row = el("div", "fb-rv-li" + (c.status === "resolved" ? " res" : ""));
+        var nb = el("span", "n"); nb.textContent = String(i + 1); row.appendChild(nb);
+        var cc = el("span", "c"); cc.textContent = c.content; row.appendChild(cc);
+        row.onclick = function () { var a2 = rvApi(); if (a2) a2.openComment(c.id); };
+        rlist.appendChild(row);
+      });
+    }
+    // --- Composer rendered OUTSIDE the device frame (clear + roomy) ----------
+    function rvCloseComposer() { if (S.rvc) { S.rvc.remove(); S.rvc = null; } }
+    function rvOpenComposer(anchor, point) {
+      rvCloseComposer();
+      if (!rvApi()) return;
+      var fr = S.rvFrame ? S.rvFrame.getBoundingClientRect()
+        : { left: 0, top: 70, right: 360, width: 360 };
+      var card = el("div", "fb-rvc");
+      var h = el("div", "fb-rvc-h");
+      var dot = el("span", "dot"); var ht = el("span"); ht.textContent = "New comment";
+      var dbadge = el("span", "fb-rvc-dev");
+      dbadge.textContent = S.rvDevice === "mobile" ? "\\uD83D\\uDCF1 Mobile" : "\\uD83D\\uDDA5 Desktop";
+      h.appendChild(dot); h.appendChild(ht); h.appendChild(dbadge);
+      var b = el("div", "fb-rvc-b");
+      var ta = el("textarea"); ta.placeholder = "Describe the feedback\\u2026";
+      var kinds = el("div", "fb-rvc-kinds");
+      var selKind = null;
+      KINDS.forEach(function (kd) {
+        var kb = el("button", "fb-rvc-kind"); kb.type = "button";
+        kb.innerHTML = kd.ico + " " + kd.label;
+        kb.onclick = function () {
+          selKind = selKind === kd.k ? null : kd.k;
+          Array.prototype.forEach.call(kinds.children, function (c, i) {
+            c.className = "fb-rvc-kind" + (KINDS[i].k === selKind ? " on" : "");
+          });
+        };
+        kinds.appendChild(kb);
+      });
+      var foot = el("div", "fb-rvc-f");
+      var cancel = el("button", "fb-rvc-cancel"); cancel.type = "button";
+      cancel.textContent = "Cancel";
+      var send = el("button", "fb-rvc-send"); send.type = "button";
+      send.textContent = "Send"; send.disabled = true;
+      foot.appendChild(cancel); foot.appendChild(send);
+      b.appendChild(ta); b.appendChild(kinds); b.appendChild(foot);
+      card.appendChild(h); card.appendChild(b);
+      var x = Math.min(fr.right + 14, window.innerWidth - 356);
+      if (x < 12) x = 12;
+      var y = clamp(fr.top + ((point && point.y) || 80) - 30, 70, window.innerHeight - 320);
+      card.style.left = x + "px"; card.style.top = y + "px";
+      root.appendChild(card); S.rvc = card;
+      setTimeout(function () { ta.focus(); }, 30);
+      ta.addEventListener("input", function () {
+        send.disabled = !ta.value.trim();
+        ta.style.height = "auto";
+        ta.style.height = Math.min(160, ta.scrollHeight) + "px";
+      });
+      function doCancel() {
+        rvCloseComposer();
+        var a2 = rvApi(); if (a2) a2.cancelCompose();
+      }
+      cancel.onclick = doCancel;
+      ta.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); doCancel(); }
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send.onclick(); }
+      });
+      send.onclick = function () {
+        var content = (ta.value || "").trim(); if (!content) return;
+        var a2 = rvApi(); if (!a2) { rvCloseComposer(); return; }
+        send.disabled = true; send.textContent = "Sending\\u2026";
+        a2.submit(anchor, content, selKind, S.rvDevice).then(function () {
+          rvCloseComposer(); rvRenderList();
+        })["catch"](function () {
+          send.disabled = false; send.textContent = "Send";
+        });
+      };
+    }
+    function updateCtx(href) {
+      if (!href) {
+        try {
+          var h = ifr.contentWindow.location.href;
+          if (h && h.indexOf("about:") !== 0) href = h;   // ignore about:srcdoc
+        } catch (e) {}
+      }
+      if (!href) href = S.rvUrl;
+      try {
+        var u = new URL(href);
+        cpage.href = href; cpage.querySelector("b").textContent = u.pathname;
+        S.rvUrl = href;
+      } catch (e) {}
+    }
+    // Load a page into the canvas. Try the LIVE page first (fully interactive —
+    // menus/nav work) since published stores allow same-origin framing; if the
+    // store blocks framing (X-Frame-Options/CSP, e.g. password-protected dev
+    // stores) fall back to a static snapshot. Never navigates the top tab.
+    function snapshotInto(url) {
+      function apply(srcdocHtml) {
+        ifr.onload = null;   // stop the live-detection handler from re-firing
+        if (S.rvFrame) S.rvFrame.style.opacity = "";
+        ifr.removeAttribute("src");
+        ifr.setAttribute("srcdoc", srcdocHtml);
+        updateCtx(url); rvBindApi();
+      }
+      if (url === location.href) { apply(buildSnapshot()); return; }
+      fetch(url, { credentials: "include" })
+        .then(function (r) { return r.text(); })
+        .then(function (html) { apply(buildSnapshotFromHTML(html, url)); })
+        ["catch"](function () {
+          if (S.rvFrame) S.rvFrame.style.opacity = "";
+          fbToast("Couldn\\u2019t load that page", true);
+        });
+    }
+    function loadCanvas(url) {
+      rvCloseComposer();
+      S.rvUrl = url;
+      if (S.rvFrame) S.rvFrame.style.opacity = ".55";
+      // Known-blocked store → skip the live attempt (no repeated delay).
+      if (S.liveBlocked) { snapshotInto(url); return; }
+      var settled = false;
+      if (S.liveTimer) { clearTimeout(S.liveTimer); S.liveTimer = 0; }
+      ifr.onload = function () {
+        if (settled) { updateCtx(); rvBindApi(); return; }  // later live navs
+        var ok = false;
+        try {
+          var d = ifr.contentDocument;
+          ok = !!(d && d.body && d.body.children.length > 1);
+        } catch (e) { ok = false; }
+        if (S.liveTimer) { clearTimeout(S.liveTimer); S.liveTimer = 0; }
+        if (ok) {
+          settled = true;
+          if (S.rvFrame) S.rvFrame.style.opacity = "";
+          updateCtx(); rvBindApi();
+        } else {
+          S.liveBlocked = true; snapshotInto(url);   // framing blocked
+        }
+      };
+      // Safety: if onload never fires (blocked silently), snapshot.
+      S.liveTimer = setTimeout(function () {
+        if (settled) return;
+        S.liveBlocked = true; snapshotInto(url);
+      }, 2200);
+      ifr.removeAttribute("srcdoc");
+      var sep = url.indexOf("?") === -1 ? "?" : "&";
+      ifr.src = url + sep + "feedback=1";
+    }
+    // The injected widget loads its script async (and reboots after each nav);
+    // poll until its API appears, then (re)wire list + composer + navigation.
+    function rvBindApi() {
+      if (S.rvPoll) { clearInterval(S.rvPoll); S.rvPoll = 0; }
+      var tries = 0;
+      S.rvPoll = setInterval(function () {
+        tries++;
+        var a = rvApi();
+        if (!a) { if (tries > 80) { clearInterval(S.rvPoll); S.rvPoll = 0; } return; }
+        clearInterval(S.rvPoll); S.rvPoll = 0;
+        a.onChange(rvRenderList);
+        if (a.onCompose) a.onCompose(rvOpenComposer);
+        if (a.onNav) a.onNav(loadCanvas);
+        if (a.setViewDevice) a.setViewDevice(S.rvDevice);
+        rvRenderList();
+      }, 200);
+    }
+    rvRenderList();
+    loadCanvas(location.href);
+
+    if (S.panel) S.panel.style.display = "none";
+    document.addEventListener("keydown", mobileKey, true);
+  }
+  function closeMobilePreview() {
+    if (!S.mobile) return;
+    S.mobile = false;
+    if (S.mTimer) { clearTimeout(S.mTimer); S.mTimer = 0; }
+    if (S.liveTimer) { clearTimeout(S.liveTimer); S.liveTimer = 0; }
+    document.removeEventListener("keydown", mobileKey, true);
+    if (S.rvPoll) { clearInterval(S.rvPoll); S.rvPoll = 0; }
+    if (S.rvc) { S.rvc.remove(); S.rvc = null; }
+    if (S.mscrim) { S.mscrim.remove(); S.mscrim = null; }
+    S.rvFrame = null; S.rvDim = null; S.rvSeg = null; S.rvRot = null; S.rvIfr = null;
+    if (S.panel) S.panel.style.display = "";
+    refresh();
+  }
+
   pHide.onclick = function () {
     pstate.hidePins = !pstate.hidePins;
     pHide.className = "fb-ptog" + (pstate.hidePins ? " on" : "");
@@ -576,6 +1135,10 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   function visibleComments() {
     var src = pstate.allPages ? (S.allComments || []) : S.comments;
     var q = S.q || "";
+    // The LIST shows every device's comments (rows from the other device get
+    // a device chip) so mobile feedback is always reachable from desktop and
+    // vice versa. Only the on-page PINS stay device-filtered — an anchor
+    // recorded on a 375px layout doesn't map onto the desktop layout.
     return src.filter(function (c) {
       if (!pstate.showResolved && c.status === "resolved") return false;
       if (q && (c.content || "").toLowerCase().indexOf(q) === -1) {
@@ -585,9 +1148,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     });
   }
 
-  // Stable pin numbers: oldest comment on the page is always #1.
+  // Stable pin numbers: oldest comment (on this device) on the page is #1.
   function numberMap() {
-    var arr = S.comments.slice().sort(function (a, b) {
+    var arr = S.comments.filter(deviceMatch).sort(function (a, b) {
       return (a.createdAt || 0) - (b.createdAt || 0);
     });
     var m = {};
@@ -619,7 +1182,18 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
         ? idx + 1
         : nmap[c.id] || idx + 1;
       var row = el("div", "fb-pli" + (c.status === "resolved" ? " res" : ""));
-      var nb = el("span", "n"); nb.textContent = String(n);
+      var nb = el("span", "n");
+      if (deviceMatch(c)) {
+        nb.textContent = String(n);
+      } else {
+        // Comment from the other device: no pin on this layout, so the row
+        // leads with a device chip instead of a pin number.
+        var mob = commentDevice(c) === "mobile";
+        nb.textContent = mob ? "\\uD83D\\uDCF1" : "\\uD83D\\uDDA5";
+        nb.title = mob ? "Left on mobile" : "Left on desktop";
+        nb.style.background = "#f2f4f7";
+        nb.style.fontSize = "10px";
+      }
       row.appendChild(nb);
       if (pstate.allPages && c.pagePath !== here) {
         var pl = el("span");
@@ -680,7 +1254,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
           // Comment lives on another page: remember it and navigate there;
           // the widget reopens it on arrival (see maybeOpenPending).
           try { sessionStorage.setItem("bo_fb_open", c.id); } catch (e) {}
-          location.href = location.origin + c.pagePath + "?feedback";
+          location.href = pageOrigin() + c.pagePath + "?feedback";
           return;
         }
         openComment(c);
@@ -752,6 +1326,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   }
   function closeOverlays(keepBar) {
     clearHover();
+    if (S._unfit) { S._unfit(); S._unfit = null; }
     if (S.listHL) { S.listHL.remove(); S.listHL = null; }
     if (S.cmpHL) { S.cmpHL.remove(); S.cmpHL = null; }
     if (S.bd) { S.bd.remove(); S.bd = null; }
@@ -768,9 +1343,46 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   // (Screenshot capture removed — comments are text-only so the composer
   //  opens instantly; no html2canvas download or full-page render.)
 
+  // POST a comment (shared by the in-page composer and the embedded bridge so
+  // metadata/viewport/clientKey/pageOverride are always correct).
+  function postComment(anchor, content, kind, clientKey, device) {
+    return api("/feedback/comments", "POST", {
+      projectToken: TOKEN, pageUrl: pageHref(), pagePath: path(),
+      anchor: { selector: anchor.selector, xpath: anchor.xpath, nx: anchor.nx,
+        ny: anchor.ny, scrollY: anchor.scrollY,
+        elementWidth: anchor.elementWidth, elementHeight: anchor.elementHeight,
+        px: anchor.px, py: anchor.py },
+      content: content, kind: kind || undefined,
+      clientKey: clientKey, device: device || curDevice(),
+      authorName: "", authorEmail: "",
+      metadata: uaInfo()
+    }).then(function (j) {
+      if (j && j.id) addMine(j.id);
+      return j;
+    });
+  }
+
   // --- Composer ------------------------------------------------------------
   function openComposer(px, py, anchor) {
     closeOverlays(true);
+    // In an embedded preview the composer is rendered OUTSIDE the device frame
+    // by the outer Review-mode chrome; here we only keep the element highlight
+    // (for context) and hand the anchor to the outer composer.
+    if (EMBED && S._embedCompose) {
+      S.pendingAnchor = anchor;
+      var ae = resolveEl(anchor);
+      if (ae && ae.getBoundingClientRect) {
+        var r0 = ae.getBoundingClientRect();
+        if (r0.width && r0.height) {
+          var hl0 = el("div", "fb-hlp");
+          hl0.style.left = r0.left + "px"; hl0.style.top = r0.top + "px";
+          hl0.style.width = r0.width + "px"; hl0.style.height = r0.height + "px";
+          root.appendChild(hl0); S.cmpHL = hl0;
+        }
+      }
+      S._embedCompose(anchor, { x: px, y: py });
+      return;
+    }
     addBackdrop();
     // No separate pending pin: the composer's own teardrop dot marks the
     // spot (plus the dashed element highlight). Avoids a double marker.
@@ -779,8 +1391,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     var clientKey = "ck_" + Date.now() + "_" +
       Math.random().toString(36).slice(2, 10);
     var wrap = el("div", "fb-cmp");
-    wrap.style.left = clamp(px, 12, window.innerWidth - 344) + "px";
-    wrap.style.top = clamp(py, 12, window.innerHeight - 70) + "px";
+    wrap.style.left = clamp(px, 8, Math.max(8, window.innerWidth - 344)) + "px";
+    wrap.style.top = clamp(py, 12, Math.max(12, window.innerHeight - 70)) + "px";
+    S._unfit = fitToKeyboard(wrap);
     var dot = el("div", "dot");
     var box = el("div", "fb-box");
     var row = el("div", "fb-row");
@@ -849,13 +1462,13 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       if (!content) return;
       snd.disabled = true; snd.innerHTML = "\\u22EF";
       api("/feedback/comments", "POST", {
-        projectToken: TOKEN, pageUrl: location.href, pagePath: path(),
+        projectToken: TOKEN, pageUrl: pageHref(), pagePath: path(),
         anchor: { selector: anchor.selector, xpath: anchor.xpath, nx: anchor.nx,
           ny: anchor.ny, scrollY: anchor.scrollY,
           elementWidth: anchor.elementWidth, elementHeight: anchor.elementHeight,
           px: anchor.px, py: anchor.py },
         content: content, kind: S.kind || undefined,
-        clientKey: clientKey,
+        clientKey: clientKey, device: curDevice(),
         authorName: "", authorEmail: "",
         metadata: uaInfo()
       }).then(function (j) {
@@ -901,8 +1514,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       }
     }
     var card = el("div", "fb-card");
-    card.style.left = clamp(px, 12, window.innerWidth - 332) + "px";
-    card.style.top = clamp(py, 12, window.innerHeight - 360) + "px";
+    card.style.left = clamp(px, 8, Math.max(8, window.innerWidth - 332)) + "px";
+    card.style.top = clamp(py, 12, Math.max(12, window.innerHeight - 360)) + "px";
+    S._unfit = fitToKeyboard(card);
     var ch = el("div", "fb-ch");
     if (c.kind) {
       var bd = el("span", "fb-badge"); bd.textContent = c.kind; ch.appendChild(bd);
@@ -912,7 +1526,13 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     var stt = el("span", "fb-badge");
     stt.textContent = c.status;
     stt.style.background = c.status === "open" ? "rgba(21,112,239,.12)" : "#e7f6ec";
-    ch.appendChild(tt); ch.appendChild(stt);
+    // Which view this comment was left on — key context when triaging a
+    // mobile note while looking at the desktop layout (or the reverse).
+    var dvb = el("span", "fb-badge");
+    dvb.textContent = commentDevice(c) === "mobile"
+      ? "\\uD83D\\uDCF1 mobile" : "\\uD83D\\uDDA5 desktop";
+    dvb.title = "Device this comment was left on";
+    ch.appendChild(tt); ch.appendChild(dvb); ch.appendChild(stt);
     card.appendChild(ch);
     var body = el("div"); body.style.maxHeight = "260px"; body.style.overflow = "auto";
     function msg(name, when, text, who) {
@@ -1033,6 +1653,11 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     if (t && t.scrollIntoView) {
       t.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+    if (!deviceMatch(c)) {
+      fbToast(commentDevice(c) === "mobile"
+        ? "Left on the mobile view \\uD83D\\uDCF1"
+        : "Left on the desktop view \\uD83D\\uDDA5");
+    }
     setTimeout(function () {
       var p = pinXY(c);
       openThread(c, p.x, p.y);
@@ -1040,6 +1665,8 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   }
 
   // --- Pins (render + drag) ------------------------------------------------
+  // Ids that already played their entrance animation this page load.
+  var pinShown = {};
   function pinXY(rec) {
     // Accept a pin record {c, el2,...} or a bare comment (openComment).
     var c = rec.c || rec;
@@ -1069,11 +1696,11 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   }
   // Signature of the *visible set* (ids/status/number/new-dot) — NOT position.
   // When it's unchanged we skip the DOM rebuild and just reposition.
-  function pinSig() {
+  function pinSig(nmap) {
     if (pstate.hidePins) return "hidden";
-    var nmap = numberMap();
-    var parts = [pstate.showResolved ? "1" : "0"];
+    var parts = [pstate.showResolved ? "1" : "0", curDevice()];
     S.comments.forEach(function (c) {
+      if (!deviceMatch(c)) return;
       if (c.status === "resolved" && !pstate.showResolved) return;
       var a = c.anchor || {};
       // Include the anchor so a server-side move (e.g. dragged in another tab)
@@ -1088,20 +1715,30 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   // Build DOM only when the visible set changes; otherwise just reposition.
   // This is the flicker fix: scrolling no longer tears down + rebuilds pins.
   function renderPins() {
-    if (S.dragging || S.suppress) return;
-    var sig = pinSig();
+    if (S.dragging || S.suppress || S.mobile) return;
+    var nmap = numberMap();
+    var sig = pinSig(nmap);
     if (S.pins && sig === S.pinSig) { positionPins(); return; }
     S.pinSig = sig;
     clearHover();
     pinLayer.innerHTML = "";
     S.pins = [];
     if (pstate.hidePins) return;
-    var nmap = numberMap();
+    var made = 0;
     S.comments.forEach(function (c, i) {
+      if (!deviceMatch(c)) return;
       if (c.status === "resolved" && !pstate.showResolved) return;
       var pin = el("div", "fb-pin" +
         (c.status === "resolved" ? " res" : "") +
         (hasNewReplies(c) ? " new" : ""));
+      // Spring entrance, once per comment per page load (staggered so a
+      // page full of pins cascades in instead of popping all at once).
+      if (!pinShown[c.id]) {
+        pinShown[c.id] = 1;
+        pin.classList.add("drop");
+        pin.style.animationDelay = Math.min(made, 8) * 40 + "ms";
+      }
+      made++;
       var num = nmap[c.id] || i + 1;
       pin.textContent = String(num);
       // Keyboard/AT access: focusable, Enter/Space opens the thread.
@@ -1133,7 +1770,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   // Cheap per-frame repositioning of the persistent pin elements: no DOM
   // teardown, no listener churn. Owns the overlap fan-out (position-dependent).
   function positionPins() {
-    if (!S.pins || S.dragging || S.suppress) return;
+    if (!S.pins || S.dragging || S.suppress || S.mobile) return;
     var placed = [];
     for (var i = 0; i < S.pins.length; i++) {
       var rec = S.pins[i], pinEl = rec.el;
@@ -1154,9 +1791,9 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
         pinEl.style.display = "none";
       } else {
         if (pinEl.style.display === "none") pinEl.style.display = "";
-        // Place so the teardrop tip (local ~2,28) sits exactly on the point.
+        // Place so the teardrop tip (local ~2,height) sits exactly on the point.
         pinEl.style.left = (px - 2) + "px";
-        pinEl.style.top = (py - 28) + "px";
+        pinEl.style.top = (py - PIN_TIP_Y) + "px";
       }
     }
   }
@@ -1183,7 +1820,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
           moved = true;
         }
         pin.style.left = (ev.clientX - 2) + "px";
-        pin.style.top = (ev.clientY - 28) + "px";
+        pin.style.top = (ev.clientY - PIN_TIP_Y) + "px";
       }
       function up(ev) {
         pin.removeEventListener("pointermove", mv);
@@ -1217,8 +1854,12 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
   }
 
   function updateFab() {
+    // Count opens across BOTH devices — the list shows them all, so the badge
+    // should agree with it.
     var open = 0;
-    S.comments.forEach(function (c) { if (c.status !== "resolved") open++; });
+    S.comments.forEach(function (c) {
+      if (c.status !== "resolved") open++;
+    });
     pct.textContent = open > 99 ? "99+" : String(open);
     pct.style.display = open > 0 ? "" : "none";
   }
@@ -1245,7 +1886,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     ensureMounted();
     // Don't repaint pins out from under an open composer/thread or active
     // selection mode; the next poll (or setMode(null) on close) catches up.
-    if (S.dragging || document.hidden || S.cmp || S.card || S.mode) return;
+    if (S.dragging || document.hidden || S.cmp || S.card || S.mode || S.mobile) return;
     api("/feedback/comments?token=" + encodeURIComponent(TOKEN) +
         "&pagePath=" + encodeURIComponent(path()), "GET")
       .then(function (j) {
@@ -1253,6 +1894,7 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
         var st = j && j.project && j.project.status;
         setPaused(st && st !== "active");
         renderPins(); updateFab(); renderList(); maybeOpenPending();
+        if (S._embedSub) { try { S._embedSub(); } catch (e) {} }
       })
       ["catch"](function () {});
   }
@@ -1316,16 +1958,18 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
       var t = document.elementFromPoint(e.clientX, e.clientY);
       if (!t || t === host) return;
       e.preventDefault(); e.stopPropagation();
-      document.removeEventListener("mousemove", move, true);
+      document.removeEventListener("pointermove", move, true);
       document.removeEventListener("click", click, true);
       hl.remove(); lab.remove(); S.hl = null; S.hlLab = null;
       var a = makeAnchor(e.clientX, e.clientY, t);
       openComposer(e.clientX + 14, e.clientY, a);
     }
-    document.addEventListener("mousemove", move, true);
+    // pointermove (not mousemove) so the hover outline also tracks pen input
+    // and touch-drag previews; taps still land via the synthesized click.
+    document.addEventListener("pointermove", move, true);
     document.addEventListener("click", click, true);
     S._teardown = function () {
-      document.removeEventListener("mousemove", move, true);
+      document.removeEventListener("pointermove", move, true);
       document.removeEventListener("click", click, true);
       if (S.hl) { S.hl.remove(); S.hl = null; }
       if (S.hlLab) { S.hlLab.remove(); S.hlLab = null; }
@@ -1338,6 +1982,10 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     var cap = el("div", "fb-cap"); root.appendChild(cap); S.cap = cap;
     var rg = null, sx, sy;
     cap.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      // Capture so a touch-drag keeps feeding this overlay (and never
+      // scrolls the page) until the finger lifts.
+      try { cap.setPointerCapture(e.pointerId); } catch (x) {}
       sx = e.clientX; sy = e.clientY;
       rg = el("div", "fb-rg"); root.appendChild(rg);
     });
@@ -1395,23 +2043,110 @@ export const FEEDBACK_WIDGET_SOURCE = `(function () {
     else if (k === "g") pGen.onclick();
   });
   window.addEventListener("scroll", schedulePosition, { passive: true });
+  // Coalesce resize bursts (mobile keyboard, window drag) into one frame —
+  // the handler reads layout (getBoundingClientRect), so don't run it per event.
+  var rszRaf = 0;
   window.addEventListener("resize", function () {
-    schedulePosition();
-    // Keep a moved panel reachable if the viewport shrank/rotated.
-    if (panel.style.left) {
-      var r = panel.getBoundingClientRect();
-      var nx = clamp(r.left, 0, window.innerWidth - r.width);
-      var ny = clamp(r.top, 0, window.innerHeight - 40);
-      panel.style.left = nx + "px"; panel.style.top = ny + "px";
-      if (typeof pstate.x === "number") {
-        pstate.x = nx; pstate.y = ny; savePanelState(pstate);
+    if (rszRaf) return;
+    rszRaf = requestAnimationFrame(function () {
+      rszRaf = 0;
+      if (S.mobile) applyFrameSize();
+      schedulePosition();
+      // Keep a moved panel reachable if the viewport shrank/rotated.
+      if (panel.style.left) {
+        var r = panel.getBoundingClientRect();
+        var nx = clamp(r.left, 0, Math.max(0, window.innerWidth - r.width));
+        var ny = clamp(r.top, 0, Math.max(0, window.innerHeight - 40));
+        panel.style.left = nx + "px"; panel.style.top = ny + "px";
+        if (typeof pstate.x === "number") {
+          pstate.x = nx; pstate.y = ny; savePanelState(pstate);
+        }
       }
-    }
+    });
   });
   window.addEventListener("focus", function () { refresh(); refreshSite(); });
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") { refresh(); refreshSite(); }
   });
+
+  // When embedded in a mobile-preview snapshot, expose a minimal bridge so the
+  // outer Review-mode rail can drive selection + read comments (same-origin).
+  if (EMBED) {
+    window.__FB_EMBED_API__ = {
+      setMode: function (m) { setMode(m); },
+      genComment: function () { pGen.onclick(); },
+      getComments: function () { return S.comments.slice(); },
+      isPaused: function () { return !!S._paused; },
+      openComment: function (id) {
+        for (var i = 0; i < S.comments.length; i++) {
+          if (S.comments[i].id === id) { openComment(S.comments[i]); return; }
+        }
+      },
+      onChange: function (fn) { S._embedSub = fn; },
+      // Render the composer in the outer chrome instead of inside the frame.
+      onCompose: function (fn) { S._embedCompose = fn; },
+      onNav: function (fn) { S._embedNav = fn; },
+      // The outer canvas device drives which comments are shown + tagged, so a
+      // resize (desktop<->mobile) re-filters this snapshot's pins/list.
+      setViewDevice: function (dev) {
+        S.viewDevice = dev === "mobile" ? "mobile" : "desktop";
+        S.pinSig = ""; renderPins(); renderList(); updateFab();
+        if (S._embedSub) { try { S._embedSub(); } catch (e) {} }
+      },
+      submit: function (anchor, content, kind, device) {
+        var ck = "ck_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+        return postComment(anchor, content, kind, ck, device).then(function (j) {
+          closeOverlays(); setMode(null); refresh();
+          return j;
+        });
+      },
+      cancelCompose: function () { closeOverlays(); setMode(null); }
+    };
+    // Only the STATIC SNAPSHOT (OVERRIDE set) needs link interception: a link
+    // there would navigate the iframe to the real store URL, which is blocked by
+    // X-Frame-Options ("refused to connect") and breaks the frame. We always
+    // cancel that default nav and instead re-render the canvas in place. (In a
+    // LIVE iframe, OVERRIDE is null → normal same-origin nav works, so we leave
+    // links alone.)
+    if (OVERRIDE) {
+      document.addEventListener("click", function (e) {
+        var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+        if (!a) return;
+        var href = a.getAttribute("href");
+        if (!href || href.charAt(0) === "#" ||
+            /^(mailto:|tel:|javascript:)/i.test(href)) return;
+        // Always stop the frame-breaking default navigation.
+        e.preventDefault();
+        // While selecting an element, let the selection handler use this click.
+        if (S.mode) return;
+        e.stopPropagation();
+        if (S.cmp || S.card) return;   // busy composing/reading
+        try {
+          var u = new URL(href, OVERRIDE || location.href);
+          if (S._embedNav) { S._embedNav(u.href); return; }
+          try { sessionStorage.setItem("bo_fb_review", S.viewDevice || "mobile"); } catch (x) {}
+          var sep = u.search ? "&" : "?";
+          if (window.top) window.top.location.href = u.href + sep + "feedback";
+        } catch (x) {}
+      }, true);
+      document.addEventListener("submit", function (e) { e.preventDefault(); }, true);
+    }
+  }
+
+  // After a navigation made from within the review canvas, reopen the workspace
+  // on the new page at the same device (one-shot).
+  if (!EMBED) {
+    try {
+      var rv0 = sessionStorage.getItem("bo_fb_review");
+      if (rv0) {
+        sessionStorage.removeItem("bo_fb_review");
+        setTimeout(function () {
+          setDevice(rv0 === "mobile" ? "mobile" : "desktop");
+        }, 700);
+      }
+    } catch (e) {}
+  }
+
   refresh();
   refreshSite();
   setInterval(refresh, 10000);

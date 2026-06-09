@@ -60,6 +60,22 @@ function clampString(value: string, max: number): string {
 	return value.length > max ? value.slice(0, max) : value;
 }
 
+// Normalize a free-text store domain to a bare host: strip protocol, path,
+// query, and trailing dots/slashes, then lowercase. Throws if it doesn't look
+// like a hostname. Stored normalized so the snapshot capture URL is always
+// well-formed (a stored "https://store/…" was producing Cloudflare 5006 / DNS).
+function normalizeShopifyDomain(input: string): string {
+	let h = input.trim().toLowerCase();
+	h = h.replace(/^https?:\/\//, ""); // strip protocol
+	h = h.split(/[/?#]/)[0]; // strip path/query/hash
+	h = h.replace(/^\.+|\.+$/g, ""); // strip leading/trailing dots
+	// host.tld — letters/digits/hyphens/dots, with at least one dot.
+	if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h)) {
+		throw new ConvexError("invalid_domain");
+	}
+	return clampString(h, 300);
+}
+
 function sanitizeAnchor(a: Doc<"comments">["anchor"]): Doc<"comments">["anchor"] {
 	const clamp01 = (n: number) =>
 		Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
@@ -110,7 +126,7 @@ async function getAccessRole(
 	return { role: "owner" };
 }
 
-async function assertProjectAccess(
+export async function assertProjectAccess(
 	ctx: QueryCtx,
 	projectId: Id<"feedbackProjects">,
 ): Promise<{
@@ -175,8 +191,10 @@ async function serializeComment(
 	authorType: "owner" | "client" | "guest";
 	authorName: string;
 	createdAt: number;
+	device: "mobile" | "tablet" | "desktop" | undefined;
 	metadata: Doc<"comments">["metadata"];
 	screenshotUrl: string | null;
+	imagePin: Doc<"comments">["imagePin"];
 	replies: Array<{
 		id: Id<"commentReplies">;
 		content: string;
@@ -203,8 +221,10 @@ async function serializeComment(
 		authorName: comment.authorName,
 		kind: comment.kind,
 		createdAt: comment.createdAt,
+		device: comment.device,
 		metadata: comment.metadata,
 		screenshotUrl,
+		imagePin: comment.imagePin,
 		replies: replyDocs.map((r) => ({
 			id: r._id,
 			content: r.content,
@@ -276,6 +296,13 @@ export const createCommentFromToken = internalMutation({
 		kind: kindValidator,
 		authorName: v.string(),
 		authorEmail: v.string(),
+		device: v.optional(
+			v.union(
+				v.literal("mobile"),
+				v.literal("tablet"),
+				v.literal("desktop"),
+			),
+		),
 		metadata: metadataValidator,
 		screenshotStorageId: v.optional(v.id("_storage")),
 	},
@@ -317,6 +344,7 @@ export const createCommentFromToken = internalMutation({
 			authorType: "guest",
 			authorName: clampString(args.authorName, NAME_MAX) || clientName,
 			authorEmail: clampString(args.authorEmail, EMAIL_MAX),
+			device: args.device,
 			screenshotStorageId: args.screenshotStorageId,
 			metadata: {
 				userAgent: clampString(args.metadata.userAgent, UA_MAX),
@@ -795,7 +823,7 @@ export const createProject = mutation({
 			ownerUserId: userId,
 			clientId: args.clientId,
 			name: clampString(name, NAME_MAX),
-			shopifyDomain: clampString(args.shopifyDomain.trim(), 300),
+			shopifyDomain: normalizeShopifyDomain(args.shopifyDomain),
 			widgetToken: newToken(),
 			shareToken: newToken(),
 			status: "active",

@@ -1,6 +1,25 @@
+import {
+	closestCorners,
+	DndContext,
+	type DragEndEvent,
+	DragOverlay,
+	type DragStartEvent,
+	PointerSensor,
+	useDraggable,
+	useDroppable,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeftIcon, CheckIcon, Settings2Icon } from "lucide-react";
+import type { FunctionReturnType } from "convex/server";
+import {
+	ArrowLeftIcon,
+	CheckIcon,
+	ImageIcon,
+	Settings2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -12,30 +31,16 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
-	DndContext,
-	DragOverlay,
-	PointerSensor,
-	closestCorners,
-	useDraggable,
-	useDroppable,
-	useSensor,
-	useSensors,
-	type DragEndEvent,
-	type DragStartEvent,
-} from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
-import {
+	type KanbanBoardCircleColor,
 	KanbanBoardColumnHeader,
 	KanbanBoardColumnList,
 	KanbanBoardColumnTitle,
 	KanbanColorCircle,
 	kanbanBoardColumnClassNames,
-	type KanbanBoardCircleColor,
 } from "@/components/ui/kanban";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import type { FunctionReturnType } from "convex/server";
+import { cn } from "@/lib/utils";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
 
@@ -77,8 +82,7 @@ function ProjectBoardPage() {
 		allComments && kindFilter !== "all"
 			? allComments.filter((c) => c.kind === kindFilter)
 			: allComments;
-	const selectedComment =
-		comments?.find((c) => c.id === selected) ?? null;
+	const selectedComment = comments?.find((c) => c.id === selected) ?? null;
 	const activeComment = comments?.find((c) => c.id === dragId) ?? null;
 
 	const onDragStart = (e: DragStartEvent) =>
@@ -185,15 +189,24 @@ function ProjectBoardPage() {
 				</p>
 			</div>
 
-			{project.role === "owner" && (
+			<div className="flex flex-wrap items-center gap-4">
 				<Link
-					to="/feedback/$projectId/install"
+					to="/feedback/$projectId/review"
 					params={{ projectId }}
 					className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
 				>
-					<Settings2Icon className="size-4" /> Install &amp; share
+					<ImageIcon className="size-4" /> Review (screenshots)
 				</Link>
-			)}
+				{project.role === "owner" && (
+					<Link
+						to="/feedback/$projectId/install"
+						params={{ projectId }}
+						className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+					>
+						<Settings2Icon className="size-4" /> Install &amp; share
+					</Link>
+				)}
+			</div>
 
 			{comments === undefined ? (
 				<Skeleton className="h-full min-h-[24rem] flex-grow" />
@@ -201,8 +214,8 @@ function ProjectBoardPage() {
 				<div className="flex flex-grow flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-16 text-center">
 					<p className="text-sm font-medium">No feedback yet</p>
 					<p className="max-w-sm text-sm text-muted-foreground">
-						Add the widget snippet to the store so clients can leave
-						comments while reviewing.
+						Add the widget snippet to the store so clients can leave comments
+						while reviewing.
 					</p>
 					{project.role === "owner" && (
 						<Link
@@ -251,18 +264,14 @@ function ProjectBoardPage() {
 					<DialogHeader>
 						<DialogTitle>Comment</DialogTitle>
 					</DialogHeader>
-					{selectedComment && (
-						<CommentDetail comment={selectedComment} />
-					)}
+					{selectedComment && <CommentDetail comment={selectedComment} />}
 				</DialogContent>
 			</Dialog>
 		</div>
 	);
 }
 
-type CommentItem = FunctionReturnType<
-	typeof api.feedback.listComments
->[number];
+type CommentItem = FunctionReturnType<typeof api.feedback.listComments>[number];
 
 const CARD_CLS =
 	"rounded-lg border border-border bg-background p-3 text-start text-foreground shadow-sm flex w-full flex-col gap-2";
@@ -272,7 +281,11 @@ function FeedbackColumn({
 	items,
 	onOpen,
 }: {
-	col: { id: "open" | "resolved"; title: string; color: KanbanBoardCircleColor };
+	col: {
+		id: "open" | "resolved";
+		title: string;
+		color: KanbanBoardCircleColor;
+	};
 	items: CommentItem[];
 	onOpen: (id: Id<"comments">) => void;
 }) {
@@ -297,11 +310,7 @@ function FeedbackColumn({
 			</KanbanBoardColumnHeader>
 			<KanbanBoardColumnList className="space-y-2 px-2">
 				{items.map((c) => (
-					<DraggableCard
-						key={c.id}
-						comment={c}
-						onOpen={() => onOpen(c.id)}
-					/>
+					<DraggableCard key={c.id} comment={c} onOpen={() => onOpen(c.id)} />
 				))}
 				{items.length === 0 && (
 					<li className="px-2 py-8 text-center text-xs text-muted-foreground">
@@ -372,9 +381,7 @@ function FeedbackCardBody({ comment }: { comment: CommentItem }) {
 			)}
 			<div className="flex items-center justify-between text-[11px] text-muted-foreground">
 				<span className="truncate">{comment.pagePath}</span>
-				{comment.replies.length > 0 && (
-					<span>{comment.replies.length} ↩</span>
-				)}
+				{comment.replies.length > 0 && <span>{comment.replies.length} ↩</span>}
 			</div>
 		</>
 	);
@@ -401,9 +408,7 @@ function timeAgo(ts: number): string {
 function KindBadge({ kind }: { kind: "bug" | "idea" | "question" }) {
 	const s = KIND_STYLE[kind];
 	return (
-		<span
-			className={`rounded px-1.5 py-0.5 text-xs font-semibold ${s.cls}`}
-		>
+		<span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${s.cls}`}>
 			{s.label}
 		</span>
 	);
@@ -454,6 +459,32 @@ function CommentDetail({ comment }: { comment: CommentItem }) {
 				<span className="text-muted-foreground">
 					{timeAgo(comment.createdAt)}
 				</span>
+				{(() => {
+					// Prefer the explicit device the comment was left on; fall back to
+					// the recorded viewport width for legacy comments.
+					const w = comment.metadata?.viewportWidth;
+					const dev =
+						comment.device ??
+						(typeof w === "number"
+							? w <= 480
+								? "mobile"
+								: w <= 1024
+									? "tablet"
+									: "desktop"
+							: null);
+					if (!dev) return null;
+					const label =
+						dev === "mobile"
+							? "📱 Mobile"
+							: dev === "tablet"
+								? "📲 Tablet"
+								: "🖥 Desktop";
+					return (
+						<Badge variant="outline" className="text-xs font-normal">
+							{label}
+						</Badge>
+					);
+				})()}
 				<Badge
 					variant={comment.status === "open" ? "default" : "secondary"}
 					className="ml-auto"
@@ -471,8 +502,7 @@ function CommentDetail({ comment }: { comment: CommentItem }) {
 				className="block truncate text-xs text-muted-foreground hover:text-foreground"
 			>
 				{comment.pagePath} · {comment.metadata?.browser ?? ""}{" "}
-				{comment.metadata?.os ?? ""} ·{" "}
-				{comment.metadata?.viewportWidth ?? "?"}×
+				{comment.metadata?.os ?? ""} · {comment.metadata?.viewportWidth ?? "?"}×
 				{comment.metadata?.viewportHeight ?? "?"} ↗
 			</a>
 
@@ -519,11 +549,7 @@ function CommentDetail({ comment }: { comment: CommentItem }) {
 					rows={1}
 					className="min-h-9"
 				/>
-				<Button
-					size="sm"
-					disabled={busy || !reply.trim()}
-					onClick={sendReply}
-				>
+				<Button size="sm" disabled={busy || !reply.trim()} onClick={sendReply}>
 					Send
 				</Button>
 				<Button

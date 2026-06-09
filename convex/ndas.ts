@@ -79,10 +79,12 @@ export const create = mutation({
 		const direction = args.direction ?? "owner_signs";
 		const businessName = settings?.businessName || "BRANDOCEAN";
 		const businessAddress = settings?.businessAddress || undefined;
-		const clientName =
+		// The client party shows only its company name (fall back to the contact
+		// name, then a placeholder when nothing is set).
+		const clientLabel =
+			client?.companyName ||
 			client?.name ||
-			(args.language === "nl" ? "[Naam klant]" : "[Client name]");
-		const clientCompany = client?.companyName || undefined;
+			(args.language === "nl" ? "[Bedrijfsnaam klant]" : "[Client company]");
 
 		// The clauses are identical; only who is named as disclosing vs receiving
 		// party swaps, and for owner_signs the owner's signature is embedded.
@@ -91,8 +93,8 @@ export const create = mutation({
 				? buildOneWayNda(
 						args.language,
 						{
-							disclosingParty: clientName,
-							disclosingAddress: clientCompany,
+							disclosingParty: clientLabel,
+							disclosingAddress: undefined,
 							receivingParty: businessName,
 							receivingCompany: businessAddress,
 							effectiveDate,
@@ -107,8 +109,8 @@ export const create = mutation({
 				: buildOneWayNda(args.language, {
 						disclosingParty: businessName,
 						disclosingAddress: businessAddress,
-						receivingParty: clientName,
-						receivingCompany: clientCompany,
+						receivingParty: clientLabel,
+						receivingCompany: undefined,
 						effectiveDate,
 						termYears: DEFAULT_TERM_YEARS,
 						governingCity: DEFAULT_GOVERNING_CITY,

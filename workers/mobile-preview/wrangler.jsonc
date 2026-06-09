@@ -1,0 +1,12 @@
+{
+	"name": "brandocean-mobile-preview",
+	"account_id": "3433d24fe9552649027796e83f8657dc",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"durable_objects": {
+		"bindings": [{ "name": "PREVIEW", "class_name": "PreviewSession" }]
+	},
+	// Storage-free DO; sqlite class works on both Free and Paid plans.
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["PreviewSession"] }]
+}

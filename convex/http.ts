@@ -291,6 +291,12 @@ http.route({
 							: undefined,
 					authorName: fbStr(body, "authorName"),
 					authorEmail: fbStr(body, "authorEmail"),
+					device:
+						body.device === "mobile" ||
+						body.device === "tablet" ||
+						body.device === "desktop"
+							? body.device
+							: undefined,
 					metadata: fbMetadata(body),
 					screenshotStorageId:
 						typeof screenshotRaw === "string"

@@ -10,11 +10,10 @@ import {
 	Trash2Icon,
 	UserIcon,
 } from "lucide-react";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DownloadPdfButton } from "@/components/nda/DownloadPdfButton";
 import { OfferteEditor } from "@/components/offertes/OfferteEditor";
-import { OfferteStaticContent } from "@/components/offertes/OfferteStaticContent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,18 @@ function NdaDetail() {
 	const { ndaId } = Route.useParams();
 	const id = ndaId as Id<"ndas">;
 	const data = useQuery(api.ndas.getById, { id });
-	const printRef = useRef<HTMLDivElement>(null);
+	const healParties = useMutation(api.ndas.updateMeta);
+	const healedRef = useRef(false);
+
+	// Once per open, if a client is attached, refresh the party lines from that
+	// client (so the disclosing party always shows the current company name).
+	useEffect(() => {
+		if (!data || healedRef.current) return;
+		const { nda } = data;
+		if (!nda.clientId || !nda.body) return;
+		healedRef.current = true;
+		void healParties({ id: nda._id, clientId: nda.clientId });
+	}, [data, healParties]);
 
 	if (data === undefined) {
 		return (
@@ -65,7 +75,7 @@ function NdaDetail() {
 				publicReadable={nda.publicReadable}
 				clientId={nda.clientId}
 				locked={Boolean(nda.signedSlug)}
-				printRef={printRef}
+				content={nda.body as JSONContent | undefined}
 				title={nda.title}
 			/>
 
@@ -110,25 +120,6 @@ function NdaDetail() {
 				body={nda.body as JSONContent | undefined}
 				readOnly={Boolean(nda.signedSlug)}
 			/>
-
-			{/* Off-screen static copy captured for the Download PDF export. */}
-			{nda.body ? (
-				<div
-					ref={printRef}
-					aria-hidden
-					className="nda-doc"
-					style={{
-						position: "absolute",
-						left: "-99999px",
-						top: 0,
-						width: "760px",
-						background: "#ffffff",
-						padding: "24px",
-					}}
-				>
-					<OfferteStaticContent content={nda.body as JSONContent} />
-				</div>
-			) : null}
 		</div>
 	);
 }
@@ -142,7 +133,7 @@ function NdaActionBar({
 	publicReadable,
 	clientId,
 	locked,
-	printRef,
+	content,
 	title,
 }: {
 	ndaId: Id<"ndas">;
@@ -153,7 +144,7 @@ function NdaActionBar({
 	publicReadable: boolean;
 	clientId: Id<"clients"> | undefined;
 	locked: boolean;
-	printRef: RefObject<HTMLDivElement | null>;
+	content: JSONContent | undefined;
 	title: string;
 }) {
 	const status = locked
@@ -175,7 +166,7 @@ function NdaActionBar({
 			<Separator orientation="vertical" className="mx-1 !h-6" />
 			<ClientPickerCompact ndaId={ndaId} clientId={clientId} />
 			<div className="ml-auto flex items-center gap-1">
-				<DownloadPdfButton targetRef={printRef} filename={title} />
+				<DownloadPdfButton content={content} filename={title} />
 				<CopyPublicUrlButton
 					slug={slug}
 					shareToken={shareToken}

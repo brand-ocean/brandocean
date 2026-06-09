@@ -314,6 +314,28 @@ export default defineSchema({
 		authorName: v.string(),
 		authorEmail: v.string(),
 		screenshotStorageId: v.optional(v.id("_storage")),
+		// Set when the comment was dropped on a server-rendered page snapshot
+		// (the screenshot review surface). nx/ny are normalized 0..1 to the
+		// full-page screenshot for the given device, so the pin renders at the
+		// exact spot regardless of how the image is scaled in the UI. Independent
+		// of `anchor` (which targets a live DOM element via selector/xpath).
+		imagePin: v.optional(
+			v.object({
+				device: v.union(v.literal("desktop"), v.literal("mobile")),
+				nx: v.number(),
+				ny: v.number(),
+			}),
+		),
+		// Device the comment was left on, so mobile/desktop feedback stays
+		// separated (pins + list filter to the matching view). Optional for
+		// back-compat; legacy comments are treated as desktop.
+		device: v.optional(
+			v.union(
+				v.literal("mobile"),
+				v.literal("tablet"),
+				v.literal("desktop"),
+			),
+		),
 		metadata: v.object({
 			userAgent: v.string(),
 			browser: v.string(),
@@ -327,6 +349,33 @@ export default defineSchema({
 		.index("by_project", ["projectId"])
 		.index("by_project_status", ["projectId", "status"])
 		.index("by_project_path", ["projectId", "pagePath"]),
+
+	// Server-rendered full-page screenshots of a project's pages, captured via
+	// Cloudflare Browser Rendering. One row per (project, pagePath, device);
+	// re-capturing replaces the row's storageId. The screenshot review UI shows
+	// these instead of an iframe (Shopify storefronts forbid framing entirely),
+	// and comments are pinned onto the image via comments.imagePin.
+	pageSnapshots: defineTable({
+		projectId: v.id("feedbackProjects"),
+		pagePath: v.string(),
+		device: v.union(v.literal("desktop"), v.literal("mobile")),
+		// "ready" once the PNG is stored; "pending" while capturing; "error" on
+		// failure (with the upstream message in `error`).
+		status: v.union(
+			v.literal("pending"),
+			v.literal("ready"),
+			v.literal("error"),
+		),
+		storageId: v.optional(v.id("_storage")),
+		// Pixel dimensions of the stored full-page PNG (from its IHDR), used to
+		// scale pins correctly in the UI.
+		width: v.optional(v.number()),
+		height: v.optional(v.number()),
+		error: v.optional(v.string()),
+		capturedAt: v.number(),
+	})
+		.index("by_project", ["projectId"])
+		.index("by_project_path_device", ["projectId", "pagePath", "device"]),
 
 	commentReplies: defineTable({
 		commentId: v.id("comments"),

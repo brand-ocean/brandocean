@@ -503,3 +503,15 @@ body {
   width: auto !important;
   object-fit: contain;
 }
+
+/* NDA documents use Host Grotesk throughout (no condensed heading font). */
+.nda-doc :is(h1, h2, h3, h4) {
+  font-family: "Host Grotesk", sans-serif !important;
+}
+
+/* A bit of breathing room between the title and the first sentence. */
+.nda-doc :is(h1, h2):first-child,
+.nda-doc h1 {
+  margin-bottom: 1.25rem !important;
+  line-height: 1.15;
+}

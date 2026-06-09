@@ -1,17 +1,17 @@
+import type { JSONContent } from "@tiptap/react";
 import { DownloadIcon } from "lucide-react";
-import type { RefObject } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { downloadElementAsPdf } from "./ndaPdf";
 
-// Downloads the referenced element as a clean PDF file (no print dialog).
+// Downloads the NDA as a clean vector PDF (selectable text, brand fonts).
+// The renderer (react-pdf) is loaded on demand so it stays out of the bundle.
 export function DownloadPdfButton({
-	targetRef,
+	content,
 	filename,
 	className,
 }: {
-	targetRef: RefObject<HTMLElement | null>;
+	content: JSONContent | null | undefined;
 	filename: string;
 	className?: string;
 }) {
@@ -22,16 +22,13 @@ export function DownloadPdfButton({
 			variant="outline"
 			size="sm"
 			className={className}
-			disabled={working}
+			disabled={working || !content}
 			onClick={async () => {
-				const el = targetRef.current;
-				if (!el) {
-					toast.error("Nothing to export yet");
-					return;
-				}
+				if (!content) return;
 				setWorking(true);
 				try {
-					await downloadElementAsPdf(el, filename);
+					const { downloadNdaPdf } = await import("./ndaPdf");
+					await downloadNdaPdf(content, filename);
 				} catch (err) {
 					toast.error("Could not create PDF", {
 						description: err instanceof Error ? err.message : String(err),

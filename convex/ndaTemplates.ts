@@ -82,81 +82,63 @@ function signatureBlock(
 }
 
 function buildEnglish(v: NdaVars): NdaDoc {
-	const receiving = v.receivingCompany
-		? `${v.receivingParty} (${v.receivingCompany})`
-		: v.receivingParty;
 	return {
 		type: "doc",
 		content: [
 			h(1, "Non-Disclosure Agreement"),
 			p(
 				text(
-					`This Non-Disclosure Agreement (the “Agreement”) is entered into on ${v.effectiveDate} between:`,
+					`This Non-Disclosure Agreement (“Agreement”) is entered into on ${v.effectiveDate} between:`,
 				),
 			),
 			partyLine("Disclosing Party:", v.disclosingParty, v.disclosingAddress),
-			partyLine("Receiving Party:", receiving),
+			partyLine("Receiving Party:", v.receivingParty, v.receivingCompany),
 			p(
 				text(
-					"The Disclosing Party intends to disclose certain confidential information to the Receiving Party for the purpose of evaluating or carrying out a potential or existing business relationship (the “Purpose”). In consideration of that disclosure, the parties agree as follows:",
+					"The Disclosing Party shares confidential information with the Receiving Party in connection with a (potential) collaboration. The parties agree as follows:",
 				),
 			),
 
 			h(2, "1. Confidential Information"),
 			p(
 				text(
-					"“Confidential Information” means all non-public information disclosed by the Disclosing Party to the Receiving Party, whether orally, in writing, or in any other form, including but not limited to business plans, strategies, designs, concepts, pricing, client lists, financial data, source files, and any other information that a reasonable person would understand to be confidential given its nature or the circumstances of disclosure.",
+					"Confidential Information means all non-public information that the Disclosing Party shares with the Receiving Party in any form, and any information that the Receiving Party should reasonably understand to be confidential.",
 				),
 			),
 
-			h(2, "2. Obligations of the Receiving Party"),
-			p(text("The Receiving Party agrees to:")),
+			h(2, "2. Confidentiality"),
+			p(text("The Receiving Party:")),
 			bullets(
-				"keep all Confidential Information strictly confidential;",
-				"use the Confidential Information solely for the Purpose;",
-				"not disclose the Confidential Information to any third party without the prior written consent of the Disclosing Party;",
-				"protect the Confidential Information using at least the same degree of care it uses for its own confidential information, and in any event no less than a reasonable degree of care.",
+				"keeps the Confidential Information secret and uses it solely for the purpose for which it was provided, never for its own benefit;",
+				"does not disclose it to third parties without the Disclosing Party's prior written consent, and binds any employees or engaged third parties to the same confidentiality;",
+				"handles it with due care and notifies the Disclosing Party without undue delay of any actual or suspected breach.",
 			),
 
 			h(2, "3. Exclusions"),
 			p(
 				text(
-					"These obligations do not apply to information that: (a) is or becomes publicly available through no fault of the Receiving Party; (b) was lawfully known to the Receiving Party before disclosure; (c) is lawfully received from a third party without a duty of confidentiality; or (d) is required to be disclosed by law or court order, provided the Receiving Party gives prompt notice where legally permitted.",
+					"The confidentiality obligation does not apply to information that: (a) is or becomes publicly known through no fault of the Receiving Party; (b) was already lawfully known to the Receiving Party; (c) is lawfully obtained from a third party without a duty of confidentiality; or (d) must be disclosed under the law or a court order, in which case the Receiving Party informs the Disclosing Party in advance where permitted.",
 				),
 			),
 
 			h(2, "4. Term"),
 			p(
 				text(
-					`This Agreement takes effect on the date stated above. The Receiving Party's obligations of confidentiality survive for a period of ${v.termYears} years following the date of disclosure of the relevant Confidential Information.`,
+					"The confidentiality obligation applies indefinitely, for as long as the information remains confidential in nature.",
 				),
 			),
 
-			h(2, "5. Return or Destruction of Materials"),
+			h(2, "5. Return and final provisions"),
 			p(
 				text(
-					"Upon the Disclosing Party's written request, the Receiving Party shall promptly return or destroy all materials containing Confidential Information, together with any copies, and confirm such destruction in writing if requested.",
+					`On first request, the Receiving Party returns or destroys the Confidential Information, including any copies. This Agreement is governed by the laws of the Netherlands; any dispute will be submitted to the competent court in ${v.governingCity}.`,
 				),
 			),
 
-			h(2, "6. No Licence or Warranty"),
+			h(2, "6. Signature"),
 			p(
 				text(
-					"No licence or other right to the Confidential Information is granted under this Agreement, whether by implication or otherwise. The Confidential Information is provided “as is”, without any warranty as to its accuracy or completeness.",
-				),
-			),
-
-			h(2, "7. Governing Law and Jurisdiction"),
-			p(
-				text(
-					`This Agreement is governed by the laws of the Netherlands. Any dispute arising out of or in connection with this Agreement shall be submitted to the exclusive jurisdiction of the competent court in ${v.governingCity}.`,
-				),
-			),
-
-			h(2, "8. Signature"),
-			p(
-				text(
-					"By signing below, the Receiving Party confirms that it has read, understood, and agrees to be bound by the terms of this Agreement.",
+					"The Receiving Party confirms that it has read, understood, and will comply with this Agreement.",
 				),
 			),
 		],
@@ -164,81 +146,63 @@ function buildEnglish(v: NdaVars): NdaDoc {
 }
 
 function buildDutch(v: NdaVars): NdaDoc {
-	const receiving = v.receivingCompany
-		? `${v.receivingParty} (${v.receivingCompany})`
-		: v.receivingParty;
 	return {
 		type: "doc",
 		content: [
 			h(1, "Geheimhoudingsovereenkomst"),
 			p(
 				text(
-					`Deze geheimhoudingsovereenkomst (de “Overeenkomst”) wordt aangegaan op ${v.effectiveDate} tussen:`,
+					`Deze geheimhoudingsovereenkomst (“Overeenkomst”) wordt op ${v.effectiveDate} gesloten tussen:`,
 				),
 			),
 			partyLine("Verstrekkende partij:", v.disclosingParty, v.disclosingAddress),
-			partyLine("Ontvangende partij:", receiving),
+			partyLine("Ontvangende partij:", v.receivingParty, v.receivingCompany),
 			p(
 				text(
-					"De verstrekkende partij is voornemens bepaalde vertrouwelijke informatie te delen met de ontvangende partij ten behoeve van het beoordelen of uitvoeren van een mogelijke of bestaande samenwerking (het “Doel”). Met inachtneming daarvan komen partijen het volgende overeen:",
+					"De verstrekkende partij verstrekt in het kader van een (mogelijke) samenwerking vertrouwelijke informatie aan de ontvangende partij. Partijen komen hierover het volgende overeen:",
 				),
 			),
 
 			h(2, "1. Vertrouwelijke informatie"),
 			p(
 				text(
-					"Onder “Vertrouwelijke informatie” wordt verstaan alle niet-openbare informatie die de verstrekkende partij aan de ontvangende partij verstrekt, mondeling, schriftelijk of in enige andere vorm, waaronder begrepen maar niet beperkt tot bedrijfsplannen, strategieën, ontwerpen, concepten, prijzen, klantenlijsten, financiële gegevens, bronbestanden en alle overige informatie waarvan een redelijk handelend persoon, gelet op de aard of de omstandigheden van de verstrekking, kan begrijpen dat deze vertrouwelijk is.",
+					"Onder vertrouwelijke informatie wordt verstaan alle niet-openbare informatie die de verstrekkende partij in welke vorm dan ook aan de ontvangende partij verstrekt, en alle informatie waarvan de ontvangende partij redelijkerwijs moet begrijpen dat deze vertrouwelijk is.",
 				),
 			),
 
-			h(2, "2. Verplichtingen van de ontvangende partij"),
-			p(text("De ontvangende partij verbindt zich ertoe om:")),
+			h(2, "2. Geheimhouding"),
+			p(text("De ontvangende partij:")),
 			bullets(
-				"de Vertrouwelijke informatie strikt vertrouwelijk te houden;",
-				"de Vertrouwelijke informatie uitsluitend te gebruiken voor het Doel;",
-				"de Vertrouwelijke informatie niet zonder voorafgaande schriftelijke toestemming van de verstrekkende partij aan derden bekend te maken;",
-				"de Vertrouwelijke informatie te beschermen met ten minste dezelfde zorg als zij voor haar eigen vertrouwelijke informatie hanteert, en in elk geval met een redelijke mate van zorg.",
+				"houdt de vertrouwelijke informatie geheim en gebruikt deze uitsluitend voor het doel waarvoor zij is verstrekt, nooit voor eigen voordeel;",
+				"verstrekt de informatie niet aan derden zonder voorafgaande schriftelijke toestemming, en legt medewerkers of ingeschakelde derden dezelfde geheimhouding op;",
+				"behandelt de informatie zorgvuldig en meldt een (vermoedelijk) lek zonder onnodige vertraging aan de verstrekkende partij.",
 			),
 
 			h(2, "3. Uitzonderingen"),
 			p(
 				text(
-					"Deze verplichtingen gelden niet voor informatie die: (a) openbaar is of wordt zonder toedoen van de ontvangende partij; (b) bij de ontvangende partij rechtmatig bekend was vóór de verstrekking; (c) rechtmatig van een derde is verkregen zonder geheimhoudingsplicht; of (d) op grond van wet- of regelgeving of een rechterlijke uitspraak openbaar gemaakt moet worden, mits de ontvangende partij hiervan, voor zover wettelijk toegestaan, tijdig melding maakt.",
+					"De geheimhoudingsplicht geldt niet voor informatie die: (a) algemeen bekend is of wordt zonder dat de ontvangende partij daarvoor verantwoordelijk is; (b) bij de ontvangende partij al rechtmatig bekend was; (c) rechtmatig van een derde is verkregen zonder geheimhoudingsplicht; of (d) op grond van de wet of een rechterlijke uitspraak openbaar moet worden gemaakt, in welk geval de ontvangende partij de verstrekkende partij vooraf informeert voor zover dat is toegestaan.",
 				),
 			),
 
 			h(2, "4. Duur"),
 			p(
 				text(
-					`Deze Overeenkomst treedt in werking op de hierboven genoemde datum. De geheimhoudingsverplichtingen van de ontvangende partij blijven van kracht gedurende een periode van ${v.termYears} jaar na de datum waarop de betreffende Vertrouwelijke informatie is verstrekt.`,
+					"De geheimhoudingsplicht geldt voor onbepaalde tijd, zolang de informatie vertrouwelijk van aard is.",
 				),
 			),
 
-			h(2, "5. Teruggave of vernietiging"),
+			h(2, "5. Teruggave en slotbepalingen"),
 			p(
 				text(
-					"Op eerste schriftelijk verzoek van de verstrekkende partij retourneert of vernietigt de ontvangende partij onverwijld alle materialen die Vertrouwelijke informatie bevatten, met inbegrip van kopieën, en bevestigt zij die vernietiging desgevraagd schriftelijk.",
+					`De ontvangende partij geeft de vertrouwelijke informatie op eerste verzoek terug of vernietigt deze, inclusief eventuele kopieën. Op deze Overeenkomst is Nederlands recht van toepassing; geschillen worden voorgelegd aan de bevoegde rechter te ${v.governingCity}.`,
 				),
 			),
 
-			h(2, "6. Geen licentie of garantie"),
+			h(2, "6. Ondertekening"),
 			p(
 				text(
-					"Met deze Overeenkomst wordt geen licentie of ander recht op de Vertrouwelijke informatie verleend, noch impliciet noch anderszins. De Vertrouwelijke informatie wordt verstrekt “as is”, zonder enige garantie ten aanzien van juistheid of volledigheid.",
-				),
-			),
-
-			h(2, "7. Toepasselijk recht en bevoegde rechter"),
-			p(
-				text(
-					`Op deze Overeenkomst is Nederlands recht van toepassing. Geschillen die voortvloeien uit of verband houden met deze Overeenkomst worden uitsluitend voorgelegd aan de bevoegde rechter te ${v.governingCity}.`,
-				),
-			),
-
-			h(2, "8. Ondertekening"),
-			p(
-				text(
-					"Door hieronder te ondertekenen verklaart de ontvangende partij deze Overeenkomst te hebben gelezen en begrepen en zich gebonden te achten aan de bepalingen ervan.",
+					"De ontvangende partij verklaart deze Overeenkomst te hebben gelezen, te begrijpen en na te leven.",
 				),
 			),
 		],
@@ -267,9 +231,9 @@ export function withUpdatedParties(
 		clientCompany?: string;
 	},
 ): NdaDoc {
-	const clientStr = parties.clientCompany
-		? `${parties.clientName}, ${parties.clientCompany}`
-		: parties.clientName;
+	// The client party shows only its company name (fall back to the contact
+	// name when no company is set).
+	const clientStr = parties.clientCompany || parties.clientName;
 	const businessStr = parties.businessAddress
 		? `${parties.businessName}, ${parties.businessAddress}`
 		: parties.businessName;

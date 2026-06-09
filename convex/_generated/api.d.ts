@@ -27,6 +27,7 @@ import type * as offertes from "../offertes.js";
 import type * as portfolio from "../portfolio.js";
 import type * as sections from "../sections.js";
 import type * as signedNdas from "../signedNdas.js";
+import type * as snapshots from "../snapshots.js";
 import type * as tasks from "../tasks.js";
 import type * as userSettings from "../userSettings.js";
 import type * as users from "../users.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   portfolio: typeof portfolio;
   sections: typeof sections;
   signedNdas: typeof signedNdas;
+  snapshots: typeof snapshots;
   tasks: typeof tasks;
   userSettings: typeof userSettings;
   users: typeof users;

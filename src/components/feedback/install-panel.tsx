@@ -53,7 +53,7 @@ export function InstallPanel({
     if (!on) return;
     window.__FEEDBACK__ = { token: "${project.widgetToken}", base: "${base}" };
     var s = document.createElement("script");
-    s.src = "${base}/feedback/widget.js?v=" + Math.floor(Date.now() / 60000);
+    s.src = "${base}/feedback/widget.js?v=" + Date.now();
     s.async = true;
     document.head.appendChild(s);
   } catch (e) {

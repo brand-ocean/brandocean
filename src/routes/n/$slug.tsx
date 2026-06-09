@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Brandmark, Logotype } from "@/components/brand";
 import { DownloadPdfButton } from "@/components/nda/DownloadPdfButton";
@@ -93,7 +93,6 @@ function PublicNda() {
 
 	const lang: Lang = data?.language === "en" ? "en" : "nl";
 	const c = COPY[lang];
-	const printRef = useRef<HTMLDivElement>(null);
 
 	if (data === null) {
 		return (
@@ -122,7 +121,7 @@ function PublicNda() {
 				<h1 className="sr-only">{data.title}</h1>
 
 				<div className="mb-6 flex justify-end">
-					<DownloadPdfButton targetRef={printRef} filename={data.title} />
+					<DownloadPdfButton content={body} filename={data.title} />
 				</div>
 
 				{data.alreadySigned ? (
@@ -140,7 +139,7 @@ function PublicNda() {
 				) : null}
 
 				{hasBody && body ? (
-					<section ref={printRef} className="nda-doc bg-white p-1">
+					<section className="nda-doc">
 						<OfferteStaticContent content={body} />
 					</section>
 				) : null}

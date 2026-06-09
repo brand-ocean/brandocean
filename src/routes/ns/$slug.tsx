@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
-import { useRef } from "react";
 import { Brandmark, Logotype } from "@/components/brand";
 import { DownloadPdfButton } from "@/components/nda/DownloadPdfButton";
 import { OfferteStaticContent } from "@/components/offertes/OfferteStaticContent";
@@ -32,7 +31,6 @@ const LABELS = {
 
 function SignedNda() {
 	const data = Route.useLoaderData();
-	const printRef = useRef<HTMLDivElement>(null);
 
 	if (data === null) {
 		return (
@@ -70,9 +68,9 @@ function SignedNda() {
 			</header>
 			<main className="mx-auto max-w-3xl px-6 py-16">
 				<div className="mb-6 flex justify-end">
-					<DownloadPdfButton targetRef={printRef} filename={data.title} />
+					<DownloadPdfButton content={body} filename={data.title} />
 				</div>
-				<div ref={printRef} className="nda-doc bg-white p-1">
+				<div className="nda-doc">
 					<header className="mb-8 space-y-2">
 						<p className="text-sm font-medium uppercase tracking-wider text-emerald-600">
 							{l.badge}

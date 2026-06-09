@@ -39,6 +39,7 @@ import { Route as AuthedAppFeedbackProjectIdRouteImport } from './routes/_authed
 import { Route as AuthedAppClientsClientIdRouteImport } from './routes/_authed/_app/clients/$clientId'
 import { Route as AuthedAppBackupSplatRouteImport } from './routes/_authed/_app/backup/$'
 import { Route as AuthedAppFeedbackProjectIdIndexRouteImport } from './routes/_authed/_app/feedback/$projectId.index'
+import { Route as AuthedAppFeedbackProjectIdReviewRouteImport } from './routes/_authed/_app/feedback/$projectId.review'
 import { Route as AuthedAppFeedbackProjectIdInstallRouteImport } from './routes/_authed/_app/feedback/$projectId.install'
 
 const MarketingRoute = MarketingRouteImport.update({
@@ -193,6 +194,12 @@ const AuthedAppFeedbackProjectIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthedAppFeedbackProjectIdRoute,
   } as any)
+const AuthedAppFeedbackProjectIdReviewRoute =
+  AuthedAppFeedbackProjectIdReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => AuthedAppFeedbackProjectIdRoute,
+  } as any)
 const AuthedAppFeedbackProjectIdInstallRoute =
   AuthedAppFeedbackProjectIdInstallRouteImport.update({
     id: '/install',
@@ -228,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthedAppSettingsIndexRoute
   '/tasks/': typeof AuthedAppTasksIndexRoute
   '/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
+  '/feedback/$projectId/review': typeof AuthedAppFeedbackProjectIdReviewRoute
   '/feedback/$projectId/': typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -257,6 +265,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedAppSettingsIndexRoute
   '/tasks': typeof AuthedAppTasksIndexRoute
   '/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
+  '/feedback/$projectId/review': typeof AuthedAppFeedbackProjectIdReviewRoute
   '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 export interface FileRoutesById {
@@ -291,6 +300,7 @@ export interface FileRoutesById {
   '/_authed/_app/settings/': typeof AuthedAppSettingsIndexRoute
   '/_authed/_app/tasks/': typeof AuthedAppTasksIndexRoute
   '/_authed/_app/feedback/$projectId/install': typeof AuthedAppFeedbackProjectIdInstallRoute
+  '/_authed/_app/feedback/$projectId/review': typeof AuthedAppFeedbackProjectIdReviewRoute
   '/_authed/_app/feedback/$projectId/': typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/feedback/$projectId/install'
+    | '/feedback/$projectId/review'
     | '/feedback/$projectId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/feedback/$projectId/install'
+    | '/feedback/$projectId/review'
     | '/feedback/$projectId'
   id:
     | '__root__'
@@ -385,6 +397,7 @@ export interface FileRouteTypes {
     | '/_authed/_app/settings/'
     | '/_authed/_app/tasks/'
     | '/_authed/_app/feedback/$projectId/install'
+    | '/_authed/_app/feedback/$projectId/review'
     | '/_authed/_app/feedback/$projectId/'
   fileRoutesById: FileRoutesById
 }
@@ -612,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppFeedbackProjectIdIndexRouteImport
       parentRoute: typeof AuthedAppFeedbackProjectIdRoute
     }
+    '/_authed/_app/feedback/$projectId/review': {
+      id: '/_authed/_app/feedback/$projectId/review'
+      path: '/review'
+      fullPath: '/feedback/$projectId/review'
+      preLoaderRoute: typeof AuthedAppFeedbackProjectIdReviewRouteImport
+      parentRoute: typeof AuthedAppFeedbackProjectIdRoute
+    }
     '/_authed/_app/feedback/$projectId/install': {
       id: '/_authed/_app/feedback/$projectId/install'
       path: '/install'
@@ -624,6 +644,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedAppFeedbackProjectIdRouteChildren {
   AuthedAppFeedbackProjectIdInstallRoute: typeof AuthedAppFeedbackProjectIdInstallRoute
+  AuthedAppFeedbackProjectIdReviewRoute: typeof AuthedAppFeedbackProjectIdReviewRoute
   AuthedAppFeedbackProjectIdIndexRoute: typeof AuthedAppFeedbackProjectIdIndexRoute
 }
 
@@ -631,6 +652,8 @@ const AuthedAppFeedbackProjectIdRouteChildren: AuthedAppFeedbackProjectIdRouteCh
   {
     AuthedAppFeedbackProjectIdInstallRoute:
       AuthedAppFeedbackProjectIdInstallRoute,
+    AuthedAppFeedbackProjectIdReviewRoute:
+      AuthedAppFeedbackProjectIdReviewRoute,
     AuthedAppFeedbackProjectIdIndexRoute: AuthedAppFeedbackProjectIdIndexRoute,
   }
 
