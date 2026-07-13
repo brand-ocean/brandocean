@@ -231,7 +231,11 @@ export function OfferteEditor({
 			Selection,
 			Markdown.configure({
 				html: false,
-				transformPastedText: true,
+				// Keep normal Cmd+V paste as rich content. When true, every paste is
+				// re-parsed as markdown with html:false, which escapes any stray
+				// "<"/">" into literal &lt;/&gt; and flattens formatting. Markdown
+				// import stays available through the explicit "MD" button below.
+				transformPastedText: false,
 				transformCopiedText: false,
 				breaks: true,
 			}),
@@ -282,20 +286,11 @@ export function OfferteEditor({
 		try {
 			const text = await navigator.clipboard.readText();
 			if (!text) return;
-			const parsed = (
-				editor.storage as unknown as {
-					markdown?: { parser?: { parse(input: string): unknown } };
-				}
-			).markdown?.parser?.parse(text);
-			if (parsed) {
-				editor
-					.chain()
-					.focus()
-					.insertContent(parsed as Parameters<typeof editor.commands.insertContent>[0])
-					.run();
-			} else {
-				editor.chain().focus().insertContent(text).run();
-			}
+			// tiptap-markdown parses a raw string passed to insertContent as
+			// markdown. Do NOT pre-convert to HTML first: insertContent(html) is
+			// re-escaped into a literal &lt;p&gt;… text node, which is what wiped
+			// the layout on earlier offertes.
+			editor.chain().focus().insertContent(text).run();
 		} catch (err) {
 			console.error("Paste as markdown failed", err);
 		}
@@ -306,7 +301,13 @@ export function OfferteEditor({
 		try {
 			const text = await navigator.clipboard.readText();
 			if (!text) return;
-			editor.chain().focus().insertContent(text).run();
+			// Insert explicit paragraph nodes so the markdown extension does not
+			// re-interpret the string (a bare string would be parsed as markdown).
+			const nodes = text.split(/\r?\n/).map((line) => ({
+				type: "paragraph",
+				content: line ? [{ type: "text", text: line }] : [],
+			}));
+			editor.chain().focus().insertContent(nodes).run();
 		} catch (err) {
 			console.error("Paste as plain text failed", err);
 		}
