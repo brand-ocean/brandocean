@@ -2,6 +2,50 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+// Rich context captured from the clicked element at comment time, so an AI can
+// map a comment back to the exact source element/component (text is the highest
+// value — it lets the AI grep the repo and land on the component). Every field
+// is optional and every array is a bounded snapshot (never grows over the doc's
+// life), so adding this is back-compatible and respects the 1MB doc limit.
+export const elementContextV = v.object({
+	text: v.optional(v.string()),
+	tag: v.optional(v.string()),
+	id: v.optional(v.string()),
+	classes: v.optional(v.array(v.string())),
+	attributes: v.optional(
+		v.array(v.object({ name: v.string(), value: v.string() })),
+	),
+	styles: v.optional(
+		v.object({
+			fontFamily: v.optional(v.string()),
+			fontSize: v.optional(v.string()),
+			fontWeight: v.optional(v.string()),
+			color: v.optional(v.string()),
+			lineHeight: v.optional(v.string()),
+			letterSpacing: v.optional(v.string()),
+			textTransform: v.optional(v.string()),
+			display: v.optional(v.string()),
+		}),
+	),
+	// Tier 2 — React only: owner-component name chain + dev-build source location.
+	// Empty on minified prod and on non-React (Shopify/Liquid) sites — graceful.
+	componentPath: v.optional(v.array(v.string())),
+	source: v.optional(
+		v.object({
+			fileName: v.string(),
+			lineNumber: v.number(),
+			columnNumber: v.optional(v.number()),
+		}),
+	),
+	// Tier 3 — nearest landmark for orientation on whole-page / body comments.
+	landmark: v.optional(
+		v.object({
+			selector: v.optional(v.string()),
+			heading: v.optional(v.string()),
+		}),
+	),
+});
+
 export default defineSchema({
 	...authTables,
 
@@ -267,6 +311,10 @@ export default defineSchema({
 		clientId: v.optional(v.id("clients")),
 		name: v.string(),
 		shopifyDomain: v.string(),
+		// Local development hosts (e.g. "localhost:5173") that resolve to this
+		// project, so the review extension loads the right comments on a dev
+		// server too. Stored normalized (lowercase host[:port]).
+		devHosts: v.optional(v.array(v.string())),
 		widgetToken: v.string(),
 		shareToken: v.string(),
 		status: v.union(
@@ -279,6 +327,7 @@ export default defineSchema({
 		.index("by_owner", ["ownerUserId"])
 		.index("by_widget_token", ["widgetToken"])
 		.index("by_share_token", ["shareToken"])
+		.index("by_shopify_domain", ["shopifyDomain"])
 		.index("by_client", ["clientId"]),
 
 	comments: defineTable({
@@ -295,6 +344,16 @@ export default defineSchema({
 			elementHeight: v.number(),
 			px: v.optional(v.number()),
 			py: v.optional(v.number()),
+			// Optional rectangular region (document coords) when the reviewer
+			// dragged a box instead of clicking a single point.
+			region: v.optional(
+				v.object({
+					x: v.number(),
+					y: v.number(),
+					w: v.number(),
+					h: v.number(),
+				}),
+			),
 		}),
 		content: v.string(),
 		clientKey: v.optional(v.string()),
@@ -344,6 +403,8 @@ export default defineSchema({
 			viewportHeight: v.number(),
 			devicePixelRatio: v.number(),
 		}),
+		// Rich element context captured at click time (see elementContextV).
+		elementContext: v.optional(elementContextV),
 		createdAt: v.number(),
 	})
 		.index("by_project", ["projectId"])
@@ -411,4 +472,131 @@ export default defineSchema({
 		projectId: v.id("feedbackProjects"),
 		lastAt: v.number(),
 	}).index("by_project", ["projectId"]),
+
+	// --- Usage-based billing (charge clients for Cloudflare + Convex usage) ----
+	//
+	// A client is put on usage billing by creating one billingClients row and
+	// linking their infra (Workers/zones/Convex deployments) as billingResources.
+	// Usage is metered per day into usageRecords, then rolled up into a
+	// billingInvoices charge collected via Mollie. See convex/billing/.
+
+	// One per client that's on usage billing. Holds the Mollie mandate and the
+	// per-client billing knobs (markup override, minimum charge, interval).
+	billingClients: defineTable({
+		ownerId: v.id("users"),
+		clientId: v.id("clients"),
+		status: v.union(
+			v.literal("active"),
+			v.literal("paused"),
+			v.literal("canceled"),
+		),
+		// Stripe identifiers. Populated during onboarding once the client saves a
+		// payment method (card/SEPA mandate) via Checkout; until then charging is
+		// impossible. mandateStatus "valid" means we have a usable payment method.
+		stripeCustomerId: v.optional(v.string()),
+		stripePaymentMethodId: v.optional(v.string()),
+		mandateStatus: v.optional(
+			v.union(
+				v.literal("pending"),
+				v.literal("valid"),
+				v.literal("invalid"),
+			),
+		),
+		// Markup multiplier applied on top of provider cost (overrides the global
+		// default in config.ts). e.g. 3 = client pays 3x cost.
+		markup: v.optional(v.number()),
+		// Bill every N months (1 = monthly). Longer intervals amortize Mollie's
+		// per-transaction fee against tiny usage amounts.
+		billingIntervalMonths: v.number(),
+		// Don't charge below this (in eurocents); usage carries forward instead, so
+		// a €0,08 month never triggers a fee-eating incasso.
+		minChargeCents: v.number(),
+		// Sub-threshold amount rolled over from prior periods (eurocents).
+		carryoverCents: v.number(),
+		// Start of the current unbilled period ("YYYY-MM-DD"). Advanced by the
+		// billing run after each successful (or carried-over) period.
+		periodStart: v.string(),
+		createdAt: v.number(),
+	})
+		.index("by_owner", ["ownerId"])
+		.index("by_client", ["clientId"])
+		.index("by_stripe_customer", ["stripeCustomerId"])
+		.index("by_status", ["status"]),
+
+	// Infra owned by a billing client. `identifier` is the Cloudflare script name,
+	// zone id, or Convex deployment name we attribute usage to.
+	billingResources: defineTable({
+		ownerId: v.id("users"),
+		billingClientId: v.id("billingClients"),
+		kind: v.union(
+			v.literal("cf_worker"),
+			v.literal("cf_zone"),
+			v.literal("cx_deployment"),
+		),
+		identifier: v.string(),
+		label: v.optional(v.string()),
+		// Convex log-stream id returned by the Platform API, so we can tear the
+		// stream down if the client leaves. Only set for cx_deployment.
+		logStreamId: v.optional(v.string()),
+		active: v.boolean(),
+		createdAt: v.number(),
+	})
+		.index("by_billing_client", ["billingClientId"])
+		.index("by_kind_and_identifier", ["kind", "identifier"])
+		.index("by_owner", ["ownerId"]),
+
+	// Daily metered usage, one canonical metric per row. Sharded on write
+	// (`shard`) so high-frequency Convex log-stream increments don't contend on a
+	// single hot document; the billing run sums all shards for the period.
+	usageRecords: defineTable({
+		ownerId: v.id("users"),
+		billingClientId: v.id("billingClients"),
+		metric: v.string(), // see METRICS in config.ts
+		day: v.string(), // "YYYY-MM-DD" (UTC), sorts chronologically
+		shard: v.number(),
+		quantity: v.number(), // in the metric's canonical unit
+		createdAt: v.number(),
+	})
+		.index("by_client_and_day", ["billingClientId", "day"])
+		.index("by_client_metric_day_shard", [
+			"billingClientId",
+			"metric",
+			"day",
+			"shard",
+		]),
+
+	// One computed charge per billing period per client.
+	billingInvoices: defineTable({
+		ownerId: v.id("users"),
+		billingClientId: v.id("billingClients"),
+		periodStart: v.string(), // "YYYY-MM-DD" inclusive
+		periodEnd: v.string(), // "YYYY-MM-DD" exclusive
+		// Per-metric breakdown so the client can see what drove the bill.
+		lines: v.array(
+			v.object({
+				metric: v.string(),
+				quantity: v.number(),
+				costCents: v.number(), // provider cost (eurocents)
+				amountCents: v.number(), // billed = cost * markup (eurocents)
+			}),
+		),
+		usageCents: v.number(), // sum of line amounts this period
+		carryInCents: v.number(), // carryover applied from prior periods
+		chargedCents: v.number(), // actually charged via Mollie (0 if carried)
+		carryOutCents: v.number(), // rolled to next period (below minimum)
+		currency: v.string(),
+		status: v.union(
+			v.literal("carried"), // below minimum, nothing charged
+			v.literal("pending"), // Mollie payment created, awaiting webhook
+			v.literal("paid"),
+			v.literal("failed"),
+		),
+		stripePaymentIntentId: v.optional(v.string()),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_owner", ["ownerId"])
+		.index("by_billing_client", ["billingClientId"])
+		.index("by_stripe_payment", ["stripePaymentIntentId"])
+		.index("by_status", ["status"]),
 });

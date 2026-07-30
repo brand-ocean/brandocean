@@ -3,16 +3,15 @@ import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { auth } from "./auth";
-import { FEEDBACK_WIDGET_SOURCE } from "./feedbackWidgetSource";
 
 const http = httpRouter();
 
 auth.addHttpRoutes(http);
 
-// --- Visual website-feedback: cross-origin widget/share API ----------------
+// --- Visual website-feedback: cross-origin extension/share API -------------
 //
-// These endpoints run on the client's Shopify domain (the widget) or the
-// public share board, so they cannot use Convex Auth. They are gated by an
+// These endpoints run on the client's Shopify domain (the review extension)
+// or the public share board, so they cannot use Convex Auth. They are gated by an
 // unguessable per-project token. Auth is a token in a header — never a cookie
 // — so echoing arbitrary request origins carries no CSRF/credential risk.
 
@@ -138,6 +137,127 @@ function fbMetadata(obj: JsonObject): {
 	};
 }
 
+function fbStrArr(value: Json): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const out: string[] = [];
+	for (const item of value) if (typeof item === "string") out.push(item);
+	return out.length ? out : undefined;
+}
+
+// Parse the optional rich element-context blob the widget sends. This does
+// type-correctness only; feedback.sanitizeElementContext does the clamping and
+// array-capping. Returns undefined when absent, so older widgets keep working.
+function fbElementContext(body: JsonObject):
+	| {
+			text?: string;
+			tag?: string;
+			id?: string;
+			classes?: string[];
+			attributes?: Array<{ name: string; value: string }>;
+			styles?: {
+				fontFamily?: string;
+				fontSize?: string;
+				fontWeight?: string;
+				color?: string;
+				lineHeight?: string;
+				letterSpacing?: string;
+				textTransform?: string;
+				display?: string;
+			};
+			componentPath?: string[];
+			source?: { fileName: string; lineNumber: number; columnNumber?: number };
+			landmark?: { selector?: string; heading?: string };
+	  }
+	| undefined {
+	const raw = body.elementContext;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+	const ec: JsonObject = raw;
+	const optStr = (o: JsonObject, k: string): string | undefined => {
+		const value = o[k];
+		return typeof value === "string" ? value : undefined;
+	};
+
+	let attributes: Array<{ name: string; value: string }> | undefined;
+	if (Array.isArray(ec.attributes)) {
+		const list: Array<{ name: string; value: string }> = [];
+		for (const item of ec.attributes) {
+			if (item && typeof item === "object" && !Array.isArray(item)) {
+				const a: JsonObject = item;
+				if (typeof a.name === "string" && typeof a.value === "string") {
+					list.push({ name: a.name, value: a.value });
+				}
+			}
+		}
+		if (list.length) attributes = list;
+	}
+
+	let styles:
+		| {
+				fontFamily?: string;
+				fontSize?: string;
+				fontWeight?: string;
+				color?: string;
+				lineHeight?: string;
+				letterSpacing?: string;
+				textTransform?: string;
+				display?: string;
+		  }
+		| undefined;
+	if (ec.styles && typeof ec.styles === "object" && !Array.isArray(ec.styles)) {
+		const s: JsonObject = ec.styles;
+		styles = {
+			fontFamily: optStr(s, "fontFamily"),
+			fontSize: optStr(s, "fontSize"),
+			fontWeight: optStr(s, "fontWeight"),
+			color: optStr(s, "color"),
+			lineHeight: optStr(s, "lineHeight"),
+			letterSpacing: optStr(s, "letterSpacing"),
+			textTransform: optStr(s, "textTransform"),
+			display: optStr(s, "display"),
+		};
+	}
+
+	let source:
+		| { fileName: string; lineNumber: number; columnNumber?: number }
+		| undefined;
+	if (ec.source && typeof ec.source === "object" && !Array.isArray(ec.source)) {
+		const sc: JsonObject = ec.source;
+		if (typeof sc.fileName === "string" && typeof sc.lineNumber === "number") {
+			source = {
+				fileName: sc.fileName,
+				lineNumber: sc.lineNumber,
+				columnNumber:
+					typeof sc.columnNumber === "number" ? sc.columnNumber : undefined,
+			};
+		}
+	}
+
+	let landmark: { selector?: string; heading?: string } | undefined;
+	if (
+		ec.landmark &&
+		typeof ec.landmark === "object" &&
+		!Array.isArray(ec.landmark)
+	) {
+		const lm: JsonObject = ec.landmark;
+		landmark = {
+			selector: optStr(lm, "selector"),
+			heading: optStr(lm, "heading"),
+		};
+	}
+
+	return {
+		text: optStr(ec, "text"),
+		tag: optStr(ec, "tag"),
+		id: optStr(ec, "id"),
+		classes: fbStrArr(ec.classes),
+		attributes,
+		styles,
+		componentPath: fbStrArr(ec.componentPath),
+		source,
+		landmark,
+	};
+}
+
 const fbPreflight = httpAction(async (_ctx, request) => {
 	return new Response(null, {
 		status: 204,
@@ -150,24 +270,48 @@ for (const path of [
 	"/feedback/replies",
 	"/feedback/resolve",
 	"/feedback/move",
+	"/feedback/edit",
 	"/feedback/delete",
 	"/feedback/screenshot-upload-url",
+	"/feedback/resolve-host",
+	"/feedback/projects",
 ]) {
 	http.route({ path, method: "OPTIONS", handler: fbPreflight });
 }
 
+// Owner's project list (name + token per project) so the review extension can
+// auto-detect which project a localhost dev server belongs to. Requires a
+// valid widget token — see feedback.listProjectsForToken for the trust model.
 http.route({
-	path: "/feedback/widget.js",
+	path: "/feedback/projects",
 	method: "GET",
-	handler: httpAction(async () => {
-		return new Response(FEEDBACK_WIDGET_SOURCE, {
-			status: 200,
-			headers: {
-				"Content-Type": "application/javascript; charset=utf-8",
-				"Cache-Control": "public, max-age=30",
-				"Access-Control-Allow-Origin": "*",
-			},
+	handler: httpAction(async (ctx, request) => {
+		const origin = request.headers.get("Origin");
+		const url = new URL(request.url);
+		const token = fbToken(request, url);
+		if (!token) return fbJson({ error: "missing_token" }, 401, origin);
+		const result = await ctx.runQuery(internal.feedback.listProjectsForToken, {
+			token,
 		});
+		if (!result) return fbJson({ error: "forbidden" }, 403, origin);
+		return fbJson(result, 200, origin);
+	}),
+});
+
+// Map a framed host → its project (token + name) so the review extension loads
+// the right project automatically. No token required (host is the lookup key);
+// returns 404 when no project is registered for that host.
+http.route({
+	path: "/feedback/resolve-host",
+	method: "GET",
+	handler: httpAction(async (ctx, request) => {
+		const origin = request.headers.get("Origin");
+		const url = new URL(request.url);
+		const host = url.searchParams.get("host");
+		if (!host) return fbJson({ error: "missing_host" }, 400, origin);
+		const result = await ctx.runQuery(internal.feedback.resolveHost, { host });
+		if (!result) return fbJson({ error: "not_found" }, 404, origin);
+		return fbJson(result, 200, origin);
 	}),
 });
 
@@ -302,6 +446,7 @@ http.route({
 						typeof screenshotRaw === "string"
 							? (screenshotRaw as Id<"_storage">)
 							: undefined,
+					elementContext: fbElementContext(body),
 				},
 			);
 			return fbJson({ id }, 200, origin);
@@ -378,6 +523,36 @@ http.route({
 				token,
 				commentId: fbStr(body, "commentId") as Id<"comments">,
 				anchor: fbAnchor(body),
+			});
+			return fbJson({ ok: true }, 200, origin);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			return fbJson({ error: msg }, fbErrorStatus(msg), origin);
+		}
+	}),
+});
+
+http.route({
+	path: "/feedback/edit",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const origin = request.headers.get("Origin");
+		const url = new URL(request.url);
+		const token = fbToken(request, url);
+		if (!token) return fbJson({ error: "missing_token" }, 401, origin);
+		const body = await fbReadJson(request);
+		if (!body) return fbJson({ error: "bad_body" }, 400, origin);
+		try {
+			const editImageRaw = body.imageStorageId;
+			await ctx.runMutation(internal.feedback.editCommentFromToken, {
+				token,
+				commentId: fbStr(body, "commentId") as Id<"comments">,
+				content: fbStr(body, "content"),
+				imageStorageId:
+					typeof editImageRaw === "string"
+						? (editImageRaw as Id<"_storage">)
+						: undefined,
+				removeImage: body.removeImage === true,
 			});
 			return fbJson({ ok: true }, 200, origin);
 		} catch (e) {
@@ -503,6 +678,79 @@ http.route({
 				"Access-Control-Allow-Origin": "*",
 			},
 		});
+	}),
+});
+
+// --- Usage billing webhooks -------------------------------------------------
+
+// Convex log stream sink. The stream is created per client deployment with the
+// URL /billing/convex-usage?deployment=<name>&secret=<...>, so every request
+// carries one deployment's batch of usage events. Gated by a shared secret.
+http.route({
+	path: "/billing/convex-usage",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const url = new URL(request.url);
+		const secret = url.searchParams.get("secret");
+		const deployment = url.searchParams.get("deployment");
+		const expected = process.env.BILLING_WEBHOOK_SECRET;
+		if (!expected || secret !== expected) {
+			return new Response("forbidden", { status: 403 });
+		}
+		if (!deployment) return new Response("missing_deployment", { status: 400 });
+
+		const text = await request.text();
+		if (text.length > 4 * 1024 * 1024) {
+			return new Response("too_large", { status: 413 });
+		}
+		let events: unknown[];
+		try {
+			const parsed: Json = JSON.parse(text);
+			if (Array.isArray(parsed)) {
+				events = parsed;
+			} else if (
+				parsed &&
+				typeof parsed === "object" &&
+				Array.isArray((parsed as JsonObject).events)
+			) {
+				events = (parsed as { events: Json[] }).events;
+			} else {
+				events = [parsed];
+			}
+		} catch {
+			return new Response("bad_json", { status: 400 });
+		}
+
+		await ctx.runAction(internal.billing.convexUsage.ingestConvexEvents, {
+			deployment,
+			events,
+			receivedAt: Date.now(),
+		});
+		return new Response("ok", { status: 200 });
+	}),
+});
+
+// Stripe webhook. The signature is verified inside the action against the raw
+// body + STRIPE_WEBHOOK_SECRET, so the body must be passed through untouched.
+http.route({
+	path: "/billing/stripe-webhook",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const signature = request.headers.get("stripe-signature");
+		if (!signature) return new Response("missing_signature", { status: 400 });
+		const payload = await request.text();
+		try {
+			const result = await ctx.runAction(
+				internal.billing.stripe.handleWebhook,
+				{ payload, signature },
+			);
+			if (!result.ok) return new Response("invalid", { status: 400 });
+		} catch (e) {
+			console.error("stripe webhook error", e);
+			// 200 on transient errors so Stripe's retry doesn't wedge; a bad
+			// signature returns 400 above.
+		}
+		return new Response("ok", { status: 200 });
 	}),
 });
 

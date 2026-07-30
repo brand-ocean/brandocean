@@ -16,4 +16,20 @@ crons.cron(
 	{},
 );
 
+// Usage billing: pull the previous complete UTC day of Cloudflare usage, then
+// (later) close out any due billing periods and charge via Mollie.
+crons.cron(
+	"pull cloudflare usage daily",
+	"0 2 * * *",
+	internal.billing.cloudflare.pullDaily,
+	{},
+);
+
+crons.cron(
+	"run due billing periods daily",
+	"0 4 * * *",
+	internal.billing.run.runDue,
+	{},
+);
+
 export default crons;

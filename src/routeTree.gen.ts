@@ -32,11 +32,13 @@ import { Route as AuthedAppInvoicesIndexRouteImport } from './routes/_authed/_ap
 import { Route as AuthedAppFeedbackIndexRouteImport } from './routes/_authed/_app/feedback/index'
 import { Route as AuthedAppDashboardIndexRouteImport } from './routes/_authed/_app/dashboard/index'
 import { Route as AuthedAppClientsIndexRouteImport } from './routes/_authed/_app/clients/index'
+import { Route as AuthedAppBillingIndexRouteImport } from './routes/_authed/_app/billing/index'
 import { Route as AuthedAppOffertesOfferteIdRouteImport } from './routes/_authed/_app/offertes/$offerteId'
 import { Route as AuthedAppNdasNdaIdRouteImport } from './routes/_authed/_app/ndas/$ndaId'
 import { Route as AuthedAppInvoicesInvoiceIdRouteImport } from './routes/_authed/_app/invoices/$invoiceId'
 import { Route as AuthedAppFeedbackProjectIdRouteImport } from './routes/_authed/_app/feedback/$projectId'
 import { Route as AuthedAppClientsClientIdRouteImport } from './routes/_authed/_app/clients/$clientId'
+import { Route as AuthedAppBillingBillingClientIdRouteImport } from './routes/_authed/_app/billing/$billingClientId'
 import { Route as AuthedAppBackupSplatRouteImport } from './routes/_authed/_app/backup/$'
 import { Route as AuthedAppFeedbackProjectIdIndexRouteImport } from './routes/_authed/_app/feedback/$projectId.index'
 import { Route as AuthedAppFeedbackProjectIdReviewRouteImport } from './routes/_authed/_app/feedback/$projectId.review'
@@ -154,6 +156,11 @@ const AuthedAppClientsIndexRoute = AuthedAppClientsIndexRouteImport.update({
   path: '/clients/',
   getParentRoute: () => AuthedAppRoute,
 } as any)
+const AuthedAppBillingIndexRoute = AuthedAppBillingIndexRouteImport.update({
+  id: '/billing/',
+  path: '/billing/',
+  getParentRoute: () => AuthedAppRoute,
+} as any)
 const AuthedAppOffertesOfferteIdRoute =
   AuthedAppOffertesOfferteIdRouteImport.update({
     id: '/offertes/$offerteId',
@@ -181,6 +188,12 @@ const AuthedAppClientsClientIdRoute =
   AuthedAppClientsClientIdRouteImport.update({
     id: '/clients/$clientId',
     path: '/clients/$clientId',
+    getParentRoute: () => AuthedAppRoute,
+  } as any)
+const AuthedAppBillingBillingClientIdRoute =
+  AuthedAppBillingBillingClientIdRouteImport.update({
+    id: '/billing/$billingClientId',
+    path: '/billing/$billingClientId',
     getParentRoute: () => AuthedAppRoute,
   } as any)
 const AuthedAppBackupSplatRoute = AuthedAppBackupSplatRouteImport.update({
@@ -220,11 +233,13 @@ export interface FileRoutesByFullPath {
   '/work/$slug': typeof MarketingWorkSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
+  '/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
+  '/billing/': typeof AuthedAppBillingIndexRoute
   '/clients/': typeof AuthedAppClientsIndexRoute
   '/dashboard/': typeof AuthedAppDashboardIndexRoute
   '/feedback/': typeof AuthedAppFeedbackIndexRoute
@@ -251,10 +266,12 @@ export interface FileRoutesByTo {
   '/work/$slug': typeof MarketingWorkSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
+  '/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
+  '/billing': typeof AuthedAppBillingIndexRoute
   '/clients': typeof AuthedAppClientsIndexRoute
   '/dashboard': typeof AuthedAppDashboardIndexRoute
   '/feedback': typeof AuthedAppFeedbackIndexRoute
@@ -285,11 +302,13 @@ export interface FileRoutesById {
   '/_marketing/work/$slug': typeof MarketingWorkSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/_authed/_app/backup/$': typeof AuthedAppBackupSplatRoute
+  '/_authed/_app/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
   '/_authed/_app/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/_authed/_app/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/_authed/_app/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/_authed/_app/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/_authed/_app/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
+  '/_authed/_app/billing/': typeof AuthedAppBillingIndexRoute
   '/_authed/_app/clients/': typeof AuthedAppClientsIndexRoute
   '/_authed/_app/dashboard/': typeof AuthedAppDashboardIndexRoute
   '/_authed/_app/feedback/': typeof AuthedAppFeedbackIndexRoute
@@ -318,11 +337,13 @@ export interface FileRouteTypes {
     | '/work/$slug'
     | '/og/o/$slug'
     | '/backup/$'
+    | '/billing/$billingClientId'
     | '/clients/$clientId'
     | '/feedback/$projectId'
     | '/invoices/$invoiceId'
     | '/ndas/$ndaId'
     | '/offertes/$offerteId'
+    | '/billing/'
     | '/clients/'
     | '/dashboard/'
     | '/feedback/'
@@ -349,10 +370,12 @@ export interface FileRouteTypes {
     | '/work/$slug'
     | '/og/o/$slug'
     | '/backup/$'
+    | '/billing/$billingClientId'
     | '/clients/$clientId'
     | '/invoices/$invoiceId'
     | '/ndas/$ndaId'
     | '/offertes/$offerteId'
+    | '/billing'
     | '/clients'
     | '/dashboard'
     | '/feedback'
@@ -382,11 +405,13 @@ export interface FileRouteTypes {
     | '/_marketing/work/$slug'
     | '/og/o/$slug'
     | '/_authed/_app/backup/$'
+    | '/_authed/_app/billing/$billingClientId'
     | '/_authed/_app/clients/$clientId'
     | '/_authed/_app/feedback/$projectId'
     | '/_authed/_app/invoices/$invoiceId'
     | '/_authed/_app/ndas/$ndaId'
     | '/_authed/_app/offertes/$offerteId'
+    | '/_authed/_app/billing/'
     | '/_authed/_app/clients/'
     | '/_authed/_app/dashboard/'
     | '/_authed/_app/feedback/'
@@ -576,6 +601,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppClientsIndexRouteImport
       parentRoute: typeof AuthedAppRoute
     }
+    '/_authed/_app/billing/': {
+      id: '/_authed/_app/billing/'
+      path: '/billing'
+      fullPath: '/billing/'
+      preLoaderRoute: typeof AuthedAppBillingIndexRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
     '/_authed/_app/offertes/$offerteId': {
       id: '/_authed/_app/offertes/$offerteId'
       path: '/offertes/$offerteId'
@@ -609,6 +641,13 @@ declare module '@tanstack/react-router' {
       path: '/clients/$clientId'
       fullPath: '/clients/$clientId'
       preLoaderRoute: typeof AuthedAppClientsClientIdRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
+    '/_authed/_app/billing/$billingClientId': {
+      id: '/_authed/_app/billing/$billingClientId'
+      path: '/billing/$billingClientId'
+      fullPath: '/billing/$billingClientId'
+      preLoaderRoute: typeof AuthedAppBillingBillingClientIdRouteImport
       parentRoute: typeof AuthedAppRoute
     }
     '/_authed/_app/backup/$': {
@@ -664,11 +703,13 @@ const AuthedAppFeedbackProjectIdRouteWithChildren =
 
 interface AuthedAppRouteChildren {
   AuthedAppBackupSplatRoute: typeof AuthedAppBackupSplatRoute
+  AuthedAppBillingBillingClientIdRoute: typeof AuthedAppBillingBillingClientIdRoute
   AuthedAppClientsClientIdRoute: typeof AuthedAppClientsClientIdRoute
   AuthedAppFeedbackProjectIdRoute: typeof AuthedAppFeedbackProjectIdRouteWithChildren
   AuthedAppInvoicesInvoiceIdRoute: typeof AuthedAppInvoicesInvoiceIdRoute
   AuthedAppNdasNdaIdRoute: typeof AuthedAppNdasNdaIdRoute
   AuthedAppOffertesOfferteIdRoute: typeof AuthedAppOffertesOfferteIdRoute
+  AuthedAppBillingIndexRoute: typeof AuthedAppBillingIndexRoute
   AuthedAppClientsIndexRoute: typeof AuthedAppClientsIndexRoute
   AuthedAppDashboardIndexRoute: typeof AuthedAppDashboardIndexRoute
   AuthedAppFeedbackIndexRoute: typeof AuthedAppFeedbackIndexRoute
@@ -682,11 +723,13 @@ interface AuthedAppRouteChildren {
 
 const AuthedAppRouteChildren: AuthedAppRouteChildren = {
   AuthedAppBackupSplatRoute: AuthedAppBackupSplatRoute,
+  AuthedAppBillingBillingClientIdRoute: AuthedAppBillingBillingClientIdRoute,
   AuthedAppClientsClientIdRoute: AuthedAppClientsClientIdRoute,
   AuthedAppFeedbackProjectIdRoute: AuthedAppFeedbackProjectIdRouteWithChildren,
   AuthedAppInvoicesInvoiceIdRoute: AuthedAppInvoicesInvoiceIdRoute,
   AuthedAppNdasNdaIdRoute: AuthedAppNdasNdaIdRoute,
   AuthedAppOffertesOfferteIdRoute: AuthedAppOffertesOfferteIdRoute,
+  AuthedAppBillingIndexRoute: AuthedAppBillingIndexRoute,
   AuthedAppClientsIndexRoute: AuthedAppClientsIndexRoute,
   AuthedAppDashboardIndexRoute: AuthedAppDashboardIndexRoute,
   AuthedAppFeedbackIndexRoute: AuthedAppFeedbackIndexRoute,

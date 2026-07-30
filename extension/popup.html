@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { width: 300px; margin: 0; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1a1a; }
+      .wrap { padding: 14px; }
+      h1 { font-size: 14px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+      h1 img { width: 22px; height: 22px; border-radius: 6px; display: block; }
+      h1 span { color: #1552EE; }
+      label { display: block; font-size: 11px; color: #6b7280; margin: 8px 0 3px; }
+      label .req { color: #dc2626; }
+      input { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #e5e7eb; border-radius: 8px; font: inherit; }
+      input:focus { outline: none; border-color: #1552EE; }
+      .btn { width: 100%; margin-top: 12px; padding: 9px; border: 0; border-radius: 8px; background: #1552EE; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+      .btn:hover { filter: brightness(1.08); }
+      .btn:disabled { background: #a9c0fa; cursor: not-allowed; filter: none; }
+      .hint { font-size: 11px; color: #9ca3af; margin-top: 6px; min-height: 14px; }
+      details.dev { margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+      details.dev summary { font-size: 11px; color: #6b7280; cursor: pointer; user-select: none; }
+      details.dev textarea { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #e5e7eb; border-radius: 8px; font: 11px/1.4 ui-monospace, Menlo, monospace; resize: vertical; min-height: 44px; }
+      details.dev textarea:focus { outline: none; border-color: #1552EE; }
+      .check { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; color: #374151; }
+      .check input { width: auto; }
+      .devnote { font-size: 10px; color: #9ca3af; margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1><img src="icons/icon-48.png" alt="" />Brandocean<span>·</span>Feedback</h1>
+
+      <label for="name">Your name <span class="req">*</span></label>
+      <input id="name" type="text" placeholder="Jane Doe" />
+      <label for="email">Your email <span class="req">*</span></label>
+      <input id="email" type="email" placeholder="jane@example.com" />
+
+      <label for="url">Site to review</label>
+      <input id="url" type="text" placeholder="https://example.com" />
+      <button id="open" class="btn" disabled>Open review canvas</button>
+      <div id="hint" class="hint">Enter your name and email to continue.</div>
+
+      <details class="dev" id="devSection">
+        <summary>Developer mode</summary>
+        <label class="check"><input id="devOn" type="checkbox" /> Enable developer mode</label>
+        <label for="devBase">Convex API override (not your website URL)</label>
+        <input id="devBase" type="text" placeholder="http://127.0.0.1:3211 (local convex dev)" />
+        <div class="devnote">Only for a locally running Convex backend. Leave empty otherwise — the site you review goes in the URL box above. If this doesn't answer, production is used automatically.</div>
+        <label for="devHostTokens">Host → token overrides (one per line)</label>
+        <textarea id="devHostTokens" placeholder="localhost:5173=PASTE_PROJECT_TOKEN"></textarea>
+        <div class="devnote">Wins over auto-resolve. Copy the token from the project's Review &amp; share page.</div>
+        <label class="check"><input id="devDebug" type="checkbox" /> Verbose logging (canvas console)</label>
+      </details>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

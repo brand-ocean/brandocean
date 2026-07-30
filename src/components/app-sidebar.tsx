@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
 	FileTextIcon,
+	GaugeIcon,
 	ImageIcon,
 	LayoutDashboardIcon,
 	ListChecksIcon,
@@ -39,6 +40,7 @@ const primaryNav = [
 	{ title: "NDAs", to: "/ndas", icon: ShieldCheckIcon, exact: false },
 	{ title: "Clients", to: "/clients", icon: UsersIcon, exact: false },
 	{ title: "Invoices", to: "/invoices", icon: ReceiptIcon, exact: false },
+	{ title: "Billing", to: "/billing", icon: GaugeIcon, exact: false },
 	{ title: "Tasks", to: "/tasks", icon: ListChecksIcon, exact: false },
 	{
 		title: "Feedback",

@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { ConvexError, v } from "convex/values";
+import { ConvexError, type Infer, v } from "convex/values";
 import { customAlphabet } from "nanoid";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -11,6 +11,7 @@ import {
 	mutation,
 	query,
 } from "./_generated/server";
+import { elementContextV } from "./schema";
 
 // --- Constants -------------------------------------------------------------
 
@@ -37,6 +38,14 @@ const anchorValidator = v.object({
 	elementHeight: v.number(),
 	px: v.optional(v.number()),
 	py: v.optional(v.number()),
+	region: v.optional(
+		v.object({
+			x: v.number(),
+			y: v.number(),
+			w: v.number(),
+			h: v.number(),
+		}),
+	),
 });
 
 const metadataValidator = v.object({
@@ -76,6 +85,28 @@ function normalizeShopifyDomain(input: string): string {
 	return clampString(h, 300);
 }
 
+// Normalize a local development host to "host[:port]". Only loopback-style
+// hosts are accepted — real domains belong in shopifyDomain. Throws when the
+// input isn't a recognizable dev host.
+function normalizeDevHost(input: string): string {
+	let h = input.trim().toLowerCase();
+	h = h.replace(/^https?:\/\//, "");
+	h = h.split(/[/?#]/)[0];
+	if (!/^(localhost|127(\.\d{1,3}){3}|\[::1\]|0\.0\.0\.0|[a-z0-9-]+\.(local|test|localhost))(:\d{1,5})?$/.test(h)) {
+		throw new ConvexError("invalid_dev_host");
+	}
+	return clampString(h, 300);
+}
+
+function isDevLikeHost(host: string): boolean {
+	try {
+		normalizeDevHost(host);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 function sanitizeAnchor(a: Doc<"comments">["anchor"]): Doc<"comments">["anchor"] {
 	const clamp01 = (n: number) =>
 		Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
@@ -92,6 +123,64 @@ function sanitizeAnchor(a: Doc<"comments">["anchor"]): Doc<"comments">["anchor"]
 		elementHeight: num(a.elementHeight),
 		px: optNum(a.px),
 		py: optNum(a.py),
+		region: a.region
+			? {
+					x: num(a.region.x),
+					y: num(a.region.y),
+					w: num(a.region.w),
+					h: num(a.region.h),
+				}
+			: undefined,
+	};
+}
+
+type ElementContext = Infer<typeof elementContextV>;
+
+// Element context is client-supplied, so clamp every string and cap every array
+// before it touches the DB. Optional fields left undefined are stored as absent.
+function sanitizeElementContext(
+	ec: ElementContext | undefined,
+): ElementContext | undefined {
+	if (!ec) return undefined;
+	const str = (s: string | undefined, max: number): string | undefined =>
+		typeof s === "string" ? clampString(s, max) : undefined;
+	return {
+		text: str(ec.text, 400),
+		tag: str(ec.tag, 40),
+		id: str(ec.id, 200),
+		classes: ec.classes?.slice(0, 30).map((c) => clampString(c, 120)),
+		attributes: ec.attributes?.slice(0, 12).map((a) => ({
+			name: clampString(a.name, 80),
+			value: clampString(a.value, 300),
+		})),
+		styles: ec.styles
+			? {
+					fontFamily: str(ec.styles.fontFamily, 200),
+					fontSize: str(ec.styles.fontSize, 40),
+					fontWeight: str(ec.styles.fontWeight, 40),
+					color: str(ec.styles.color, 60),
+					lineHeight: str(ec.styles.lineHeight, 40),
+					letterSpacing: str(ec.styles.letterSpacing, 40),
+					textTransform: str(ec.styles.textTransform, 40),
+					display: str(ec.styles.display, 40),
+				}
+			: undefined,
+		componentPath: ec.componentPath
+			?.slice(0, 8)
+			.map((c) => clampString(c, 120)),
+		source: ec.source
+			? {
+					fileName: clampString(ec.source.fileName, 400),
+					lineNumber: ec.source.lineNumber,
+					columnNumber: ec.source.columnNumber,
+				}
+			: undefined,
+		landmark: ec.landmark
+			? {
+					selector: str(ec.landmark.selector, 1000),
+					heading: str(ec.landmark.heading, 300),
+				}
+			: undefined,
 	};
 }
 
@@ -194,6 +283,7 @@ async function serializeComment(
 	device: "mobile" | "tablet" | "desktop" | undefined;
 	metadata: Doc<"comments">["metadata"];
 	screenshotUrl: string | null;
+	elementContext: Doc<"comments">["elementContext"];
 	imagePin: Doc<"comments">["imagePin"];
 	replies: Array<{
 		id: Id<"commentReplies">;
@@ -224,6 +314,7 @@ async function serializeComment(
 		device: comment.device,
 		metadata: comment.metadata,
 		screenshotUrl,
+		elementContext: comment.elementContext,
 		imagePin: comment.imagePin,
 		replies: replyDocs.map((r) => ({
 			id: r._id,
@@ -248,6 +339,98 @@ export const resolveToken = internalQuery({
 			status: resolved.project.status,
 			kind: resolved.kind,
 		};
+	},
+});
+
+// Sibling-project list for the review extension's localhost auto-detect.
+// Gated by a valid WIDGET token (share tokens are read-only guests — they
+// don't get the owner's other tokens). All projects belong to the same
+// owner, so possession of one project token grants listing the rest — this
+// is an internal agency tool, not a multi-tenant product.
+export const listProjectsForToken = internalQuery({
+	args: { token: v.string() },
+	handler: async (ctx, args) => {
+		const resolved = await resolveProjectByToken(ctx, args.token);
+		if (!resolved || resolved.kind !== "widget") return null;
+		const projects = await ctx.db
+			.query("feedbackProjects")
+			.withIndex("by_owner", (q) =>
+				q.eq("ownerUserId", resolved.project.ownerUserId),
+			)
+			.collect();
+		return projects
+			.filter((p) => p.status === "active")
+			.map((p) => ({
+				name: p.name,
+				token: p.widgetToken,
+				shopifyDomain: p.shopifyDomain,
+				devHosts: p.devHosts ?? [],
+			}));
+	},
+});
+
+// Resolve the project for a framed host so the review extension shows THIS
+// site's feedback (instead of whatever token happens to be saved). The widget
+// token is already public in the storefront widget, so returning it by host
+// is no new exposure. Returns null for an unknown/invalid host.
+export const resolveHost = internalQuery({
+	args: { host: v.string() },
+	handler: async (ctx, args) => {
+		// Dev hosts (localhost:5173 etc.) can't live in the by_shopify_domain
+		// index — match them against each project's devHosts list instead. The
+		// table is small (one row per client site), so a scan is fine here.
+		if (isDevLikeHost(args.host)) {
+			const devHost = normalizeDevHost(args.host);
+			const projects = await ctx.db.query("feedbackProjects").collect();
+			const project = projects.find((p) => p.devHosts?.includes(devHost));
+			if (!project) return null;
+			return {
+				token: project.widgetToken,
+				name: project.name,
+				status: project.status,
+			};
+		}
+		let host: string;
+		try {
+			host = normalizeShopifyDomain(args.host);
+		} catch {
+			return null;
+		}
+		const project = await ctx.db
+			.query("feedbackProjects")
+			.withIndex("by_shopify_domain", (q) => q.eq("shopifyDomain", host))
+			.first();
+		if (!project) return null;
+		return {
+			token: project.widgetToken,
+			name: project.name,
+			status: project.status,
+		};
+	},
+});
+
+// One-off backfill: older projects stored shopifyDomain as a raw URL
+// ("https://store/") before normalizeShopifyDomain was enforced on create,
+// so host lookups (by_shopify_domain) miss them. Normalize every row to a bare
+// host. Safe to re-run — already-normalized rows are skipped.
+export const normalizeProjectDomains = internalMutation({
+	args: {},
+	handler: async (ctx) => {
+		const projects = await ctx.db.query("feedbackProjects").collect();
+		let fixed = 0;
+		for (const p of projects) {
+			let normalized: string;
+			try {
+				normalized = normalizeShopifyDomain(p.shopifyDomain);
+			} catch {
+				continue; // leave un-parseable values untouched
+			}
+			if (normalized !== p.shopifyDomain) {
+				await ctx.db.patch(p._id, { shopifyDomain: normalized });
+				fixed++;
+			}
+		}
+		return { total: projects.length, fixed };
 	},
 });
 
@@ -305,6 +488,7 @@ export const createCommentFromToken = internalMutation({
 		),
 		metadata: metadataValidator,
 		screenshotStorageId: v.optional(v.id("_storage")),
+		elementContext: v.optional(elementContextV),
 	},
 	handler: async (ctx, args) => {
 		const resolved = await resolveProjectByToken(ctx, args.token);
@@ -346,6 +530,7 @@ export const createCommentFromToken = internalMutation({
 			authorEmail: clampString(args.authorEmail, EMAIL_MAX),
 			device: args.device,
 			screenshotStorageId: args.screenshotStorageId,
+			elementContext: sanitizeElementContext(args.elementContext),
 			metadata: {
 				userAgent: clampString(args.metadata.userAgent, UA_MAX),
 				browser: clampString(args.metadata.browser, 80),
@@ -361,6 +546,12 @@ export const createCommentFromToken = internalMutation({
 			internal.feedback.notifyOwnerOfComment,
 			{ commentId },
 		);
+		// Cropped element screenshot via Cloudflare Browser Rendering (the same
+		// reliable engine as pageSnapshots). Best-effort + backgrounded — a failed
+		// or unconfigured render never affects the comment itself.
+		await ctx.scheduler.runAfter(0, internal.snapshots.captureCommentShot, {
+			commentId,
+		});
 		return commentId;
 	},
 });
@@ -390,6 +581,33 @@ export const getCommentNotice = internalQuery({
 			pageUrl: comment.pageUrl,
 			openCount: open.length,
 		};
+	},
+});
+
+// Read the geometry + target URL a clipped screenshot needs. Returns null if the
+// comment was deleted before the backgrounded capture ran.
+export const getCommentForShot = internalQuery({
+	args: { commentId: v.id("comments") },
+	handler: async (ctx, args) => {
+		const c = await ctx.db.get(args.commentId);
+		if (!c) return null;
+		return {
+			pageUrl: c.pageUrl,
+			anchor: c.anchor,
+			device: c.device ?? null,
+			viewportWidth: c.metadata.viewportWidth,
+			viewportHeight: c.metadata.viewportHeight,
+		};
+	},
+});
+
+export const setCommentShot = internalMutation({
+	args: { commentId: v.id("comments"), storageId: v.id("_storage") },
+	handler: async (ctx, args): Promise<null> => {
+		const c = await ctx.db.get(args.commentId);
+		if (!c) return null; // comment deleted mid-capture — drop the screenshot
+		await ctx.db.patch(args.commentId, { screenshotStorageId: args.storageId });
+		return null;
 	},
 });
 
@@ -639,6 +857,47 @@ export const setStatusFromToken = internalMutation({
 	},
 });
 
+export const editCommentFromToken = internalMutation({
+	args: {
+		token: v.string(),
+		commentId: v.id("comments"),
+		content: v.string(),
+		// Image edits: attach/replace with imageStorageId, or clear with removeImage.
+		imageStorageId: v.optional(v.id("_storage")),
+		removeImage: v.optional(v.boolean()),
+	},
+	handler: async (ctx, args) => {
+		const resolved = await resolveProjectByToken(ctx, args.token);
+		if (!resolved) throw new ConvexError("invalid_token");
+		const comment = await ctx.db.get(args.commentId);
+		if (!comment || comment.projectId !== resolved.project._id) {
+			throw new ConvexError("not_found");
+		}
+		const content = args.content.trim();
+		if (!content) throw new ConvexError("empty_content");
+		await enforceRateLimit(ctx, resolved.project._id);
+		const patch: Partial<Doc<"comments">> = {
+			content: clampString(content, CONTENT_MAX),
+		};
+		if (args.removeImage) {
+			if (comment.screenshotStorageId) {
+				await ctx.storage.delete(comment.screenshotStorageId);
+			}
+			patch.screenshotStorageId = undefined;
+		} else if (args.imageStorageId) {
+			if (
+				comment.screenshotStorageId &&
+				comment.screenshotStorageId !== args.imageStorageId
+			) {
+				await ctx.storage.delete(comment.screenshotStorageId);
+			}
+			patch.screenshotStorageId = args.imageStorageId;
+		}
+		await ctx.db.patch(args.commentId, patch);
+		return null;
+	},
+});
+
 export const pruneRateBuckets = internalMutation({
 	args: {},
 	handler: async (ctx): Promise<null> => {
@@ -742,6 +1001,7 @@ export const getProject = query({
 			id: project._id,
 			name: project.name,
 			shopifyDomain: project.shopifyDomain,
+			devHosts: project.devHosts ?? [],
 			status: project.status,
 			createdAt: project.createdAt,
 			role,
@@ -907,6 +1167,49 @@ export const setProjectStatus = mutation({
 		await assertOwner(ctx, args.projectId);
 		await ctx.db.patch(args.projectId, { status: args.status });
 		return null;
+	},
+});
+
+// Owner-set list of local dev hosts (e.g. "localhost:5173") that resolve to
+// this project in the review extension. Rejects anything that isn't a
+// loopback-style host and caps the list so it stays a dev convenience.
+export const setDevHosts = mutation({
+	args: {
+		projectId: v.id("feedbackProjects"),
+		devHosts: v.array(v.string()),
+	},
+	handler: async (ctx, args) => {
+		await assertOwner(ctx, args.projectId);
+		const normalized: string[] = [];
+		for (const raw of args.devHosts.slice(0, 10)) {
+			const h = normalizeDevHost(raw);
+			if (!normalized.includes(h)) normalized.push(h);
+		}
+		await ctx.db.patch(args.projectId, { devHosts: normalized });
+		return null;
+	},
+});
+
+// CLI escape hatch (`npx convex run feedback:setDevHostsByDomain --prod ...`)
+// for wiring a dev host before the dashboard UI is deployed. Same
+// normalization rules as setDevHosts.
+export const setDevHostsByDomain = internalMutation({
+	args: { shopifyDomain: v.string(), devHosts: v.array(v.string()) },
+	handler: async (ctx, args) => {
+		const project = await ctx.db
+			.query("feedbackProjects")
+			.withIndex("by_shopify_domain", (q) =>
+				q.eq("shopifyDomain", args.shopifyDomain),
+			)
+			.first();
+		if (!project) throw new ConvexError("project_not_found");
+		const normalized: string[] = [];
+		for (const raw of args.devHosts.slice(0, 10)) {
+			const h = normalizeDevHost(raw);
+			if (!normalized.includes(h)) normalized.push(h);
+		}
+		await ctx.db.patch(project._id, { devHosts: normalized });
+		return { project: project.name, devHosts: normalized };
 	},
 });
 

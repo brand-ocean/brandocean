@@ -23,10 +23,10 @@ function InstallPage() {
 					<ArrowLeftIcon className="size-4" /> Back to board
 				</Link>
 				<h1 className="text-2xl font-semibold tracking-tight">
-					Install &amp; share
+					Review &amp; share
 				</h1>
 				<p className="mt-1 text-sm text-muted-foreground">
-					Embed the widget on the store and manage client access.
+					Review the site with the Chrome extension and manage client access.
 				</p>
 			</div>
 			<InstallPanel projectId={id} />

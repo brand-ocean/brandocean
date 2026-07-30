@@ -1,0 +1,21 @@
+/* Injected into the framed site only while reviewing. */
+html.bo-fb-commenting,
+html.bo-fb-commenting * {
+  cursor: crosshair !important;
+}
+.bo-fb-hl {
+  outline: 2px solid #1552EE !important;
+  outline-offset: 1px !important;
+  background: rgba(21, 82, 238, 0.06) !important;
+}
+/* Flash an element when its comment is opened from the sidebar. */
+.bo-fb-focus {
+  animation: bo-fb-pulse 1.6s ease-out 1 !important;
+  outline: 3px solid #1552EE !important;
+  outline-offset: 2px !important;
+}
+@keyframes bo-fb-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(21, 82, 238, 0.55); }
+  70%  { box-shadow: 0 0 0 14px rgba(21, 82, 238, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(21, 82, 238, 0); }
+}

@@ -13,6 +13,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import {
 	action,
+	internalAction,
 	internalMutation,
 	internalQuery,
 	mutation,
@@ -169,8 +170,9 @@ export const capture = action({
 		const vp = VIEWPORTS[args.device];
 		const host = sanitizeHost(shopifyDomain);
 		if (!host) throw new ConvexError("invalid_domain");
-		// feedback=0 tells the injected widget to no-op, so it never appears in
-		// the screenshot.
+		// Legacy: feedback=0 told the (since-removed) on-page widget to no-op so
+		// it never appeared in screenshots. Kept while old theme snippets are
+		// still pasted on client sites; harmless otherwise.
 		const targetUrl = `https://${host}${pagePath}?feedback=0`;
 
 		await ctx.runMutation(internal.snapshots.upsert, {
@@ -247,6 +249,113 @@ export const capture = action({
 		});
 
 		return { ok: true };
+	},
+});
+
+// --- Per-comment cropped element screenshot ---------------------------------
+
+// Reliable server-side screenshot of the single element a comment is pinned to,
+// via Cloudflare Browser Rendering (the same engine as full-page snapshots).
+// Scheduled from feedback.createCommentFromToken; fully best-effort — any failure
+// just leaves the comment without a screenshot, never blocks it. Renders the
+// comment's OWN pageUrl so it works for both React sites and Shopify stores.
+export const captureCommentShot = internalAction({
+	args: { commentId: v.id("comments") },
+	handler: async (ctx, args): Promise<null> => {
+		const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+		const apiToken = process.env.CLOUDFLARE_BROWSER_API_TOKEN;
+		if (!accountId || !apiToken) return null; // not configured — skip silently
+
+		const c = await ctx.runQuery(internal.feedback.getCommentForShot, {
+			commentId: args.commentId,
+		});
+		if (!c) return null;
+
+		// feedback=0 tells the injected widget to no-op, so it never appears.
+		let targetUrl: string;
+		try {
+			const u = new URL(c.pageUrl);
+			u.searchParams.set("feedback", "0");
+			targetUrl = u.toString();
+		} catch {
+			return null;
+		}
+
+		// Reconstruct the element's box in full-page coords from the anchor (the
+		// click's absolute px/py minus the normalized offset within the element),
+		// then pad. Skip the clip for body / near-full-page elements — a full-page
+		// shot reads better there.
+		const a = c.anchor;
+		const PAD = 12;
+		let clip: { x: number; y: number; width: number; height: number } | null =
+			null;
+		if (
+			typeof a.px === "number" &&
+			typeof a.py === "number" &&
+			a.elementWidth > 0 &&
+			a.elementHeight > 0 &&
+			a.selector !== "body"
+		) {
+			const left = a.px - a.nx * a.elementWidth;
+			const top = a.py - a.ny * a.elementHeight;
+			const w = a.elementWidth + PAD * 2;
+			const h = a.elementHeight + PAD * 2;
+			if (w < 4000 && h < 4000) {
+				clip = {
+					x: Math.max(0, Math.round(left - PAD)),
+					y: Math.max(0, Math.round(top - PAD)),
+					width: Math.round(w),
+					height: Math.round(h),
+				};
+			}
+		}
+
+		// Render at the client's own viewport so coordinates line up with what
+		// they saw (falls back to a sane desktop width).
+		const width = c.viewportWidth > 0 ? Math.round(c.viewportWidth) : 1440;
+		const height = c.viewportHeight > 0 ? Math.round(c.viewportHeight) : 900;
+		const screenshotOptions = clip
+			? { clip, type: "png" as const }
+			: { fullPage: true, type: "png" as const };
+
+		let res: Response;
+		try {
+			res = await fetch(
+				`https://api.cloudflare.com/client/v4/accounts/${accountId}/browser-rendering/screenshot`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${apiToken}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						url: targetUrl,
+						viewport: { width, height, deviceScaleFactor: 1 },
+						screenshotOptions,
+						gotoOptions: { waitUntil: "networkidle2", timeout: 45000 },
+						bestAttempt: true,
+						addStyleTag: [
+							{ content: "#bo-feedback-host{display:none!important}" },
+						],
+					}),
+				},
+			);
+		} catch {
+			return null;
+		}
+
+		const contentType = res.headers.get("Content-Type") || "";
+		if (!res.ok || !contentType.startsWith("image/")) return null;
+
+		const buf = await res.arrayBuffer();
+		const storageId = await ctx.storage.store(
+			new Blob([buf], { type: "image/png" }),
+		);
+		await ctx.runMutation(internal.feedback.setCommentShot, {
+			commentId: args.commentId,
+			storageId,
+		});
+		return null;
 	},
 });
 

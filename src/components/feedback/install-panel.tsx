@@ -11,7 +11,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { convexSiteUrl } from "@/lib/convex";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
 
@@ -27,41 +26,15 @@ export function InstallPanel({
 	const devAdd = useMutation(api.feedback.devAddTestComment);
 	const setProjectStatus = useMutation(api.feedback.setProjectStatus);
 	const deleteProject = useMutation(api.feedback.deleteProject);
+	const setDevHosts = useMutation(api.feedback.setDevHosts);
 	const navigate = useNavigate();
 	const [clientId, setClientId] = useState("none");
+	const [devHostsDraft, setDevHostsDraft] = useState<string | null>(null);
 
 	if (!project || project.widgetToken === null) return null;
 
-	const base = convexSiteUrl;
-	const snippet = `<script>
-(function () {
-  try {
-    var p = new URLSearchParams(location.search);
-    var fb = p.get("feedback");
-    var on1 = (p.has("feedback") && fb !== "0") ||
-      location.hash === "#feedback";
-    // Stay on across page navigation once turned on, until ?feedback=0.
-    try {
-      if (on1) localStorage.setItem("bo_fb", "1");
-      if (fb === "0") localStorage.removeItem("bo_fb");
-    } catch (e) {}
-    var saved = false;
-    try { saved = localStorage.getItem("bo_fb") === "1"; } catch (e) {}
-    var tags = {% if customer %}{{ customer.tags | json }}{% else %}[]{% endif %};
-    var on = on1 || saved ||
-      (Array.isArray(tags) && tags.indexOf("feedback-reviewer") !== -1);
-    if (!on) return;
-    window.__FEEDBACK__ = { token: "${project.widgetToken}", base: "${base}" };
-    var s = document.createElement("script");
-    s.src = "${base}/feedback/widget.js?v=" + Date.now();
-    s.async = true;
-    document.head.appendChild(s);
-  } catch (e) {
-    if (window.console && console.warn) console.warn("feedback widget failed", e);
-  }
-})();
-</script>`;
 	const shareUrl = `${window.location.origin}/share/${project.shareToken}`;
+	const devHostsValue = devHostsDraft ?? project.devHosts.join(", ");
 
 	const copy = (text: string, label: string) => {
 		navigator.clipboard.writeText(text).then(
@@ -97,30 +70,74 @@ export function InstallPanel({
 				))}
 				<span className="text-xs text-muted-foreground">
 					{project.status !== "active" &&
-						"Widget stops accepting new comments when not active."}
+						"The project stops accepting new comments when not active."}
 				</span>
 			</div>
 
-			<div>
-				<div className="mb-1 flex items-center justify-between">
+			<div className="space-y-2 rounded-md border bg-background p-3">
+				<span className="text-xs font-medium text-muted-foreground">
+					Review with the Chrome extension
+				</span>
+				<p className="text-xs text-muted-foreground">
+					Nothing to install on the site — open the Brandocean Feedback
+					extension, enter your name and email, and load{" "}
+					<code>{project.shopifyDomain}</code>. The extension matches the domain
+					to this project automatically and loads its comments.
+				</p>
+				<div className="flex flex-wrap items-center gap-2">
 					<span className="text-xs font-medium text-muted-foreground">
-						Theme snippet — paste before &lt;/body&gt; in theme.liquid
+						Extension token (for dev-mode overrides):
 					</span>
+					<code className="truncate rounded bg-muted px-2 py-1 text-xs">
+						{project.widgetToken}
+					</code>
 					<Button
 						variant="ghost"
 						size="sm"
-						onClick={() => copy(snippet, "Snippet")}
+						onClick={() => copy(project.widgetToken ?? "", "Token")}
 					>
 						Copy
 					</Button>
 				</div>
-				<pre className="overflow-x-auto rounded-md border bg-background p-3 text-xs">
-					{snippet}
-				</pre>
-				<p className="mt-1 text-xs text-muted-foreground">
-					Add the tag <code>feedback-reviewer</code> to a Shopify customer,
-					or append <code>?feedback</code> to any store URL. It then stays
-					on as you browse the store; add <code>?feedback=0</code> to turn it off.
+			</div>
+
+			<div className="space-y-1">
+				<span className="text-xs font-medium text-muted-foreground">
+					Dev hosts — local URLs that also resolve to this project
+				</span>
+				<div className="flex items-center gap-2">
+					<input
+						className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+						placeholder="localhost:5173, 127.0.0.1:3000"
+						value={devHostsValue}
+						onChange={(e) => setDevHostsDraft(e.target.value)}
+					/>
+					<Button
+						size="sm"
+						variant="outline"
+						disabled={devHostsDraft === null}
+						onClick={async () => {
+							const hosts = devHostsValue
+								.split(",")
+								.map((h) => h.trim())
+								.filter(Boolean);
+							try {
+								await setDevHosts({ projectId, devHosts: hosts });
+								setDevHostsDraft(null);
+								toast.success("Dev hosts saved");
+							} catch {
+								toast.error(
+									"Only local hosts allowed (localhost, 127.x, *.local, *.test)",
+								);
+							}
+						}}
+					>
+						Save
+					</Button>
+				</div>
+				<p className="text-xs text-muted-foreground">
+					Reviewing e.g. <code>http://localhost:5173</code> in the extension
+					then loads this project's comments.
 				</p>
 			</div>
 
@@ -169,9 +186,7 @@ export function InstallPanel({
 								projectId,
 								clientId: clientId as Id<"clients">,
 							});
-							toast.success(
-								"Client linked — they can log in with their email",
-							);
+							toast.success("Client linked — they can log in with their email");
 						} catch {
 							toast.error("Could not link client (needs an email)");
 						}
@@ -183,9 +198,9 @@ export function InstallPanel({
 
 			<div className="flex flex-wrap items-center gap-2 border-t pt-4">
 				<span className="w-full text-xs text-muted-foreground">
-					Danger zone — only revoke a token if a link leaked. This does NOT
-					affect linked client accounts. You must re-paste the snippet
-					after.
+					Danger zone — only revoke a token if it leaked. This does NOT affect
+					linked client accounts. Dev-mode token overrides in the extension must
+					be updated after.
 				</span>
 				<Button
 					variant="outline"
@@ -193,17 +208,15 @@ export function InstallPanel({
 					onClick={async () => {
 						if (
 							!window.confirm(
-								"Revoke the current widget token? The snippet already in the store theme will stop working until you paste the new one.",
+								"Revoke the current feedback token? The extension re-resolves it by domain automatically, but any dev-mode token override must be updated.",
 							)
 						)
 							return;
 						await regenerate({ projectId, which: "widget" });
-						toast.success(
-							"Widget token regenerated — re-paste the snippet",
-						);
+						toast.success("Feedback token regenerated");
 					}}
 				>
-					<RotateCcwIcon className="size-4" /> Revoke widget token
+					<RotateCcwIcon className="size-4" /> Revoke feedback token
 				</Button>
 				<Button
 					variant="outline"

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brandocean Feedback — Review</title>
+    <link rel="stylesheet" href="canvas.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="bar__group">
+        <span class="brand">Brandocean<span class="brand__dot">·</span>Feedback</span>
+        <form id="urlForm" class="urlForm">
+          <input id="urlInput" class="urlInput" type="text" placeholder="https://example.com" spellcheck="false" />
+          <button class="btn" type="submit">Load</button>
+        </form>
+      </div>
+
+      <div class="bar__group" role="tablist" aria-label="Device width">
+        <button class="seg" data-device="desktop" aria-pressed="true">Desktop</button>
+        <button class="seg" data-device="tablet" aria-pressed="false">Tablet</button>
+        <button class="seg" data-device="mobile" aria-pressed="false">Mobile</button>
+      </div>
+
+      <div class="bar__group">
+        <button id="commentToggle" class="btn btn--accent" aria-pressed="false">Comment</button>
+        <span id="status" class="status">—</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="stage" id="stage">
+        <div class="frameWrap" id="frameWrap">
+          <iframe id="frame" class="frame" title="Site under review"></iframe>
+          <div class="overlay" id="overlay"></div>
+        </div>
+        <div class="empty" id="empty">
+          <p>Enter a URL and press <b>Load</b>, then hit <b>Comment</b> and click anywhere on the page.</p>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel__head">
+          <span id="projectName" class="panel__title">Comments</span>
+          <button id="refreshBtn" class="btn btn--ghost" title="Refresh">↻</button>
+        </div>
+        <div class="panel__filters">
+          <div class="filterGroup" id="statusFilter" role="tablist" aria-label="Status filter">
+            <button class="fbtn" data-status="open" data-label="Open" aria-pressed="true">Open</button>
+            <button class="fbtn" data-status="resolved" data-label="Resolved" aria-pressed="false">Resolved</button>
+            <button class="fbtn" data-status="all" data-label="All" aria-pressed="false">All</button>
+          </div>
+          <button class="fbtn fbtn--scope" id="scopeToggle" aria-pressed="true" title="Toggle page scope">This page</button>
+        </div>
+        <div id="list" class="list"></div>
+
+        <!-- Note detail: list slides to this in place (no overlay on canvas) -->
+        <section id="detail" class="detail" hidden>
+          <div class="detail__head">
+            <button id="dBack" class="btn btn--ghost detail__back" title="Back to list">← Back</button>
+            <span id="dTag" class="modal__tag"></span>
+            <button id="dLocate" class="btn btn--ghost" title="Jump to it on the page">⤢ Locate</button>
+          </div>
+          <div class="detail__body">
+            <div id="dMeta" class="modal__meta"></div>
+
+            <label class="modal__label">Note</label>
+            <textarea id="dText" class="modal__text" rows="3"></textarea>
+
+            <div id="dImgRow" class="modal__imgRow"></div>
+            <div class="modal__row">
+              <button id="dAttach" class="btn" type="button">📎 Attach image</button>
+              <input id="dFile" type="file" accept="image/*" hidden />
+              <button id="dSave" class="btn btn--accent" type="button">Save changes</button>
+            </div>
+
+            <div class="modal__thread">
+              <div class="modal__threadHead">Conversation</div>
+              <div id="dReplies" class="modal__replies"></div>
+              <form id="dReplyForm" class="modal__replyForm">
+                <input id="dReplyInput" class="modal__replyInput" placeholder="Reply to your client…" autocomplete="off" />
+                <button class="btn btn--accent" type="submit">Send</button>
+              </form>
+            </div>
+          </div>
+          <footer class="detail__foot">
+            <button id="dResolve" class="btn" type="button"></button>
+            <button id="dDelete" class="btn btn--danger" type="button">Delete</button>
+          </footer>
+        </section>
+      </aside>
+    </main>
+
+    <!-- Composer popover, positioned over the clicked point -->
+    <div id="composer" class="composer" hidden>
+      <div class="composer__kinds">
+        <button class="kind" data-kind="bug">🐞 Bug</button>
+        <button class="kind" data-kind="idea">💡 Idea</button>
+        <button class="kind" data-kind="question">❓ Question</button>
+      </div>
+      <textarea id="composerText" class="composer__text" rows="3" placeholder="Describe the change…"></textarea>
+      <div class="composer__row">
+        <span id="composerCtx" class="composer__ctx"></span>
+        <div class="composer__actions">
+          <button id="composerCancel" class="btn btn--ghost">Cancel</button>
+          <button id="composerSend" class="btn btn--accent">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-size image viewer (click anywhere or Esc to close) -->
+    <div id="lightbox" class="lightbox" hidden>
+      <img id="lightboxImg" class="lightbox__img" alt="Attachment" />
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+
+    <script src="canvas.js"></script>
+  </body>
+</html>
