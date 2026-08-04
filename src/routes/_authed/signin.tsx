@@ -2,14 +2,17 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+	Frame,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
+import { CountTabs } from "@/components/app/toolbar";
+import { Brandmark, Logotype } from "@/components/brand";
+import { Button } from "@/components/ui/button";
 import {
 	Field,
 	FieldDescription,
@@ -18,7 +21,6 @@ import {
 	FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authed/signin")({
 	component: SignInPage,
@@ -46,32 +48,38 @@ function friendlyAuthError(
 }
 
 function SignInPage() {
+	const [tab, setTab] = useState("password");
+
 	return (
-		<div className="flex min-h-svh flex-col items-center justify-center bg-muted px-6 py-12">
-			<div className="w-full max-w-md">
-				<Card>
-					<CardHeader className="text-center">
-						<CardTitle className="text-2xl">Sign in</CardTitle>
-						<CardDescription>
-							Owner access to the BRANDOCEAN dashboard.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Tabs defaultValue="password" className="w-full">
-							<TabsList className="grid w-full grid-cols-2">
-								<TabsTrigger value="password">Password</TabsTrigger>
-								<TabsTrigger value="otp">Email code</TabsTrigger>
-							</TabsList>
-							<TabsContent value="password">
-								<PasswordForm />
-							</TabsContent>
-							<TabsContent value="otp">
-								<OtpForm />
-							</TabsContent>
-						</Tabs>
-					</CardContent>
-				</Card>
-				<FieldDescription className="mt-4 text-center">
+		<div className="flex min-h-svh flex-col items-center justify-center bg-muted/40 px-6 py-12">
+			<div className="flex w-full max-w-md flex-col gap-4">
+				<div className="flex items-center justify-center gap-2">
+					<Brandmark size={28} className="shrink-0" />
+					<Logotype height={20} className="shrink-0" />
+				</div>
+				<Frame className="bg-muted/60">
+					<FrameHeader className="justify-center">
+						<FrameHeading className="items-center text-center">
+							<FrameTitle>Sign in</FrameTitle>
+							<FrameDescription>
+								Owner access to the BRANDOCEAN dashboard.
+							</FrameDescription>
+						</FrameHeading>
+					</FrameHeader>
+					<CountTabs
+						value={tab}
+						onValueChange={setTab}
+						className="justify-center"
+						tabs={[
+							{ id: "password", label: "Password" },
+							{ id: "otp", label: "Email code" },
+						]}
+					/>
+					<FramePanel>
+						{tab === "password" ? <PasswordForm /> : <OtpForm />}
+					</FramePanel>
+				</Frame>
+				<FieldDescription className="text-center">
 					Locked to admin emails only. New accounts must be allowlisted.
 				</FieldDescription>
 			</div>
@@ -94,7 +102,7 @@ function PasswordForm() {
 				setSubmitting(true);
 				try {
 					await signIn("password", formData);
-					navigate({ to: "/offertes" });
+					navigate({ to: "/dashboard" });
 				} catch (err) {
 					toast.error(mode === "signIn" ? "Sign-in failed" : "Sign-up failed", {
 						description: friendlyAuthError(err, mode),
@@ -221,7 +229,7 @@ function OtpForm() {
 				setSubmitting(true);
 				try {
 					await signIn("resend-otp", formData);
-					navigate({ to: "/offertes" });
+					navigate({ to: "/dashboard" });
 				} catch (err) {
 					toast.error("Invalid code", {
 						description: friendlyAuthError(err, "verifyCode"),

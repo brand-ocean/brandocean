@@ -1,0 +1,17 @@
+.footer {
+  width: 100%;
+  padding: 2.25rem;
+}
+
+.inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+}
+
+@media (max-width: 1000px) {
+  .footer {
+    padding: 1.5rem;
+  }
+}

@@ -10,10 +10,32 @@ import {
 	ShieldCheckIcon,
 	Trash2Icon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+
+import { type Column, DataTable } from "@/components/app/data-table";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FrameTitle,
+} from "@/components/app/frame";
+import { TonePill, type Tone } from "@/components/app/tone";
+import { CountTabs, ToolbarSearch } from "@/components/app/toolbar";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -21,13 +43,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
-} from "@/components/ui/empty";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -36,7 +52,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableRow } from "@/components/ui/table";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
 
@@ -49,11 +65,243 @@ type Direction = "owner_signs" | "client_signs";
 
 const NONE_VALUE = "__none__";
 
+type Row = {
+	_id: Id<"ndas">;
+	title: string;
+	slug: string;
+	shareToken: string;
+	language: Language;
+	direction: Direction;
+	updatedAt: number;
+	published: boolean;
+	publicReadable: boolean;
+	signedSlug: string | null;
+	clientName: string | null;
+};
+
+function state(row: Row): { label: string; tone: Tone; id: string } {
+	if (row.signedSlug) return { label: "Signed", tone: "success", id: "signed" };
+	if (!row.published) return { label: "Draft", tone: "muted", id: "draft" };
+	if (row.publicReadable)
+		return { label: "Public", tone: "success", id: "public" };
+	return { label: "Shared", tone: "info", id: "shared" };
+}
+
 function NdasList() {
 	const ndas = useQuery(api.ndas.listByOwner, {});
 	const clients = useQuery(api.clients.list);
-	const createNda = useMutation(api.ndas.create);
 	const navigate = useNavigate();
+	const [q, setQ] = useState("");
+	const [tab, setTab] = useState("all");
+
+	const clientName = useMemo(
+		() => new Map((clients ?? []).map((c) => [c._id, c.name])),
+		[clients],
+	);
+
+	const rows: Row[] = useMemo(
+		() =>
+			(ndas ?? []).map((n) => ({
+				_id: n._id,
+				title: n.title,
+				slug: n.slug,
+				shareToken: n.shareToken,
+				language: n.language,
+				direction: n.direction ?? "client_signs",
+				updatedAt: n.updatedAt,
+				published: n.published,
+				publicReadable: n.publicReadable,
+				signedSlug: n.signedSlug ?? null,
+				clientName: n.clientId ? (clientName.get(n.clientId) ?? null) : null,
+			})),
+		[ndas, clientName],
+	);
+
+	const counts = useMemo(
+		() => ({
+			all: rows.length,
+			signed: rows.filter((r) => r.signedSlug).length,
+			awaiting: rows.filter((r) => !r.signedSlug && r.published).length,
+			draft: rows.filter((r) => !r.signedSlug && !r.published).length,
+		}),
+		[rows],
+	);
+
+	const filtered = useMemo(() => {
+		const term = q.trim().toLowerCase();
+		return rows.filter((r) => {
+			if (tab === "signed" && !r.signedSlug) return false;
+			if (tab === "awaiting" && (r.signedSlug || !r.published)) return false;
+			if (tab === "draft" && (r.signedSlug || r.published)) return false;
+			if (!term) return true;
+			return (
+				r.title.toLowerCase().includes(term) ||
+				r.slug.toLowerCase().includes(term) ||
+				(r.clientName ?? "").toLowerCase().includes(term)
+			);
+		});
+	}, [rows, q, tab]);
+
+	const columns: readonly Column<Row>[] = useMemo(
+		() => [
+			{
+				id: "title",
+				header: "NDA",
+				sortValue: (r) => r.title,
+				cell: (r) => (
+					<div className="flex min-w-0 items-center gap-2.5">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-muted-foreground">
+							<ShieldCheckIcon className="size-3.5" />
+						</span>
+						<div className="flex min-w-0 flex-col">
+							<span className="truncate font-medium">{r.title}</span>
+							<span className="font-mono text-xs text-muted-foreground">
+								/n/{r.slug}
+							</span>
+						</div>
+					</div>
+				),
+			},
+			{
+				id: "client",
+				header: "Client",
+				sortValue: (r) => r.clientName ?? "",
+				cell: (r) => (
+					<span className={r.clientName ? "" : "text-muted-foreground"}>
+						{r.clientName ?? "—"}
+					</span>
+				),
+			},
+			{
+				id: "who",
+				header: "Signed by",
+				sortValue: (r) => r.direction,
+				cell: (r) => (
+					<span className="text-muted-foreground">
+						{r.direction === "owner_signs" ? "Me" : "Client"}
+					</span>
+				),
+			},
+			{
+				id: "lang",
+				header: "Lang",
+				sortValue: (r) => r.language,
+				cell: (r) => (
+					<span className="font-mono text-xs uppercase">{r.language}</span>
+				),
+			},
+			{
+				id: "status",
+				header: "Status",
+				sortValue: (r) => state(r).id,
+				cell: (r) => {
+					const s = state(r);
+					return (
+						<TonePill dot tone={s.tone}>
+							{s.label}
+						</TonePill>
+					);
+				},
+			},
+			{
+				id: "updated",
+				header: "Updated",
+				align: "right",
+				sortValue: (r) => r.updatedAt,
+				cell: (r) => (
+					<span className="text-muted-foreground tabular-nums">
+						{new Date(r.updatedAt).toLocaleDateString()}
+					</span>
+				),
+			},
+			{
+				id: "actions",
+				header: "",
+				className: "w-10",
+				cell: (r) => (
+					<NdaRowMenu
+						ndaId={r._id}
+						title={r.title}
+						slug={r.slug}
+						shareToken={r.shareToken}
+						published={r.published}
+						publicReadable={r.publicReadable}
+						signedSlug={r.signedSlug}
+					/>
+				),
+			},
+		],
+		[],
+	);
+
+	return (
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>NDAs</FrameTitle>
+					<FrameDescription>
+						One-way agreements. “Me” means you sign for the client's data;
+						“Client” means they sign online for yours.
+					</FrameDescription>
+				</FrameHeading>
+				<FrameActions>
+					<ToolbarSearch
+						value={q}
+						onValueChange={setQ}
+						placeholder="Search NDAs…"
+					/>
+					<NewNdaDialog />
+				</FrameActions>
+			</FrameHeader>
+			<CountTabs
+				value={tab}
+				onValueChange={setTab}
+				tabs={[
+					{ id: "all", label: "All", count: counts.all },
+					{ id: "awaiting", label: "Awaiting signature", count: counts.awaiting },
+					{ id: "signed", label: "Signed", count: counts.signed },
+					{ id: "draft", label: "Drafts", count: counts.draft },
+				]}
+			/>
+			<DataTable
+				rows={filtered}
+				columns={columns}
+				getRowKey={(r) => r._id}
+				loading={ndas === undefined}
+				noun="NDAs"
+				defaultSort={{ id: "updated", dir: "desc" }}
+				renderRow={(row, cells) => (
+					<TableRow
+						className="cursor-pointer"
+						onClick={() =>
+							void navigate({ to: "/ndas/$ndaId", params: { ndaId: row._id } })
+						}
+					>
+						{cells}
+					</TableRow>
+				)}
+				empty={
+					<EmptyState
+						icon={ShieldCheckIcon}
+						title={q || tab !== "all" ? "Nothing here" : "No NDAs yet"}
+						description={
+							q || tab !== "all"
+								? "Try another search or switch tab."
+								: "Start from the ready-made one-way template and edit what you need."
+						}
+						action={q || tab !== "all" ? null : <NewNdaDialog />}
+					/>
+				}
+			/>
+		</Frame>
+	);
+}
+
+function NewNdaDialog() {
+	const createNda = useMutation(api.ndas.create);
+	const clients = useQuery(api.clients.list);
+	const navigate = useNavigate();
+	const [open, setOpen] = useState(false);
 	const [title, setTitle] = useState("NDA");
 	const [language, setLanguage] = useState<Language>("nl");
 	const [direction, setDirection] = useState<Direction>("owner_signs");
@@ -61,207 +309,123 @@ function NdasList() {
 	const [creating, setCreating] = useState(false);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-10">
-			<header className="flex flex-col gap-2">
-				<h1 className="text-3xl font-semibold tracking-tight">NDAs</h1>
-				<p className="text-base text-muted-foreground">
-					One-way non-disclosure agreements. <strong>I sign</strong> = you
-					promise to keep the client's data confidential (auto-signed with your
-					signature). <strong>Client signs</strong> = the client promises to
-					keep your info confidential and signs online.
-				</p>
-			</header>
-
-			<form
-				onSubmit={async (e) => {
-					e.preventDefault();
-					if (!title.trim()) return;
-					setCreating(true);
-					try {
-						const id = await createNda({
-							title: title.trim(),
-							language,
-							direction,
-							clientId:
-								clientId === NONE_VALUE
-									? undefined
-									: (clientId as Id<"clients">),
-						});
-						setTitle("NDA");
-						setClientId(NONE_VALUE);
-						navigate({ to: "/ndas/$ndaId", params: { ndaId: id } });
-					} catch (err) {
-						toast.error("Could not create NDA", {
-							description: err instanceof Error ? err.message : String(err),
-						});
-					} finally {
-						setCreating(false);
-					}
-				}}
-			>
-				<div className="flex flex-wrap items-center gap-2">
-					<Input
-						value={title}
-						onChange={(e) => setTitle(e.target.value)}
-						placeholder="NDA title…"
-						className="min-w-48 flex-1"
-					/>
-					<Select
-						value={direction}
-						onValueChange={(v) => setDirection(v as Direction)}
-					>
-						<SelectTrigger className="w-48">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="owner_signs">I sign (client data)</SelectItem>
-							<SelectItem value="client_signs">Client signs</SelectItem>
-						</SelectContent>
-					</Select>
-					<Select
-						value={language}
-						onValueChange={(v) => setLanguage(v as Language)}
-					>
-						<SelectTrigger className="w-32">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="nl">Dutch</SelectItem>
-							<SelectItem value="en">English</SelectItem>
-						</SelectContent>
-					</Select>
-					{clients && clients.length > 0 ? (
-						<Select
-							value={clientId}
-							onValueChange={(v) => setClientId(v ?? NONE_VALUE)}
-						>
-							<SelectTrigger className="w-44">
-								<SelectValue placeholder="No client" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value={NONE_VALUE}>
-									<span className="text-muted-foreground">No client</span>
-								</SelectItem>
-								{clients.map((c) => (
-									<SelectItem key={c._id} value={c._id}>
-										{c.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					) : null}
-					<Button type="submit" disabled={creating || !title.trim()}>
-						<PlusIcon data-icon="inline-start" />
-						{creating ? "Creating…" : "Create"}
-					</Button>
-				</div>
-			</form>
-
-			{ndas === undefined ? (
-				<div className="flex flex-col gap-2">
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-				</div>
-			) : ndas.length === 0 ? (
-				<Empty>
-					<EmptyHeader>
-						<EmptyMedia variant="icon">
-							<ShieldCheckIcon />
-						</EmptyMedia>
-						<EmptyTitle>No NDAs yet</EmptyTitle>
-						<EmptyDescription>
-							Create your first one above. It starts from a ready-made one-way
-							NDA template you can edit.
-						</EmptyDescription>
-					</EmptyHeader>
-				</Empty>
-			) : (
-				<ul className="divide-y rounded-lg border bg-card">
-					{ndas.map((n) => (
-						<NdaRow
-							key={n._id}
-							ndaId={n._id}
-							title={n.title}
-							slug={n.slug}
-							shareToken={n.shareToken}
-							language={n.language}
-							updatedAt={n.updatedAt}
-							published={n.published}
-							publicReadable={n.publicReadable}
-							signedSlug={n.signedSlug ?? null}
-						/>
-					))}
-				</ul>
-			)}
-		</div>
-	);
-}
-
-function NdaRow({
-	ndaId,
-	title,
-	slug,
-	shareToken,
-	language,
-	updatedAt,
-	published,
-	publicReadable,
-	signedSlug,
-}: {
-	ndaId: Id<"ndas">;
-	title: string;
-	slug: string;
-	shareToken: string;
-	language: Language;
-	updatedAt: number;
-	published: boolean;
-	publicReadable: boolean;
-	signedSlug: string | null;
-}) {
-	return (
-		<li className="group relative">
-			<Link
-				to="/ndas/$ndaId"
-				params={{ ndaId }}
-				className="flex items-center gap-4 px-6 py-5 pr-16 hover:bg-muted/50"
-			>
-				<div className="flex min-w-0 flex-1 flex-col gap-1">
-					<span className="truncate text-base font-medium">{title}</span>
-					<span className="text-sm text-muted-foreground">
-						Updated {new Date(updatedAt).toLocaleDateString()}
-					</span>
-				</div>
-				<Badge variant="outline" className="shrink-0 uppercase">
-					{language}
-				</Badge>
-				{signedSlug ? (
-					<Badge variant="default" className="shrink-0">
-						Signed
-					</Badge>
-				) : (
-					<Badge
-						variant={
-							published ? (publicReadable ? "default" : "secondary") : "outline"
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger render={<Button size="sm" />}>
+				<PlusIcon data-icon="inline-start" />
+				New NDA
+			</DialogTrigger>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>New NDA</DialogTitle>
+					<DialogDescription>
+						Starts from the one-way template in the language you pick.
+					</DialogDescription>
+				</DialogHeader>
+				<form
+					onSubmit={async (e) => {
+						e.preventDefault();
+						if (!title.trim()) return;
+						setCreating(true);
+						try {
+							const id = await createNda({
+								title: title.trim(),
+								language,
+								direction,
+								clientId:
+									clientId === NONE_VALUE
+										? undefined
+										: (clientId as Id<"clients">),
+							});
+							setOpen(false);
+							setTitle("NDA");
+							setClientId(NONE_VALUE);
+							navigate({ to: "/ndas/$ndaId", params: { ndaId: id } });
+						} catch (err) {
+							toast.error("Could not create NDA", {
+								description: err instanceof Error ? err.message : String(err),
+							});
+						} finally {
+							setCreating(false);
 						}
-						className="shrink-0"
-					>
-						{published ? (publicReadable ? "Public" : "Shared") : "Draft"}
-					</Badge>
-				)}
-			</Link>
-			<div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100">
-				<NdaRowMenu
-					ndaId={ndaId}
-					title={title}
-					slug={slug}
-					shareToken={shareToken}
-					published={published}
-					publicReadable={publicReadable}
-					signedSlug={signedSlug}
-				/>
-			</div>
-		</li>
+					}}
+					className="space-y-6"
+				>
+					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor="new-nda-title">Title</FieldLabel>
+							<Input
+								id="new-nda-title"
+								value={title}
+								onChange={(e) => setTitle(e.target.value)}
+								placeholder="NDA — Acme"
+								autoFocus
+							/>
+						</Field>
+						<Field>
+							<FieldLabel>Who signs</FieldLabel>
+							<Select
+								value={direction}
+								onValueChange={(v) => setDirection(v as Direction)}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="owner_signs">
+										I sign — protecting the client's data
+									</SelectItem>
+									<SelectItem value="client_signs">
+										Client signs — protecting my information
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</Field>
+						<Field>
+							<FieldLabel>Language</FieldLabel>
+							<Select
+								value={language}
+								onValueChange={(v) => setLanguage(v as Language)}
+							>
+								<SelectTrigger>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="nl">Dutch</SelectItem>
+									<SelectItem value="en">English</SelectItem>
+								</SelectContent>
+							</Select>
+						</Field>
+						<Field>
+							<FieldLabel>Client (optional)</FieldLabel>
+							<Select
+								value={clientId}
+								onValueChange={(v) => setClientId(v ?? NONE_VALUE)}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="No client" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={NONE_VALUE}>No client</SelectItem>
+									{(clients ?? []).map((c) => (
+										<SelectItem key={c._id} value={c._id}>
+											{c.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</Field>
+					</FieldGroup>
+					<DialogFooter>
+						<DialogClose render={<Button type="button" variant="outline" />}>
+							Cancel
+						</DialogClose>
+						<Button type="submit" disabled={creating || !title.trim()}>
+							{creating ? "Creating…" : "Create NDA"}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
@@ -314,11 +478,14 @@ function NdaRowMenu({
 					<Button
 						type="button"
 						variant="ghost"
-						size="icon"
+						size="icon-sm"
 						aria-label={`Actions for ${title}`}
 					/>
 				}
-				onClick={(e) => e.preventDefault()}
+				onClick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				}}
 			>
 				{copied ? (
 					<CheckIcon className="h-4 w-4" />
@@ -335,6 +502,10 @@ function NdaRowMenu({
 					/n/{slug}
 				</div>
 				<DropdownMenuSeparator />
+				<DropdownMenuItem render={<Link to="/ndas/$ndaId" params={{ ndaId }} />}>
+					<ExternalLinkIcon className="h-4 w-4" />
+					Open editor
+				</DropdownMenuItem>
 				{signedSlug ? (
 					<DropdownMenuItem
 						onClick={(e) => {

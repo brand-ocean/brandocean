@@ -157,10 +157,36 @@ export const ingestConvexEvents = internalAction({
 	},
 });
 
+// Build the sink URL a client deployment should POST its usage events to. The
+// deployment name is the same identifier stored on the billingResource, so
+// resourceOwner can map an incoming batch back to its billing client. Exported
+// so the same URL can be generated for hand-configured streams.
+export function billingSinkUrl(
+	siteUrl: string,
+	secret: string,
+	deploymentName: string,
+): string {
+	return (
+		`${siteUrl}/billing/convex-usage` +
+		`?deployment=${encodeURIComponent(deploymentName)}` +
+		`&secret=${encodeURIComponent(secret)}`
+	);
+}
+
 // Provision a usage log stream on a client deployment, pointing at our webhook.
-// Requires CONVEX_PLATFORM_TOKEN and the deployment's own deploy key. Optional
-// convenience — you can also create the stream by hand in the Convex dashboard
-// with the sink URL below. Stores the returned stream id on the resource.
+//
+// Targets the deployment's own HTTP API with that deployment's deploy key — NOT
+// api.convex.dev, which has no log-stream endpoint at all; the previous version
+// of this action could never have succeeded.
+//
+// CAVEAT: the deployment-api docs publish the endpoint but not its request body,
+// so the `sink` shape below is inferred from the dashboard's own vocabulary. If
+// Convex rejects it, the thrown error carries the API's response text, which
+// names the expected fields — adjust and re-run. Creating the webhook by hand in
+// the dashboard (Settings > Integrations > Webhook) with the URL from
+// billingSinkUrl is the guaranteed alternative.
+//
+// Convex refuses a second stream of the same type, so this is create-once.
 export const provisionLogStream = internalAction({
 	args: {
 		resourceId: v.id("billingResources"),
@@ -172,25 +198,19 @@ export const provisionLogStream = internalAction({
 		const siteUrl = process.env.CONVEX_SITE_URL; // this deployment's .site URL
 		if (!secret || !siteUrl) throw new Error("billing webhook not configured");
 
-		const sinkUrl =
-			`${siteUrl}/billing/convex-usage` +
-			`?deployment=${encodeURIComponent(args.deploymentName)}` +
-			`&secret=${encodeURIComponent(secret)}`;
+		const sinkUrl = billingSinkUrl(siteUrl, secret, args.deploymentName);
+		const endpoint = `https://${args.deploymentName}.convex.cloud/api/create_log_stream`;
 
-		// Convex Platform API: create a webhook log stream on the target deployment.
-		const res = await fetch(
-			"https://api.convex.dev/v1/deployments/log_streams",
-			{
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${args.deployKey}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					sink: { type: "webhook", url: sinkUrl, format: "json" },
-				}),
+		const res = await fetch(endpoint, {
+			method: "POST",
+			headers: {
+				Authorization: `Convex ${args.deployKey}`,
+				"Content-Type": "application/json",
 			},
-		);
+			body: JSON.stringify({
+				sink: { type: "webhook", url: sinkUrl, format: "json" },
+			}),
+		});
 		if (!res.ok) {
 			const text = await res.text().catch(() => "");
 			throw new Error(`log stream create failed: ${res.status} ${text}`);

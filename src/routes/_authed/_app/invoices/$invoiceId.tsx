@@ -1,15 +1,38 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { CheckIcon, CopyIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameFooter,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
+import { usePageTitle } from "@/components/app/page-title";
+import { TonePill, type Tone } from "@/components/app/tone";
+import { InvoiceDownloadButtons } from "@/components/invoices/InvoiceDownloadButtons";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { InvoiceDocumentData } from "@/lib/invoiceDocument";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
+import { computeInvoiceTotals } from "~convex/lib/invoiceMath";
 
 export const Route = createFileRoute("/_authed/_app/invoices/$invoiceId")({
 	component: InvoiceEditor,
@@ -17,6 +40,14 @@ export const Route = createFileRoute("/_authed/_app/invoices/$invoiceId")({
 
 const STATUSES = ["draft", "sent", "paid", "overdue", "void"] as const;
 type Status = (typeof STATUSES)[number];
+
+const STATUS_TONE: Record<Status, Tone> = {
+	draft: "muted",
+	sent: "info",
+	paid: "success",
+	overdue: "danger",
+	void: "muted",
+};
 
 function fmtCurrency(cents: number, currency: string) {
 	return new Intl.NumberFormat("en-NL", {
@@ -34,38 +65,98 @@ function InvoiceEditor() {
 	const id = invoiceId as Id<"invoices">;
 	const data = useQuery(api.invoices.getById, { id });
 	const clients = useQuery(api.clients.list);
+	const settings = useQuery(api.userSettings.get);
+	const fullClient = useQuery(
+		api.clients.getById,
+		data ? { id: data.invoice.clientId } : "skip",
+	);
+	usePageTitle(data?.invoice.number);
 
 	if (data === undefined) {
 		return (
-			<div className="mx-auto max-w-4xl space-y-6">
-				<Skeleton className="h-10 w-2/3" />
-				<Skeleton className="h-40" />
-			</div>
+			<Frame className="mx-auto w-full max-w-4xl">
+				<FramePanel>
+					<Skeleton className="mb-4 h-8 w-2/3" />
+					<Skeleton className="h-40" />
+				</FramePanel>
+			</Frame>
 		)
 	}
 
 	if (data === null) {
 		return (
-			<div className="mx-auto max-w-4xl space-y-3">
-				<h1 className="text-2xl font-semibold">Invoice not found</h1>
-				<Button render={<Link to="/invoices" />} variant="outline">
-					Back to invoices
-				</Button>
-			</div>
+			<Frame className="mx-auto w-full max-w-4xl">
+				<FramePanel flush>
+					<EmptyState
+						title="Invoice not found"
+						description="It may have been removed, or you don't have access."
+						action={
+							<Button
+								size="sm"
+								render={<Link to="/invoices" />}
+								variant="outline"
+							>
+								Back to invoices
+							</Button>
+						}
+					/>
+				</FramePanel>
+			</Frame>
 		)
 	}
 
 	const { invoice, lines } = data;
 	const client = (clients ?? []).find((c) => c._id === invoice.clientId);
-	const subtotal = lines.reduce(
-		(acc, l) => acc + l.quantity * l.unitPrice,
-		0,
-	)
-	const vat = Math.round((subtotal * invoice.vatRate) / 100);
-	const total = subtotal + vat;
+	const pricesIncludeVat = invoice.pricesIncludeVat ?? false;
+	const lineSum = lines.reduce((acc, l) => acc + l.quantity * l.unitPrice, 0);
+	const totals = computeInvoiceTotals(
+		lineSum,
+		invoice.vatRate,
+		pricesIncludeVat,
+	);
+
+	// Alles wat op de PDF / UBL e-factuur staat, in één pakketje.
+	const docData: InvoiceDocumentData | null =
+		settings && fullClient
+			? {
+					number: invoice.number,
+					issuedAt: invoice.issuedAt,
+					dueAt: invoice.dueAt,
+					currency: invoice.currency,
+					vatRate: invoice.vatRate,
+					pricesIncludeVat,
+					lines: lines.map((l) => ({
+						description: l.description,
+						quantity: l.quantity,
+						unitPrice: l.unitPrice,
+					})),
+					business: {
+						name: settings.businessName ?? "brandocean",
+						street: settings.businessStreet,
+						postalCode: settings.businessPostalCode,
+						city: settings.businessCity,
+						countryCode: settings.businessCountryCode,
+						email: settings.businessEmail,
+						kvkNumber: settings.kvkNumber,
+						vatNumber: settings.vatNumber,
+						iban: settings.iban,
+						bic: settings.bic,
+					},
+					client: {
+						name: fullClient.name,
+						companyName: fullClient.companyName,
+						email: fullClient.email,
+						street: fullClient.street,
+						postalCode: fullClient.postalCode,
+						city: fullClient.city,
+						countryCode: fullClient.countryCode,
+						vatNumber: fullClient.vatNumber,
+					},
+				}
+			: null;
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-10">
+		<div className="mx-auto flex w-full max-w-4xl flex-col gap-4.5">
 			<InvoiceHeader
 				invoiceId={id}
 				number={invoice.number}
@@ -74,6 +165,7 @@ function InvoiceEditor() {
 				clientId={invoice.clientId}
 				slug={invoice.slug}
 				token={invoice.shareToken}
+				docData={docData}
 			/>
 			<MetaForm
 				invoiceId={id}
@@ -82,13 +174,14 @@ function InvoiceEditor() {
 				vatRate={invoice.vatRate}
 				currency={invoice.currency}
 				notes={invoice.notes ?? ""}
+				pricesIncludeVat={pricesIncludeVat}
 			/>
 			<LinesEditor invoiceId={id} lines={lines} currency={invoice.currency} />
 			<Totals
-				subtotal={subtotal}
-				vat={vat}
+				subtotal={totals.subtotalCents}
+				vat={totals.vatCents}
 				vatRate={invoice.vatRate}
-				total={total}
+				total={totals.totalCents}
 				currency={invoice.currency}
 			/>
 		</div>
@@ -103,6 +196,7 @@ function InvoiceHeader({
 	clientId,
 	slug,
 	token,
+	docData,
 }: {
 	invoiceId: Id<"invoices">;
 	number: string;
@@ -111,6 +205,7 @@ function InvoiceHeader({
 	clientId: Id<"clients">;
 	slug: string;
 	token: string;
+	docData: InvoiceDocumentData | null;
 }) {
 	const setStatus = useMutation(api.invoices.setStatus);
 	const remove = useMutation(api.invoices.remove);
@@ -121,38 +216,46 @@ function InvoiceHeader({
 			: `/i/${slug}?t=${token}`;
 
 	return (
-		<header className="flex flex-wrap items-start justify-between gap-4">
-			<div className="flex flex-col gap-1">
-				<h1 className="text-3xl font-semibold tracking-tight">{number}</h1>
-				<p className="text-base text-muted-foreground">
-					For{" "}
-					<Link
-						to="/clients/$clientId"
-						params={{ clientId }}
-						className="underline"
-					>
-						{clientName}
-					</Link>
-				</p>
-			</div>
-			<div className="flex items-center gap-2">
-				<Badge variant="outline">{status}</Badge>
-				<select
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>{number}</FrameTitle>
+					<FrameDescription>
+						For{" "}
+						<Link
+							to="/clients/$clientId"
+							params={{ clientId }}
+							className="underline underline-offset-2"
+						>
+							{clientName}
+						</Link>
+					</FrameDescription>
+				</FrameHeading>
+				<FrameActions className="flex-wrap">
+				<TonePill dot tone={STATUS_TONE[status]}>
+					{status}
+				</TonePill>
+				<Select
 					value={status}
-					onChange={(e) =>
-						void setStatus({ id: invoiceId, status: e.target.value as Status })
+					onValueChange={(v) =>
+						void setStatus({ id: invoiceId, status: (v ?? status) as Status })
 					}
-					className="rounded-md border bg-background px-2 py-1 text-sm"
 				>
-					{STATUSES.map((s) => (
-						<option key={s} value={s}>
-							{s}
-						</option>
-					))}
-				</select>
+					<SelectTrigger size="sm" className="w-28">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{STATUSES.map((s) => (
+							<SelectItem key={s} value={s}>
+								{s}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 				<Button
 					type="button"
 					variant="outline"
+					size="sm"
 					onClick={async () => {
 						try {
 							await navigator.clipboard.writeText(shareUrl);
@@ -173,9 +276,11 @@ function InvoiceHeader({
 					)}
 					{copied ? "Copied" : "Copy link"}
 				</Button>
+				<InvoiceDownloadButtons data={docData} />
 				<Button
 					type="button"
 					variant="outline"
+					size="sm"
 					onClick={async () => {
 						if (!window.confirm(`Delete ${number}?`)) return;
 						try {
@@ -191,8 +296,9 @@ function InvoiceHeader({
 					<Trash2Icon data-icon="inline-start" />
 					Delete
 				</Button>
-			</div>
-		</header>
+				</FrameActions>
+			</FrameHeader>
+		</Frame>
 	)
 }
 
@@ -203,6 +309,7 @@ function MetaForm({
 	vatRate,
 	currency,
 	notes,
+	pricesIncludeVat,
 }: {
 	invoiceId: Id<"invoices">;
 	issuedAt: number;
@@ -210,6 +317,7 @@ function MetaForm({
 	vatRate: number;
 	currency: string;
 	notes: string;
+	pricesIncludeVat: boolean;
 }) {
 	const update = useMutation(api.invoices.update);
 	const [issued, setIssued] = useState(toIsoDate(issuedAt));
@@ -218,6 +326,7 @@ function MetaForm({
 	const [curr, setCurr] = useState(currency);
 	const [note, setNote] = useState(notes);
 	const [saving, setSaving] = useState(false);
+	const pricesModeId = useId();
 
 	return (
 		<form
@@ -242,8 +351,17 @@ function MetaForm({
 					setSaving(false);
 				}
 			}}
-			className="rounded-lg border bg-card p-5"
 		>
+			<Frame>
+				<FrameHeader>
+					<FrameHeading>
+						<FrameTitle>Invoice details</FrameTitle>
+						<FrameDescription>
+							Dates, VAT and the note printed on the invoice.
+						</FrameDescription>
+					</FrameHeading>
+				</FrameHeader>
+				<FramePanel>
 			<FieldGroup>
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<Field>
@@ -281,6 +399,48 @@ function MetaForm({
 							onChange={(e) => setCurr(e.target.value)}
 						/>
 					</Field>
+					<Field>
+						<FieldLabel htmlFor={pricesModeId}>
+							Prijzen incl. btw
+						</FieldLabel>
+						{/* Direct opslaan — de prijsmodus bepaalt hoe totalen en de
+						    PDF/UBL rekenen, dus geen aparte save-stap. */}
+						<Select
+							value={pricesIncludeVat ? "incl" : "excl"}
+							onValueChange={async (v) => {
+								if (v === null) return;
+								try {
+									await update({
+										id: invoiceId,
+										pricesIncludeVat: v === "incl",
+									})
+								} catch (err) {
+									if (
+										err instanceof ConvexError &&
+										err.data === "invoice_booked"
+									) {
+										toast.error("Factuur is al geboekt", {
+											description:
+												"De prijsmodus is vergrendeld zodra de factuur in het grootboek staat. Void de factuur en maak een nieuwe voor correcties.",
+										})
+										return;
+									}
+									toast.error("Could not save", {
+										description:
+											err instanceof Error ? err.message : String(err),
+									})
+								}
+							}}
+						>
+							<SelectTrigger id={pricesModeId}>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="excl">Excl. btw (standaard)</SelectItem>
+								<SelectItem value="incl">Incl. btw (Moneybird)</SelectItem>
+							</SelectContent>
+						</Select>
+					</Field>
 				</div>
 				<Field>
 					<FieldLabel htmlFor="notes">Notes</FieldLabel>
@@ -292,11 +452,13 @@ function MetaForm({
 					/>
 				</Field>
 			</FieldGroup>
-			<div className="mt-4">
-				<Button type="submit" disabled={saving}>
-					{saving ? "Saving…" : "Save details"}
-				</Button>
-			</div>
+				</FramePanel>
+				<FrameFooter className="justify-end">
+					<Button type="submit" size="sm" disabled={saving}>
+						{saving ? "Saving…" : "Save details"}
+					</Button>
+				</FrameFooter>
+			</Frame>
 		</form>
 	)
 }
@@ -323,11 +485,18 @@ function LinesEditor({
 	const removeLine = useMutation(api.invoices.removeLine);
 
 	return (
-		<div className="space-y-4">
-			<h2 className="text-base font-semibold">Line items</h2>
-			<div className="overflow-hidden rounded-lg border bg-card">
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Line items</FrameTitle>
+					<FrameDescription>
+						{lines.length} line{lines.length === 1 ? "" : "s"} on this invoice
+					</FrameDescription>
+				</FrameHeading>
+			</FrameHeader>
+			<FramePanel flush>
 				<table className="w-full text-sm">
-					<thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+					<thead className="text-left text-xs text-muted-foreground [&_th]:border-b">
 						<tr>
 							<th className="px-4 py-3">Description</th>
 							<th className="px-4 py-3 w-24">Qty</th>
@@ -410,24 +579,26 @@ function LinesEditor({
 						)}
 					</tbody>
 				</table>
-			</div>
-			<NewLineForm
-				onAdd={async (description, quantity, unitPriceCents) => {
-					try {
-						await addLine({
-							invoiceId,
-							description,
-							quantity,
-							unitPrice: unitPriceCents,
-						})
-					} catch (err) {
-						toast.error("Could not add line", {
-							description: err instanceof Error ? err.message : String(err),
-						})
-					}
-				}}
-			/>
-		</div>
+			</FramePanel>
+			<FrameFooter className="py-2">
+				<NewLineForm
+					onAdd={async (description, quantity, unitPriceCents) => {
+						try {
+							await addLine({
+								invoiceId,
+								description,
+								quantity,
+								unitPrice: unitPriceCents,
+							})
+						} catch (err) {
+							toast.error("Could not add line", {
+								description: err instanceof Error ? err.message : String(err),
+							})
+						}
+					}}
+				/>
+			</FrameFooter>
+		</Frame>
 	)
 }
 
@@ -516,13 +687,18 @@ function Totals({
 	currency: string;
 }) {
 	return (
-		<div className="ml-auto w-full max-w-xs space-y-2 rounded-lg border bg-card p-5 text-sm">
-			<Row label="Subtotal" value={fmtCurrency(subtotal, currency)} />
-			<Row label={`VAT (${vatRate}%)`} value={fmtCurrency(vat, currency)} />
-			<div className="border-t pt-2 text-base font-semibold">
-				<Row label="Total" value={fmtCurrency(total, currency)} />
-			</div>
-		</div>
+		<Frame className="ml-auto w-full max-w-xs">
+			<FramePanel className="space-y-2 text-sm">
+				<Row
+					label="Subtotaal excl. btw"
+					value={fmtCurrency(subtotal, currency)}
+				/>
+				<Row label={`${vatRate}% btw`} value={fmtCurrency(vat, currency)} />
+				<div className="border-t pt-2 text-base font-semibold">
+					<Row label="Totaal" value={fmtCurrency(total, currency)} />
+				</div>
+			</FramePanel>
+		</Frame>
 	)
 }
 

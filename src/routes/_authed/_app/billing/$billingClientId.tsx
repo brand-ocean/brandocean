@@ -9,6 +9,15 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FrameTitle,
+} from "@/components/app/frame";
+import { usePageTitle } from "@/components/app/page-title";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,18 +101,17 @@ function BillingDetailPage() {
 
 	const rows = useQuery(api.billing.api.list);
 	const record = rows?.find((r) => r.id === id) ?? null;
+	usePageTitle(record?.clientName);
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-8">
-			<div>
-				<Link
-					to="/billing"
-					className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-				>
-					<ArrowLeftIcon className="size-4" />
-					Terug
-				</Link>
-			</div>
+		<div className="mx-auto flex w-full max-w-4xl flex-col gap-4.5">
+			<Link
+				to="/billing"
+				className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+			>
+				<ArrowLeftIcon className="size-4" />
+				Terug
+			</Link>
 
 			{rows === undefined ? (
 				<Skeleton className="h-24" />
@@ -111,20 +119,22 @@ function BillingDetailPage() {
 				<p className="text-muted-foreground">Niet gevonden.</p>
 			) : (
 				<>
-					<header className="flex flex-wrap items-start justify-between gap-4">
-						<div className="flex flex-col gap-2">
-							<h1 className="text-3xl font-semibold tracking-tight">
-								{record.clientName}
-							</h1>
-							<p className="text-sm text-muted-foreground">
-								Markup {record.markup}× · incasso per{" "}
-								{record.billingIntervalMonths} maand
-								{record.billingIntervalMonths === 1 ? "" : "en"} · minimum{" "}
-								{eur(record.minChargeCents)}
-							</p>
-						</div>
-						<SettingsDialog id={id} record={record} />
-					</header>
+					<Frame>
+						<FrameHeader>
+							<FrameHeading>
+								<FrameTitle>{record.clientName}</FrameTitle>
+								<FrameDescription>
+									Markup {record.markup}× · incasso per{" "}
+									{record.billingIntervalMonths} maand
+									{record.billingIntervalMonths === 1 ? "" : "en"} · minimum{" "}
+									{eur(record.minChargeCents)}
+								</FrameDescription>
+							</FrameHeading>
+							<FrameActions>
+								<SettingsDialog id={id} record={record} />
+							</FrameActions>
+						</FrameHeader>
+					</Frame>
 
 					<MandateCard id={id} record={record} />
 					<ResourcesCard id={id} />

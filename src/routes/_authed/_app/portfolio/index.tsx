@@ -1,10 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { DownloadIcon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
+import {
+	DownloadIcon,
+	ImageIcon,
+	PencilIcon,
+	PlusIcon,
+	TrashIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
+import { TonePill } from "@/components/app/tone";
 import { BRANDOCEAN_SEED } from "@/components/portfolio/brandoceanSeedData";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,18 +144,19 @@ function PortfolioAdmin() {
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-8">
-			<header className="flex flex-wrap items-start justify-between gap-4">
-				<div className="flex flex-col gap-2">
-					<h1 className="text-3xl font-semibold tracking-tight">Portfolio</h1>
-					<p className="text-base text-muted-foreground">
-						Manage the Observation Registry shown on the homepage.
-					</p>
-				</div>
-				<div className="flex flex-wrap items-center gap-2">
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Portfolio</FrameTitle>
+					<FrameDescription>
+						The Observation Registry shown on the homepage, in display order.
+					</FrameDescription>
+				</FrameHeading>
+				<FrameActions className="flex-wrap">
 					<Button
 						type="button"
 						variant="outline"
+						size="sm"
 						disabled={importing}
 						onClick={async () => {
 							const replace =
@@ -167,63 +184,77 @@ function PortfolioAdmin() {
 						<DownloadIcon data-icon="inline-start" />
 						{importing ? "Importing…" : "Import from brandocean.nl"}
 					</Button>
-					<Button onClick={startNew}>
+					<Button size="sm" onClick={startNew}>
 						<PlusIcon data-icon="inline-start" /> Add item
 					</Button>
-				</div>
-			</header>
+				</FrameActions>
+			</FrameHeader>
 
-			{sorted === undefined ? (
-				<div className="flex flex-col gap-2">
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-				</div>
-			) : sorted.length === 0 ? (
-				<div className="rounded-lg border bg-card p-10 text-center text-muted-foreground">
-					No portfolio items yet. Click "Add item" to create your first one.
-				</div>
-			) : (
-				<ul className="divide-y rounded-lg border bg-card">
-					{sorted.map((item) => (
-						<li
-							key={item._id}
-							className="flex items-center justify-between gap-4 px-6 py-4"
-						>
-							<div className="flex min-w-0 flex-col gap-1">
-								<span className="truncate text-base font-medium">
-									{item.title}
-								</span>
-								<span className="text-sm text-muted-foreground">
-									{item.category} · {item.project}
-								</span>
-							</div>
-							<div className="flex items-center gap-2">
-								<Badge variant={item.published ? "default" : "outline"}>
-									{item.published ? "Public" : "Draft"}
-								</Badge>
-								{item.featured ? (
-									<Badge variant="secondary">Featured</Badge>
-								) : null}
-								<Button
-									size="sm"
-									variant="ghost"
-									onClick={() => startEdit(item)}
-								>
-									<PencilIcon />
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onClick={() => void onDelete(item._id)}
-								>
-									<TrashIcon />
-								</Button>
-							</div>
-						</li>
-					))}
-				</ul>
-			)}
+			<FramePanel flush>
+				{sorted === undefined ? (
+					<div className="flex flex-col gap-2 p-4">
+						<Skeleton className="h-12" />
+						<Skeleton className="h-12" />
+						<Skeleton className="h-12" />
+					</div>
+				) : sorted.length === 0 ? (
+					<EmptyState
+						icon={ImageIcon}
+						title="No portfolio items yet"
+						description="Add one by hand, or pull the existing set in from brandocean.nl."
+						action={
+							<Button size="sm" onClick={startNew}>
+								<PlusIcon data-icon="inline-start" /> Add item
+							</Button>
+						}
+					/>
+				) : (
+					<ul className="divide-y">
+						{sorted.map((item, i) => (
+							<li
+								key={item._id}
+								className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+							>
+								<div className="flex min-w-0 items-center gap-2.5">
+									<span className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-xs font-medium text-muted-foreground tabular-nums">
+										{i + 1}
+									</span>
+									<div className="flex min-w-0 flex-col">
+										<span className="truncate font-medium">{item.title}</span>
+										<span className="truncate text-xs text-muted-foreground">
+											{item.category} · {item.project}
+										</span>
+									</div>
+								</div>
+								<div className="flex shrink-0 items-center gap-2">
+									{item.featured ? (
+										<TonePill tone="info">Featured</TonePill>
+									) : null}
+									<TonePill dot tone={item.published ? "success" : "muted"}>
+										{item.published ? "Public" : "Draft"}
+									</TonePill>
+									<Button
+										size="icon-sm"
+										variant="ghost"
+										aria-label={`Edit ${item.title}`}
+										onClick={() => startEdit(item)}
+									>
+										<PencilIcon />
+									</Button>
+									<Button
+										size="icon-sm"
+										variant="ghost"
+										aria-label={`Delete ${item.title}`}
+										onClick={() => void onDelete(item._id)}
+									>
+										<TrashIcon />
+									</Button>
+								</div>
+							</li>
+						))}
+					</ul>
+				)}
+			</FramePanel>
 
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetContent className="w-full sm:max-w-xl overflow-y-auto">
@@ -390,7 +421,7 @@ function PortfolioAdmin() {
 					</SheetFooter>
 				</SheetContent>
 			</Sheet>
-		</div>
+		</Frame>
 	)
 }
 

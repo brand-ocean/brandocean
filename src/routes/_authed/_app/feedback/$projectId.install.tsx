@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
+import {
+	Frame,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
 import { InstallPanel } from "@/components/feedback/install-panel";
 import type { Id } from "~convex/_generated/dataModel";
 
@@ -13,23 +21,28 @@ function InstallPage() {
 	const { projectId } = Route.useParams();
 	const id = projectId as Id<"feedbackProjects">;
 	return (
-		<div className="mx-auto w-full max-w-2xl space-y-6">
-			<div>
-				<Link
-					to="/feedback/$projectId"
-					params={{ projectId }}
-					className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-				>
-					<ArrowLeftIcon className="size-4" /> Back to board
-				</Link>
-				<h1 className="text-2xl font-semibold tracking-tight">
-					Review &amp; share
-				</h1>
-				<p className="mt-1 text-sm text-muted-foreground">
-					Review the site with the Chrome extension and manage client access.
-				</p>
-			</div>
-			<InstallPanel projectId={id} />
+		<div className="mx-auto flex w-full max-w-2xl flex-col gap-4.5">
+			<Link
+				to="/feedback/$projectId"
+				params={{ projectId }}
+				className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+			>
+				<ArrowLeftIcon className="size-4" /> Back to board
+			</Link>
+			<Frame>
+				<FrameHeader>
+					<FrameHeading>
+						<FrameTitle>Review &amp; share</FrameTitle>
+						<FrameDescription>
+							Review the site with the Chrome extension and manage client
+							access.
+						</FrameDescription>
+					</FrameHeading>
+				</FrameHeader>
+				<FramePanel>
+					<InstallPanel projectId={id} />
+				</FramePanel>
+			</Frame>
 		</div>
 	);
 }

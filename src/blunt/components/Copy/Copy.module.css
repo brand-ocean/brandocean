@@ -1,0 +1,9 @@
+.line,
+.word {
+  position: relative;
+}
+
+.char {
+  display: inline-block;
+  will-change: opacity;
+}

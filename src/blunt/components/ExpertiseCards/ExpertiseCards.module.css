@@ -1,0 +1,79 @@
+.stickyCards {
+  position: relative;
+  width: 100%;
+  background-color: var(--base-1000);
+}
+
+.card {
+  position: sticky;
+  width: 100%;
+  height: 125svh;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.cardInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transform-origin: 50% 100%;
+  will-change: transform;
+  text-align: center;
+  color: var(--base-1000);
+}
+
+.cardInfo {
+  width: 15%;
+  padding: 2.25rem;
+  text-align: left;
+}
+
+.cardTitle h1 {
+  padding: 2rem 0;
+}
+
+.cardDescription {
+  width: 60%;
+  margin: 0 auto 2em;
+}
+
+.cardImg {
+  width: 100%;
+  height: 100%;
+  margin-top: 4em;
+  overflow: hidden;
+}
+
+.cardInner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  background-color: var(--base-1000);
+  opacity: var(--after-opacity, 0);
+  will-change: opacity;
+  pointer-events: none;
+}
+
+@media (max-width: 1000px) {
+  .cardTitle h1 {
+    font-size: 3rem;
+  }
+
+  .cardInfo {
+    width: 75%;
+    margin: 0 auto;
+    padding: 4em 2em;
+    text-align: center;
+  }
+
+  .cardDescription {
+    width: calc(100% - 4rem);
+    margin: 0 auto;
+  }
+}

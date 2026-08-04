@@ -53,16 +53,13 @@ export function NavUser() {
 							<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
 						}
 					>
-						<Avatar className="size-8 rounded-lg">
-							<AvatarFallback className="rounded-lg">
+						<Avatar className="size-7 rounded-md">
+							<AvatarFallback className="rounded-md bg-zinc-700 text-xs text-zinc-100">
 								{avatarFallback}
 							</AvatarFallback>
 						</Avatar>
 						<div className="grid flex-1 text-left text-sm leading-tight">
 							<span className="truncate font-medium">{name}</span>
-							<span className="truncate text-xs text-foreground/70">
-								{email}
-							</span>
 						</div>
 						<EllipsisVerticalIcon className="ml-auto size-4" />
 					</DropdownMenuTrigger>
@@ -91,17 +88,13 @@ export function NavUser() {
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem
-								render={
-									<Link to="/backup/$" params={{ _splat: "settings/account" }} />
-								}
-							>
-								<CircleUserRoundIcon />
-								Account
-							</DropdownMenuItem>
 							<DropdownMenuItem render={<Link to="/settings" />}>
+								<CircleUserRoundIcon />
+								Workspace details
+							</DropdownMenuItem>
+							<DropdownMenuItem render={<Link to="/billing" />}>
 								<SettingsIcon />
-								Settings
+								Usage billing
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />

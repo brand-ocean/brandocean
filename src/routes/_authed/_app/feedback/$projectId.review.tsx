@@ -11,6 +11,15 @@ import {
 } from "lucide-react";
 import { type FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
 import { LiveMobilePreview } from "@/components/feedback/live-mobile-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,31 +92,33 @@ function ReviewPage() {
 
 	if (project === undefined) {
 		return (
-			<div className="mx-auto w-full max-w-6xl space-y-4">
-				<Skeleton className="h-10 w-64" />
-				<Skeleton className="h-[60vh]" />
-			</div>
+			<Frame className="mx-auto w-full max-w-6xl">
+				<FramePanel>
+					<Skeleton className="mb-4 h-8 w-64" />
+					<Skeleton className="h-[50vh]" />
+				</FramePanel>
+			</Frame>
 		);
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-			<div>
-				<Link
-					to="/feedback/$projectId"
-					params={{ projectId }}
-					className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-				>
-					<ArrowLeftIcon className="size-4" /> Back to board
-				</Link>
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div>
-						<h1 className="text-2xl font-semibold tracking-tight">Review</h1>
-						<p className="mt-1 text-sm text-muted-foreground">
+		<div className="mx-auto flex w-full max-w-6xl flex-col gap-4.5">
+			<Link
+				to="/feedback/$projectId"
+				params={{ projectId }}
+				className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+			>
+				<ArrowLeftIcon className="size-4" /> Back to board
+			</Link>
+			<Frame>
+				<FrameHeader>
+					<FrameHeading>
+						<FrameTitle>Review</FrameTitle>
+						<FrameDescription>
 							{project.shopifyDomain} · click the screenshot to leave a comment
-						</p>
-					</div>
-					<div className="flex items-center gap-1.5">
+						</FrameDescription>
+					</FrameHeading>
+					<FrameActions className="gap-1.5">
 						<div className="flex rounded-md bg-muted p-0.5">
 							{(["shot", "live"] as const).map((mo) => (
 								<button
@@ -150,11 +161,9 @@ function ReviewPage() {
 								</button>
 							))}
 						</div>
-					</div>
-				</div>
-			</div>
-
-			<div className="flex flex-wrap items-center gap-2">
+					</FrameActions>
+				</FrameHeader>
+				<FramePanel className="flex flex-wrap items-center gap-2">
 				<form
 					className="flex items-center gap-2"
 					onSubmit={(e: FormEvent) => {
@@ -193,7 +202,8 @@ function ReviewPage() {
 						{p}
 					</button>
 				))}
-			</div>
+				</FramePanel>
+			</Frame>
 
 			{mode === "live" ? (
 				<LiveMobilePreview projectId={id} path={normalize(path)} />

@@ -1,6 +1,11 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+	accountTypeV,
+	entryTypeV,
+	vatCategoryV,
+} from "./boekhouding/validators";
 
 // Rich context captured from the clicked element at comment time, so an AI can
 // map a comment back to the exact source element/component (text is the highest
@@ -88,6 +93,18 @@ export default defineSchema({
 		name: v.string(),
 		email: v.optional(v.string()),
 		companyName: v.optional(v.string()),
+		// Voor ICP-opgaaf bij EU-diensten (rubriek 3b).
+		vatNumber: v.optional(v.string()),
+		countryCode: v.optional(v.string()), // ISO-3166 alpha-2, bv. "NL"
+		// Adres-/bedrijfsgegevens voor factuur-PDF en UBL e-factuur.
+		street: v.optional(v.string()),
+		addressLine2: v.optional(v.string()),
+		postalCode: v.optional(v.string()),
+		city: v.optional(v.string()),
+		phone: v.optional(v.string()),
+		kvkNumber: v.optional(v.string()),
+		// Herkomst-id bij import (Moneybird contact-id) — voorkomt dubbele import.
+		importedFrom: v.optional(v.string()),
 	}).index("by_owner", ["ownerId"]),
 
 	userSettings: defineTable({
@@ -110,6 +127,19 @@ export default defineSchema({
 		// beneath it. Auto-applied to owner-signed NDAs.
 		signatureDataUrl: v.optional(v.string()),
 		signatureName: v.optional(v.string()),
+		// Boekhouding: doorlopende journaalpostteller + boekjaarconfig.
+		nextJournalEntryNumber: v.optional(v.number()),
+		boekjaarStart: v.optional(v.string()), // "YYYY-MM-DD"
+		openingBalanceBookedAt: v.optional(v.number()),
+		// Bedrijfsprofiel voor factuur-PDF en UBL e-factuur (gestructureerd,
+		// naast het vrije businessAddress-veld).
+		businessStreet: v.optional(v.string()),
+		businessPostalCode: v.optional(v.string()),
+		businessCity: v.optional(v.string()),
+		businessCountryCode: v.optional(v.string()),
+		businessEmail: v.optional(v.string()),
+		iban: v.optional(v.string()),
+		bic: v.optional(v.string()),
 	}).index("by_user", ["userId"]),
 
 	invoices: defineTable({
@@ -129,6 +159,12 @@ export default defineSchema({
 		paidAt: v.optional(v.number()),
 		currency: v.string(),
 		vatRate: v.number(),
+		// BTW-categorie voor de journaalboeking; ontbreekt op oude facturen —
+		// leesfallback: afgeleid van vatRate (21→hoog, 9→laag, 0→nul).
+		vatCategory: v.optional(vatCategoryV),
+		// Moneybird-stijl: regelprijzen zijn inclusief BTW; het factuurtotaal
+		// staat vast en subtotaal/BTW worden teruggerekend.
+		pricesIncludeVat: v.optional(v.boolean()),
 		notes: v.optional(v.string()),
 		slug: v.string(),
 		shareToken: v.string(),
@@ -303,6 +339,33 @@ export default defineSchema({
 		.index("by_client", ["clientId"])
 		.index("by_owner_updated", ["ownerId", "updatedAt"])
 		.index("by_owner_status_order", ["ownerId", "status", "order"]),
+
+	// --- Personal habit tracker (the /habits dashboard) ---
+
+	// One per big button on the habits page, max 6 per owner. `step` is the
+	// amount one tap logs (e.g. 10 push-ups), `total` is a denormalized
+	// lifetime sum so the page never counts the whole log table.
+	habitTrackers: defineTable({
+		ownerId: v.id("users"),
+		name: v.string(),
+		emoji: v.string(),
+		step: v.number(),
+		unit: v.optional(v.string()),
+		color: v.string(),
+		order: v.number(),
+		total: v.number(),
+		createdAt: v.number(),
+	}).index("by_owner", ["ownerId"]),
+
+	// One row per tap. `day` is the owner's local "YYYY-MM-DD" (sent by the
+	// client so "today" follows their timezone, not UTC).
+	habitLogs: defineTable({
+		ownerId: v.id("users"),
+		trackerId: v.id("habitTrackers"),
+		day: v.string(),
+		amount: v.number(),
+		createdAt: v.number(),
+	}).index("by_tracker_day", ["trackerId", "day"]),
 
 	// --- Visual website-feedback tool (Shopify stores) ---
 
@@ -599,4 +662,107 @@ export default defineSchema({
 		.index("by_billing_client", ["billingClientId"])
 		.index("by_stripe_payment", ["stripePaymentIntentId"])
 		.index("by_status", ["status"]),
+
+	// ---------------------------------------------------------------------------
+	// Boekhouding — dubbel boekhouden voor de eigen BV.
+	// Journaalposten zijn immutable: correcties gaan via tegenboekingen.
+
+	ledgerAccounts: defineTable({
+		ownerId: v.id("users"),
+		code: v.string(), // "1300" — decimaal rekeningstelsel
+		name: v.string(), // "Debiteuren"
+		type: accountTypeV,
+		// Stabiele sleutel zodat code nooit op rekeningnummers hoeft te matchen.
+		// Alleen gezet op geseede systeemrekeningen.
+		systemKey: v.optional(v.string()),
+		defaultVatCategory: v.optional(vatCategoryV),
+		isSystem: v.boolean(), // geseed: niet verwijderbaar, code/type vast
+		active: v.boolean(),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_owner", ["ownerId"])
+		.index("by_owner_code", ["ownerId", "code"])
+		.index("by_owner_system_key", ["ownerId", "systemKey"]),
+
+	journalEntries: defineTable({
+		ownerId: v.id("users"),
+		entryNumber: v.number(), // doorlopend via userSettings.nextJournalEntryNumber
+		date: v.string(), // "YYYY-MM-DD" boekdatum
+		description: v.string(),
+		type: entryTypeV,
+		// Idempotentiesleutel — postEntry is een no-op als deze al bestaat.
+		sourceKey: v.string(),
+		reversesEntryId: v.optional(v.id("journalEntries")),
+		// Enige veld dat ooit gepatcht wordt (bij tegenboeking van deze post).
+		reversedByEntryId: v.optional(v.id("journalEntries")),
+		totalCents: v.number(), // som van de debetzijde
+		createdAt: v.number(), // géén updatedAt — immutable
+	})
+		.index("by_owner_date", ["ownerId", "date"])
+		.index("by_owner_source_key", ["ownerId", "sourceKey"])
+		.index("by_owner_number", ["ownerId", "entryNumber"]),
+
+	journalLines: defineTable({
+		entryId: v.id("journalEntries"),
+		// Gedenormaliseerd voor aggregatie over posten heen (rapporten, BTW).
+		ownerId: v.id("users"),
+		date: v.string(), // = entry.date
+		accountId: v.id("ledgerAccounts"),
+		debitCents: v.number(), // precies één van debit/credit > 0
+		creditCents: v.number(),
+		description: v.optional(v.string()),
+		vatCategory: v.optional(vatCategoryV),
+		clientId: v.optional(v.id("clients")), // voor ICP bij eu_dienst
+	})
+		.index("by_entry", ["entryId"])
+		.index("by_owner_account_date", ["ownerId", "accountId", "date"])
+		.index("by_owner_vat_date", ["ownerId", "vatCategory", "date"]),
+
+	fiscalPeriods: defineTable({
+		ownerId: v.id("users"),
+		kind: v.union(v.literal("year"), v.literal("quarter")),
+		year: v.number(),
+		quarter: v.optional(v.number()), // 1-4, alleen bij kind "quarter"
+		startDate: v.string(), // "YYYY-MM-DD" inclusief
+		endDate: v.string(), // exclusief
+		status: v.union(v.literal("open"), v.literal("closed")),
+		closedAt: v.optional(v.number()),
+		createdAt: v.number(),
+	})
+		.index("by_owner", ["ownerId"]) // ≤ ~5 rijen per jaar
+		.index("by_owner_start", ["ownerId", "startDate"]),
+
+	// Vragenlijsten — een genummerde set vragen die je deelt met een klant, die
+	// per vraag antwoordt op een publieke pagina. Zelfde deelpatroon als
+	// offertes: slug in de URL, shareToken als sleutel.
+	specs: defineTable({
+		ownerId: v.id("users"),
+		clientId: v.optional(v.id("clients")),
+		title: v.string(),
+		intro: v.optional(v.string()),
+		slug: v.string(),
+		shareToken: v.string(),
+		published: v.boolean(),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_slug", ["slug"])
+		.index("by_owner", ["ownerId"])
+		.index("by_client", ["clientId"]),
+
+	// Eén vraag. `fallback` is wat er gebeurt als de klant niet antwoordt, zodat
+	// stilte ook een uitkomst heeft. `resolved` zet jij zelf, na het lezen.
+	specQuestions: defineTable({
+		specId: v.id("specs"),
+		order: v.number(),
+		question: v.string(),
+		detail: v.optional(v.string()),
+		fallback: v.optional(v.string()),
+		blocking: v.boolean(),
+		answer: v.optional(v.string()),
+		answeredBy: v.optional(v.string()),
+		answeredAt: v.optional(v.number()),
+		resolved: v.boolean(),
+	}).index("by_spec", ["specId"]),
 });

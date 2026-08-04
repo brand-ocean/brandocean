@@ -12,6 +12,13 @@ export function utcDayKey(ms: number): string {
 	return new Date(ms).toISOString().slice(0, 10);
 }
 
+// First day of the UTC month containing `ms`, as "YYYY-MM-01". Used as the
+// default period start so a freshly enrolled client's current period captures
+// usage already metered earlier this month (incl. the daily pull of yesterday).
+export function startOfMonthKey(ms: number): string {
+	return `${new Date(ms).toISOString().slice(0, 7)}-01`;
+}
+
 const usageEntryV = v.object({
 	metric: v.string(),
 	quantity: v.number(),

@@ -8,19 +8,19 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameHeader,
+	FramePanel,
+} from "@/components/app/frame";
+import { usePageTitle } from "@/components/app/page-title";
+import { CountTabs } from "@/components/app/toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
-} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TasksPanel } from "@/components/tasks/TasksPanel";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
@@ -33,58 +33,68 @@ function ClientDetail() {
 	const { clientId } = Route.useParams();
 	const id = clientId as Id<"clients">;
 	const client = useQuery(api.clients.getById, { id });
+	const [tab, setTab] = useState("overview");
+	usePageTitle(client?.name);
 
 	if (client === undefined) {
 		return (
-			<div className="mx-auto w-full max-w-4xl space-y-8">
-				<Skeleton className="h-10 w-2/3" />
-				<Skeleton className="h-32" />
-			</div>
+			<Frame className="mx-auto w-full max-w-4xl">
+				<FramePanel>
+					<Skeleton className="mb-4 h-8 w-2/3" />
+					<Skeleton className="h-40" />
+				</FramePanel>
+			</Frame>
 		)
 	}
 
 	if (client === null) {
 		return (
-			<div className="mx-auto w-full max-w-4xl space-y-3">
-				<h1 className="text-2xl font-semibold">Client not found</h1>
-				<p className="text-muted-foreground">
-					It may have been removed or you don't have access.
-				</p>
-				<Button render={<Link to="/clients" />} variant="outline">
-					Back to clients
-				</Button>
-			</div>
+			<Frame className="mx-auto w-full max-w-4xl">
+				<FramePanel flush>
+					<EmptyState
+						title="Client not found"
+						description="It may have been removed, or you don't have access."
+						action={
+							<Button size="sm" render={<Link to="/clients" />} variant="outline">
+								Back to clients
+							</Button>
+						}
+					/>
+				</FramePanel>
+			</Frame>
 		)
 	}
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-10">
-			<ClientHeader clientId={id} client={client} />
-			<Tabs defaultValue="overview">
-				<TabsList>
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="offertes">Offertes</TabsTrigger>
-					<TabsTrigger value="contracts">Contracts</TabsTrigger>
-					<TabsTrigger value="tasks">Tasks</TabsTrigger>
-					<TabsTrigger value="notes">Notes</TabsTrigger>
-				</TabsList>
-				<TabsContent value="overview" className="pt-6">
+		<Frame className="mx-auto w-full max-w-4xl">
+			<FrameHeader>
+				<ClientHeader clientId={id} client={client} />
+			</FrameHeader>
+			<CountTabs
+				value={tab}
+				onValueChange={setTab}
+				tabs={[
+					{ id: "overview", label: "Overview" },
+					{ id: "offertes", label: "Offertes" },
+					{ id: "contracts", label: "Contracts" },
+					{ id: "tasks", label: "Tasks" },
+					{ id: "notes", label: "Notes" },
+				]}
+			/>
+			<FramePanel>
+				{tab === "overview" ? (
 					<OverviewTab clientId={id} />
-				</TabsContent>
-				<TabsContent value="offertes" className="pt-6">
+				) : tab === "offertes" ? (
 					<OffertesTab clientId={id} />
-				</TabsContent>
-				<TabsContent value="contracts" className="pt-6">
+				) : tab === "contracts" ? (
 					<ContractsTab clientId={id} />
-				</TabsContent>
-				<TabsContent value="tasks" className="pt-6">
+				) : tab === "tasks" ? (
 					<TasksPanel clientId={id} />
-				</TabsContent>
-				<TabsContent value="notes" className="pt-6">
+				) : (
 					<NotesTab />
-				</TabsContent>
-			</Tabs>
-		</div>
+				)}
+			</FramePanel>
+		</Frame>
 	)
 }
 
@@ -117,20 +127,19 @@ function ClientHeader({
 
 	if (!editing) {
 		return (
-			<header className="flex flex-wrap items-start justify-between gap-4">
-				<div className="flex flex-col gap-1">
-					<h1 className="text-3xl font-semibold tracking-tight">
-						{client.name}
-					</h1>
-					<p className="text-base text-muted-foreground">
+			<>
+				<div className="flex min-w-0 flex-col gap-px">
+					<h2 className="truncate text-sm font-semibold">{client.name}</h2>
+					<p className="truncate text-xs text-muted-foreground">
 						{[client.companyName, client.email].filter(Boolean).join(" · ") ||
 							"No company or email yet"}
 					</p>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex shrink-0 items-center gap-2">
 					<Button
 						type="button"
 						variant="outline"
+						size="sm"
 						onClick={() => {
 							setName(client.name)
 							setCompanyName(client.companyName ?? "");
@@ -166,7 +175,7 @@ function ClientHeader({
 						Delete
 					</Button>
 				</div>
-			</header>
+			</>
 		)
 	}
 
@@ -189,6 +198,7 @@ function ClientHeader({
 					})
 				}
 			}}
+			className="w-full py-2"
 		>
 			<FieldGroup>
 				<Field>
@@ -310,17 +320,11 @@ function OffertesTab({ clientId }: { clientId: Id<"clients"> }) {
 					<Skeleton className="h-14" />
 				</div>
 			) : offertes.length === 0 ? (
-				<Empty>
-					<EmptyHeader>
-						<EmptyMedia variant="icon">
-							<FileTextIcon />
-						</EmptyMedia>
-						<EmptyTitle>No offertes yet</EmptyTitle>
-						<EmptyDescription>
-							Create one above to start the proposal flow.
-						</EmptyDescription>
-					</EmptyHeader>
-				</Empty>
+				<EmptyState
+					icon={FileTextIcon}
+					title="No offertes yet"
+					description="Create one above to start the proposal flow."
+				/>
 			) : (
 				<ul className="divide-y rounded-lg border bg-card">
 					{offertes.map((o) => (
@@ -372,17 +376,11 @@ function ContractsTab({ clientId }: { clientId: Id<"clients"> }) {
 		)
 	if (contracts.length === 0) {
 		return (
-			<Empty>
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<FileTextIcon />
-					</EmptyMedia>
-					<EmptyTitle>No signed contracts yet</EmptyTitle>
-					<EmptyDescription>
-						When a client signs an offerte share link, the contract appears here.
-					</EmptyDescription>
-				</EmptyHeader>
-			</Empty>
+			<EmptyState
+				icon={FileTextIcon}
+				title="No signed contracts yet"
+				description="When a client signs an offerte share link, the contract appears here."
+			/>
 		)
 	}
 	return (

@@ -1,0 +1,144 @@
+.careers {
+  min-height: 100svh;
+  height: max-content;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+  background-color: var(--base-1000);
+}
+
+.careers > p {
+  color: var(--base-200);
+  padding: 1.5rem 2.5rem 2rem 2.5rem;
+  width: 100%;
+  max-width: 2000px;
+  margin: 0 auto;
+  text-transform: uppercase;
+  font-family: var(--font-dm-mono);
+  font-size: clamp(0.8rem, 0.75vw, 0.85rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.list .item {
+  --h2-font-size: clamp(3.25rem, 8vw, 8rem);
+  --h2-line-height: calc(var(--h2-font-size) * 0.85);
+  position: relative;
+  height: var(--h2-line-height);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+  overflow: hidden;
+  background-color: var(--base-1000);
+  max-width: 2000px;
+  margin: 0 auto;
+}
+
+.list .item .wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  --h2-font-size: clamp(3.25rem, 8vw, 8rem);
+  --h2-line-height: calc(var(--h2-font-size) * 0.85);
+  height: calc(var(--h2-line-height) * 3);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+.list .item .wrapper .nameRow,
+.list .item .wrapper .detailRow {
+  --h2-font-size: clamp(3.25rem, 8vw, 8rem);
+  --h2-line-height: calc(var(--h2-font-size) * 0.85);
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: var(--h2-line-height);
+  padding: 0.5rem 2.5rem;
+  box-sizing: border-box;
+}
+
+.list .item .wrapper .nameRow h2,
+.list .item .wrapper .detailRow h2 {
+  text-transform: uppercase;
+  font-family: var(--font-schabo);
+  font-size: var(--h2-font-size);
+  font-weight: 500;
+  line-height: 0.85;
+  letter-spacing: clamp(-0.025rem, -0.75vw, -0.1rem);
+}
+
+.list .item .wrapper .nameRow {
+  background-color: transparent;
+  color: var(--base-100);
+}
+
+.list .item .wrapper .detailRow {
+  position: relative;
+  background-color: var(--base-800);
+  color: var(--base-1000);
+}
+
+.list .item:nth-child(7n + 1) .wrapper .detailRow {
+  background-color: var(--base-800);
+  color: var(--base-1000);
+}
+
+.list .item:nth-child(7n + 2) .wrapper .detailRow {
+  background-color: var(--base-300);
+  color: var(--base-1000);
+}
+
+.list .item:nth-child(7n + 3) .wrapper .detailRow {
+  background-color: var(--base-700);
+  color: var(--base-1000);
+}
+
+.list .item:nth-child(7n + 4) .wrapper .detailRow {
+  background-color: var(--base-400);
+  color: var(--base-100);
+}
+
+.list .item:nth-child(7n + 5) .wrapper .detailRow {
+  background-color: var(--base-500);
+  color: var(--base-1000);
+}
+
+.list .item:nth-child(7n + 6) .wrapper .detailRow {
+  background-color: var(--base-900);
+  color: var(--base-1000);
+}
+
+.list .item:nth-child(7n + 7) .wrapper .detailRow {
+  background-color: var(--base-600);
+  color: var(--base-100);
+}
+
+@media (max-width: 1000px) {
+  .careers {
+    padding: 4rem 0 2rem 0;
+    height: max-content;
+  }
+
+  .careers > p {
+    margin-top: 2rem;
+    padding: 1rem;
+  }
+
+  .list .item .wrapper {
+    height: var(--h2-line-height);
+    transform: none;
+    will-change: auto;
+  }
+
+  .list .item .wrapper .detailRow,
+  .list .item .wrapper .nameRow:last-child {
+    display: none;
+  }
+
+  .list .item .wrapper .nameRow {
+    padding: 0.5rem 1rem;
+  }
+
+  .list .item .wrapper .nameRow h2:nth-child(2) {
+    display: none;
+  }
+}

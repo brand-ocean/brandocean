@@ -7,7 +7,16 @@ import {
 	mutation,
 	query,
 } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import {
+	bookInvoicePaidManual,
+	bookInvoiceSent,
+	bookInvoiceVoided,
+	deriveVatCategoryFromRate,
+	isInvoiceBooked,
+} from "./boekhouding/invoiceBooking";
+import { vatCategoryV } from "./boekhouding/validators";
+import { computeInvoiceTotals } from "./lib/invoiceMath";
 
 const slugAlphabet =
 	"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -23,6 +32,14 @@ const statusValidator = v.union(
 );
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Eenmaal in het grootboek geboekt zijn bedragen en BTW van een factuur
+// bevroren — wijzigen zou de administratie laten afwijken van de post.
+// Correctie: factuur void'en (tegenboeking) en een nieuwe maken.
+async function assertNotBooked(ctx: MutationCtx, invoice: Doc<"invoices">) {
+	if (await isInvoiceBooked(ctx, invoice))
+		throw new ConvexError("invoice_booked");
+}
 
 async function loadSettings(ctx: MutationCtx, userId: Id<"users">) {
 	return await ctx.db
@@ -79,12 +96,16 @@ export const listByOwner = query({
 					);
 					lineCount = lines.length;
 				}
-				const vat = Math.round((subtotal * inv.vatRate) / 100);
+				const totals = computeInvoiceTotals(
+					subtotal,
+					inv.vatRate,
+					inv.pricesIncludeVat ?? false,
+				);
 				return {
 					...inv,
-					subtotal,
-					vat,
-					total: subtotal + vat,
+					subtotal: totals.subtotalCents,
+					vat: totals.vatCents,
+					total: totals.totalCents,
 					lineCount,
 				};
 			}),
@@ -123,6 +144,13 @@ export const getBySlug = query({
 			.withIndex("by_invoice", (q) => q.eq("invoiceId", invoice._id))
 			.collect();
 		const client = await ctx.db.get(invoice.clientId);
+		// Bedrijfsprofiel van de eigenaar, zodat de publieke pagina de PDF en
+		// UBL e-factuur kan renderen. Alleen de velden die op die documenten
+		// staan — nooit interne velden of tokens.
+		const settings = await ctx.db
+			.query("userSettings")
+			.withIndex("by_user", (q) => q.eq("userId", invoice.ownerId))
+			.unique();
 		return {
 			invoice,
 			lines: lines.sort((a, b) => a.order - b.order),
@@ -131,6 +159,25 @@ export const getBySlug = query({
 						name: client.name,
 						email: client.email,
 						companyName: client.companyName,
+						street: client.street,
+						postalCode: client.postalCode,
+						city: client.city,
+						countryCode: client.countryCode,
+						vatNumber: client.vatNumber,
+					}
+				: null,
+			settings: settings
+				? {
+						businessName: settings.businessName,
+						businessStreet: settings.businessStreet,
+						businessPostalCode: settings.businessPostalCode,
+						businessCity: settings.businessCity,
+						businessCountryCode: settings.businessCountryCode,
+						businessEmail: settings.businessEmail,
+						kvkNumber: settings.kvkNumber,
+						vatNumber: settings.vatNumber,
+						iban: settings.iban,
+						bic: settings.bic,
 					}
 				: null,
 		};
@@ -188,6 +235,7 @@ export const create = mutation({
 			dueAt: now + 14 * DAY_MS,
 			currency,
 			vatRate,
+			vatCategory: deriveVatCategoryFromRate(vatRate),
 			slug: newSlug(),
 			shareToken: newShareToken(),
 			subtotal: 0,
@@ -205,6 +253,8 @@ export const update = mutation({
 		dueAt: v.optional(v.number()),
 		notes: v.optional(v.string()),
 		vatRate: v.optional(v.number()),
+		vatCategory: v.optional(vatCategoryV),
+		pricesIncludeVat: v.optional(v.boolean()),
 		currency: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
@@ -213,11 +263,24 @@ export const update = mutation({
 		const invoice = await ctx.db.get(args.id);
 		if (!invoice || invoice.ownerId !== userId)
 			throw new ConvexError("forbidden");
+		const touchesBookedFields =
+			args.vatRate !== undefined ||
+			args.vatCategory !== undefined ||
+			args.currency !== undefined ||
+			args.issuedAt !== undefined ||
+			args.pricesIncludeVat !== undefined;
+		if (touchesBookedFields) await assertNotBooked(ctx, invoice);
 		await ctx.db.patch(args.id, {
 			...(args.issuedAt !== undefined ? { issuedAt: args.issuedAt } : {}),
 			...(args.dueAt !== undefined ? { dueAt: args.dueAt } : {}),
 			...(args.notes !== undefined ? { notes: args.notes } : {}),
 			...(args.vatRate !== undefined ? { vatRate: args.vatRate } : {}),
+			...(args.vatCategory !== undefined
+				? { vatCategory: args.vatCategory }
+				: {}),
+			...(args.pricesIncludeVat !== undefined
+				? { pricesIncludeVat: args.pricesIncludeVat }
+				: {}),
 			...(args.currency !== undefined ? { currency: args.currency } : {}),
 			updatedAt: Date.now(),
 		});
@@ -232,11 +295,23 @@ export const setStatus = mutation({
 		const invoice = await ctx.db.get(args.id);
 		if (!invoice || invoice.ownerId !== userId)
 			throw new ConvexError("forbidden");
+		// Terug naar draft kan niet meer zodra de factuur in het grootboek
+		// staat — correcties lopen via void (tegenboeking) + nieuwe factuur.
+		if (args.status === "draft") await assertNotBooked(ctx, invoice);
 		await ctx.db.patch(args.id, {
 			status: args.status,
 			paidAt: args.status === "paid" ? Date.now() : undefined,
 			updatedAt: Date.now(),
 		});
+		const updated = await ctx.db.get(args.id);
+		if (!updated) return;
+		if (args.status === "sent" || args.status === "overdue") {
+			await bookInvoiceSent(ctx, updated);
+		} else if (args.status === "paid") {
+			await bookInvoicePaidManual(ctx, updated);
+		} else if (args.status === "void") {
+			await bookInvoiceVoided(ctx, updated);
+		}
 	},
 });
 
@@ -248,6 +323,7 @@ export const remove = mutation({
 		const invoice = await ctx.db.get(args.id);
 		if (!invoice || invoice.ownerId !== userId)
 			throw new ConvexError("forbidden");
+		await assertNotBooked(ctx, invoice);
 		const lines = await ctx.db
 			.query("invoiceLines")
 			.withIndex("by_invoice", (q) => q.eq("invoiceId", args.id))
@@ -263,9 +339,20 @@ async function assertOwnInvoice(
 	ctx: MutationCtx,
 	id: Id<"invoices">,
 	userId: Id<"users">,
-) {
+): Promise<Doc<"invoices">> {
 	const inv = await ctx.db.get(id);
 	if (!inv || inv.ownerId !== userId) throw new ConvexError("forbidden");
+	return inv;
+}
+
+async function assertEditableInvoice(
+	ctx: MutationCtx,
+	id: Id<"invoices">,
+	userId: Id<"users">,
+): Promise<Doc<"invoices">> {
+	const inv = await assertOwnInvoice(ctx, id, userId);
+	await assertNotBooked(ctx, inv);
+	return inv;
 }
 
 export const addLine = mutation({
@@ -278,7 +365,7 @@ export const addLine = mutation({
 	handler: async (ctx, args) => {
 		const userId = await getAuthUserId(ctx);
 		if (!userId) throw new ConvexError("unauthenticated");
-		await assertOwnInvoice(ctx, args.invoiceId, userId);
+		await assertEditableInvoice(ctx, args.invoiceId, userId);
 		const existing = await ctx.db
 			.query("invoiceLines")
 			.withIndex("by_invoice", (q) => q.eq("invoiceId", args.invoiceId))
@@ -311,7 +398,7 @@ export const updateLine = mutation({
 		if (!userId) throw new ConvexError("unauthenticated");
 		const line = await ctx.db.get(args.id);
 		if (!line) throw new ConvexError("not_found");
-		await assertOwnInvoice(ctx, line.invoiceId, userId);
+		await assertEditableInvoice(ctx, line.invoiceId, userId);
 		await ctx.db.patch(args.id, {
 			...(args.description !== undefined
 				? { description: args.description }
@@ -332,9 +419,25 @@ export const removeLine = mutation({
 		if (!userId) throw new ConvexError("unauthenticated");
 		const line = await ctx.db.get(args.id);
 		if (!line) throw new ConvexError("not_found");
-		await assertOwnInvoice(ctx, line.invoiceId, userId);
+		await assertEditableInvoice(ctx, line.invoiceId, userId);
 		await ctx.db.delete(args.id);
 		await recomputeInvoiceTotals(ctx, line.invoiceId);
+	},
+});
+
+export const backfillInvoiceVatCategoryInternal = internalMutation({
+	args: {},
+	handler: async (ctx) => {
+		const invoices = await ctx.db.query("invoices").collect();
+		let patched = 0;
+		for (const inv of invoices) {
+			if (inv.vatCategory !== undefined) continue;
+			await ctx.db.patch(inv._id, {
+				vatCategory: deriveVatCategoryFromRate(inv.vatRate),
+			});
+			patched += 1;
+		}
+		return { total: invoices.length, patched };
 	},
 });
 

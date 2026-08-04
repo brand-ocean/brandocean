@@ -10,10 +10,32 @@ import {
 	RefreshCwIcon,
 	Trash2Icon,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+
+import { type Column, DataTable } from "@/components/app/data-table";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FrameTitle,
+} from "@/components/app/frame";
+import { type Tone, TonePill } from "@/components/app/tone";
+import { CountTabs, ToolbarSearch } from "@/components/app/toolbar";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -21,15 +43,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
-} from "@/components/ui/empty";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableRow } from "@/components/ui/table";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
 
@@ -37,163 +53,281 @@ export const Route = createFileRoute("/_authed/_app/offertes/")({
 	component: OffertesList,
 });
 
-function OffertesList() {
-	const offertes = useQuery(api.offertes.listByOwner, {});
-	const createOfferte = useMutation(api.offertes.create);
-	const navigate = useNavigate();
-	const [title, setTitle] = useState("");
-	const [creating, setCreating] = useState(false);
-
-	return (
-		<div className="mx-auto w-full max-w-5xl space-y-10">
-			<header className="flex flex-col gap-2">
-				<h1 className="text-3xl font-semibold tracking-tight">Offertes</h1>
-				<p className="text-base text-muted-foreground">
-					Create and share proposal checklists with clients.
-				</p>
-			</header>
-
-			<form
-				onSubmit={async (e) => {
-					e.preventDefault();
-					if (!title.trim()) return;
-					setCreating(true);
-					try {
-						const id = await createOfferte({ title: title.trim() });
-						setTitle("");
-						navigate({
-							to: "/offertes/$offerteId",
-							params: { offerteId: id },
-						});
-					} catch (err) {
-						toast.error("Could not create offerte", {
-							description: err instanceof Error ? err.message : String(err),
-						});
-					} finally {
-						setCreating(false);
-					}
-				}}
-			>
-				<div className="flex items-center gap-2">
-					<Input
-						value={title}
-						onChange={(e) => setTitle(e.target.value)}
-						placeholder="New offerte title…"
-						className="flex-1"
-					/>
-					<Button type="submit" disabled={creating || !title.trim()}>
-						<PlusIcon data-icon="inline-start" />
-						{creating ? "Creating…" : "Create"}
-					</Button>
-				</div>
-			</form>
-
-			{offertes === undefined ? (
-				<div className="flex flex-col gap-2">
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-				</div>
-			) : offertes.length === 0 ? (
-				<Empty>
-					<EmptyHeader>
-						<EmptyMedia variant="icon">
-							<FileTextIcon />
-						</EmptyMedia>
-						<EmptyTitle>No offertes yet</EmptyTitle>
-						<EmptyDescription>
-							Create your first one above to get started.
-						</EmptyDescription>
-					</EmptyHeader>
-				</Empty>
-			) : (
-				<ul className="divide-y rounded-lg border bg-card">
-					{offertes.map((o) => (
-						<OfferteRow
-							key={o._id}
-							offerteId={o._id}
-							title={o.title}
-							slug={o.slug}
-							shareToken={o.shareToken}
-							updatedAt={o.updatedAt}
-							published={o.published}
-							publicReadable={o.publicReadable}
-						/>
-					))}
-				</ul>
-			)}
-		</div>
-	);
-}
-
-function OfferteRow({
-	offerteId,
-	title,
-	slug,
-	shareToken,
-	updatedAt,
-	published,
-	publicReadable,
-}: {
-	offerteId: Id<"offertes">;
+type Row = {
+	_id: Id<"offertes">;
 	title: string;
 	slug: string;
 	shareToken: string;
 	updatedAt: number;
 	published: boolean;
 	publicReadable: boolean;
-}) {
-	return (
-		<li className="group relative">
-			<Link
-				to="/offertes/$offerteId"
-				params={{ offerteId }}
-				className="flex items-center gap-4 px-6 py-5 pr-16 hover:bg-muted/50"
-			>
-				<div className="flex min-w-0 flex-1 flex-col gap-1">
-					<span className="truncate text-base font-medium">{title}</span>
-					<span className="text-sm text-muted-foreground">
-						Updated {new Date(updatedAt).toLocaleDateString()}
+	clientId?: Id<"clients">;
+	clientName: string | null;
+};
+
+function state(row: Row): { label: string; tone: Tone; id: string } {
+	if (!row.published) return { label: "Draft", tone: "muted", id: "draft" };
+	if (row.publicReadable)
+		return { label: "Public", tone: "success", id: "public" };
+	return { label: "Shared", tone: "info", id: "shared" };
+}
+
+function OffertesList() {
+	const offertes = useQuery(api.offertes.listByOwner, {});
+	const clients = useQuery(api.clients.list);
+	const navigate = useNavigate();
+	const [q, setQ] = useState("");
+	const [tab, setTab] = useState("all");
+
+	const clientName = useMemo(
+		() => new Map((clients ?? []).map((c) => [c._id, c.name])),
+		[clients],
+	);
+
+	const rows: Row[] = useMemo(
+		() =>
+			(offertes ?? []).map((o) => ({
+				_id: o._id,
+				title: o.title,
+				slug: o.slug,
+				shareToken: o.shareToken,
+				updatedAt: o.updatedAt,
+				published: o.published,
+				publicReadable: o.publicReadable,
+				clientId: o.clientId,
+				clientName: o.clientId ? (clientName.get(o.clientId) ?? null) : null,
+			})),
+		[offertes, clientName],
+	);
+
+	const counts = useMemo(
+		() => ({
+			all: rows.length,
+			shared: rows.filter((r) => r.published).length,
+			draft: rows.filter((r) => !r.published).length,
+		}),
+		[rows],
+	);
+
+	const filtered = useMemo(() => {
+		const term = q.trim().toLowerCase();
+		return rows.filter((r) => {
+			if (tab === "shared" && !r.published) return false;
+			if (tab === "draft" && r.published) return false;
+			if (!term) return true;
+			return (
+				r.title.toLowerCase().includes(term) ||
+				r.slug.toLowerCase().includes(term) ||
+				(r.clientName ?? "").toLowerCase().includes(term)
+			);
+		});
+	}, [rows, q, tab]);
+
+	const columns: readonly Column<Row>[] = useMemo(
+		() => [
+			{
+				id: "title",
+				header: "Offerte",
+				sortValue: (r) => r.title,
+				cell: (r) => (
+					<div className="flex min-w-0 items-center gap-2.5">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-muted-foreground">
+							<FileTextIcon className="size-3.5" />
+						</span>
+						<div className="flex min-w-0 flex-col">
+							<span className="truncate font-medium">{r.title}</span>
+							<span className="font-mono text-xs text-muted-foreground">
+								/o/{r.slug}
+							</span>
+						</div>
+					</div>
+				),
+			},
+			{
+				id: "client",
+				header: "Client",
+				sortValue: (r) => r.clientName ?? "",
+				cell: (r) => (
+					<span className={r.clientName ? "" : "text-muted-foreground"}>
+						{r.clientName ?? "—"}
 					</span>
-				</div>
-				<Badge
-					variant={
-						published ? (publicReadable ? "default" : "secondary") : "outline"
-					}
-					className="shrink-0"
-				>
-					{published ? (publicReadable ? "Public" : "Shared") : "Draft"}
-				</Badge>
-			</Link>
-			<div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[state=open]:opacity-100">
-				<OfferteRowMenu
-					offerteId={offerteId}
-					title={title}
-					slug={slug}
-					shareToken={shareToken}
-					published={published}
-					publicReadable={publicReadable}
-				/>
-			</div>
-		</li>
+				),
+			},
+			{
+				id: "status",
+				header: "Status",
+				sortValue: (r) => state(r).id,
+				cell: (r) => {
+					const s = state(r);
+					return (
+						<TonePill dot tone={s.tone}>
+							{s.label}
+						</TonePill>
+					);
+				},
+			},
+			{
+				id: "updated",
+				header: "Updated",
+				align: "right",
+				sortValue: (r) => r.updatedAt,
+				cell: (r) => (
+					<span className="text-muted-foreground tabular-nums">
+						{new Date(r.updatedAt).toLocaleDateString()}
+					</span>
+				),
+			},
+			{
+				id: "actions",
+				header: "",
+				className: "w-10",
+				cell: (r) => <OfferteRowMenu row={r} />,
+			},
+		],
+		[],
+	);
+
+	return (
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Offertes</FrameTitle>
+					<FrameDescription>
+						Proposals you write here and share with a link.
+					</FrameDescription>
+				</FrameHeading>
+				<FrameActions>
+					<ToolbarSearch
+						value={q}
+						onValueChange={setQ}
+						placeholder="Search offertes…"
+					/>
+					<NewOfferteDialog />
+				</FrameActions>
+			</FrameHeader>
+			<CountTabs
+				value={tab}
+				onValueChange={setTab}
+				tabs={[
+					{ id: "all", label: "All", count: counts.all },
+					{ id: "shared", label: "Shared", count: counts.shared },
+					{ id: "draft", label: "Drafts", count: counts.draft },
+				]}
+			/>
+			<DataTable
+				rows={filtered}
+				columns={columns}
+				getRowKey={(r) => r._id}
+				loading={offertes === undefined}
+				noun="offertes"
+				defaultSort={{ id: "updated", dir: "desc" }}
+				renderRow={(row, cells) => (
+					<TableRow
+						className="cursor-pointer"
+						onClick={() =>
+							void navigate({
+								to: "/offertes/$offerteId",
+								params: { offerteId: row._id },
+							})
+						}
+					>
+						{cells}
+					</TableRow>
+				)}
+				empty={
+					<EmptyState
+						icon={FileTextIcon}
+						title={q || tab !== "all" ? "Nothing here" : "No offertes yet"}
+						description={
+							q || tab !== "all"
+								? "Try another search or switch tab."
+								: "Write your first proposal and share it with a link."
+						}
+						action={q || tab !== "all" ? null : <NewOfferteDialog />}
+					/>
+				}
+			/>
+		</Frame>
 	);
 }
 
-function OfferteRowMenu({
-	offerteId,
-	title,
-	slug,
-	shareToken,
-	published,
-	publicReadable,
-}: {
-	offerteId: Id<"offertes">;
-	title: string;
-	slug: string;
-	shareToken: string;
-	published: boolean;
-	publicReadable: boolean;
-}) {
+function NewOfferteDialog() {
+	const titleId = useId();
+	const createOfferte = useMutation(api.offertes.create);
+	const navigate = useNavigate();
+	const [open, setOpen] = useState(false);
+	const [title, setTitle] = useState("");
+	const [creating, setCreating] = useState(false);
+
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={(v) => {
+				setOpen(v);
+				if (!v) setTitle("");
+			}}
+		>
+			<DialogTrigger render={<Button size="sm" />}>
+				<PlusIcon data-icon="inline-start" />
+				New offerte
+			</DialogTrigger>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>New offerte</DialogTitle>
+					<DialogDescription>
+						Give it a working title — you can rename it any time.
+					</DialogDescription>
+				</DialogHeader>
+				<form
+					onSubmit={async (e) => {
+						e.preventDefault();
+						if (!title.trim()) return;
+						setCreating(true);
+						try {
+							const id = await createOfferte({ title: title.trim() });
+							setOpen(false);
+							setTitle("");
+							navigate({
+								to: "/offertes/$offerteId",
+								params: { offerteId: id },
+							});
+						} catch (err) {
+							toast.error("Could not create offerte", {
+								description: err instanceof Error ? err.message : String(err),
+							});
+						} finally {
+							setCreating(false);
+						}
+					}}
+					className="space-y-6"
+				>
+					<FieldGroup>
+						<Field>
+							<FieldLabel htmlFor={titleId}>Title</FieldLabel>
+							<Input
+								id={titleId}
+								value={title}
+								onChange={(e) => setTitle(e.target.value)}
+								placeholder="Webshop redesign — Acme"
+								autoFocus
+							/>
+						</Field>
+					</FieldGroup>
+					<DialogFooter>
+						<DialogClose render={<Button type="button" variant="outline" />}>
+							Cancel
+						</DialogClose>
+						<Button type="submit" disabled={creating || !title.trim()}>
+							{creating ? "Creating…" : "Create offerte"}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function OfferteRowMenu({ row }: { row: Row }) {
 	const publish = useMutation(api.offertes.publish);
 	const unpublish = useMutation(api.offertes.unpublish);
 	const regenerate = useMutation(api.offertes.regenerateSlug);
@@ -202,9 +336,9 @@ function OfferteRowMenu({
 	const [working, setWorking] = useState(false);
 
 	const origin = typeof window !== "undefined" ? window.location.origin : "";
-	const publicUrl = `${origin}/o/${slug}`;
-	const tokenUrl = `${origin}/o/${slug}?t=${shareToken}`;
-	const shareUrl = published && publicReadable ? publicUrl : tokenUrl;
+	const publicUrl = `${origin}/o/${row.slug}`;
+	const tokenUrl = `${origin}/o/${row.slug}?t=${row.shareToken}`;
+	const shareUrl = row.published && row.publicReadable ? publicUrl : tokenUrl;
 
 	const copy = async (url: string, label: string) => {
 		try {
@@ -226,16 +360,19 @@ function OfferteRowMenu({
 					<Button
 						type="button"
 						variant="ghost"
-						size="icon"
-						aria-label={`Actions for ${title}`}
+						size="icon-sm"
+						aria-label={`Actions for ${row.title}`}
 					/>
 				}
-				onClick={(e) => e.preventDefault()}
+				onClick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				}}
 			>
 				{copied ? (
-					<CheckIcon className="h-4 w-4" />
+					<CheckIcon className="size-4" />
 				) : (
-					<MoreHorizontalIcon className="h-4 w-4" />
+					<MoreHorizontalIcon className="size-4" />
 				)}
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
@@ -244,29 +381,39 @@ function OfferteRowMenu({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="px-1.5 py-1 font-mono text-xs text-muted-foreground">
-					/o/{slug}
+					/o/{row.slug}
 				</div>
 				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					render={
+						<Link to="/offertes/$offerteId" params={{ offerteId: row._id }} />
+					}
+				>
+					<ExternalLinkIcon className="size-4" />
+					Open editor
+				</DropdownMenuItem>
 				<DropdownMenuItem
 					onClick={(e) => {
 						e.preventDefault();
 						void copy(
 							shareUrl,
-							published ? "Share URL copied" : "URL copied — publish to share",
+							row.published
+								? "Share URL copied"
+								: "URL copied — publish to share",
 						);
 					}}
 				>
-					<CopyIcon className="h-4 w-4" />
+					<CopyIcon className="size-4" />
 					Copy share URL
 				</DropdownMenuItem>
-				{published && publicReadable ? null : (
+				{row.published && row.publicReadable ? null : (
 					<DropdownMenuItem
 						onClick={(e) => {
 							e.preventDefault();
 							void copy(tokenUrl, "Token URL copied");
 						}}
 					>
-						<CopyIcon className="h-4 w-4" />
+						<CopyIcon className="size-4" />
 						Copy URL with token
 					</DropdownMenuItem>
 				)}
@@ -276,20 +423,23 @@ function OfferteRowMenu({
 						window.open(shareUrl, "_blank", "noopener,noreferrer");
 					}}
 				>
-					<ExternalLinkIcon className="h-4 w-4" />
+					<ExternalLinkIcon className="size-4" />
 					Open share page
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
-				{published ? (
+				{row.published ? (
 					<DropdownMenuItem
 						disabled={working}
 						onClick={async (e) => {
 							e.preventDefault();
 							setWorking(true);
 							try {
-								await publish({ id: offerteId, publicReadable: !publicReadable });
+								await publish({
+									id: row._id,
+									publicReadable: !row.publicReadable,
+								});
 								toast.success(
-									!publicReadable
+									!row.publicReadable
 										? "Now public — no token needed"
 										: "Now token-only",
 								);
@@ -302,8 +452,8 @@ function OfferteRowMenu({
 							}
 						}}
 					>
-						<CheckIcon className="h-4 w-4" />
-						{publicReadable ? "Switch to token-only" : "Make fully public"}
+						<CheckIcon className="size-4" />
+						{row.publicReadable ? "Switch to token-only" : "Make fully public"}
 					</DropdownMenuItem>
 				) : null}
 				<DropdownMenuItem
@@ -312,11 +462,11 @@ function OfferteRowMenu({
 						e.preventDefault();
 						setWorking(true);
 						try {
-							if (published) {
-								await unpublish({ id: offerteId });
+							if (row.published) {
+								await unpublish({ id: row._id });
 								toast.success("Unpublished");
 							} else {
-								await publish({ id: offerteId, publicReadable: true });
+								await publish({ id: row._id, publicReadable: true });
 								toast.success("Published publicly");
 							}
 						} catch (err) {
@@ -328,8 +478,8 @@ function OfferteRowMenu({
 						}
 					}}
 				>
-					<CheckIcon className="h-4 w-4" />
-					{published ? "Unpublish" : "Publish public"}
+					<CheckIcon className="size-4" />
+					{row.published ? "Unpublish" : "Publish public"}
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					disabled={working}
@@ -343,8 +493,10 @@ function OfferteRowMenu({
 							return;
 						setWorking(true);
 						try {
-							const next = await regenerate({ id: offerteId });
-							toast.success("URL refreshed", { description: `New: /o/${next}` });
+							const next = await regenerate({ id: row._id });
+							toast.success("URL refreshed", {
+								description: `New: /o/${next}`,
+							});
 						} catch (err) {
 							toast.error("Could not refresh", {
 								description: err instanceof Error ? err.message : String(err),
@@ -354,7 +506,7 @@ function OfferteRowMenu({
 						}
 					}}
 				>
-					<RefreshCwIcon className="h-4 w-4" />
+					<RefreshCwIcon className="size-4" />
 					Refresh URL
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
@@ -365,13 +517,13 @@ function OfferteRowMenu({
 						e.preventDefault();
 						if (
 							!window.confirm(
-								`Delete "${title}"? This permanently removes the offerte and all its sections.`,
+								`Delete "${row.title}"? This permanently removes the offerte and all its sections.`,
 							)
 						)
 							return;
 						setWorking(true);
 						try {
-							await removeOfferte({ id: offerteId });
+							await removeOfferte({ id: row._id });
 							toast.success("Offerte deleted");
 						} catch (err) {
 							toast.error("Could not delete", {
@@ -382,7 +534,7 @@ function OfferteRowMenu({
 						}
 					}}
 				>
-					<Trash2Icon className="h-4 w-4" />
+					<Trash2Icon className="size-4" />
 					Delete
 				</DropdownMenuItem>
 			</DropdownMenuContent>

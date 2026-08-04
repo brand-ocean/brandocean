@@ -1,4 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+
+import {
+	Frame,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
 import { TasksBoard } from "@/components/tasks/TasksBoard";
 
 export const Route = createFileRoute("/_authed/_app/tasks/")({
@@ -7,15 +16,18 @@ export const Route = createFileRoute("/_authed/_app/tasks/")({
 
 function TasksPage() {
 	return (
-		<div className="flex h-full w-full flex-col gap-6 px-4 md:px-6">
-			<header className="flex flex-col gap-2">
-				<h1 className="text-3xl font-semibold tracking-tight">Tasks</h1>
-				<p className="text-base text-muted-foreground">
-					Roadmap board — drag cards between columns, drag the grip to reorder
-					columns.
-				</p>
-			</header>
-			<TasksBoard />
-		</div>
+		<Frame className="min-h-0 flex-1">
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Tasks</FrameTitle>
+					<FrameDescription>
+						Drag cards between columns; drag a column's grip to reorder.
+					</FrameDescription>
+				</FrameHeading>
+			</FrameHeader>
+			<FramePanel flush className="flex min-h-0 flex-1 flex-col p-3">
+				<TasksBoard />
+			</FramePanel>
+		</Frame>
 	);
 }

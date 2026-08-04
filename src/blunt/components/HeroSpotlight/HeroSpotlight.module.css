@@ -1,0 +1,121 @@
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 6rem;
+}
+
+.heroInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.heroTop {
+  align-self: flex-start;
+}
+
+.heroTop h1,
+.heroBottom h1 {
+  font-size: 20vw;
+}
+
+.heroBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
+}
+
+.heroBottom p {
+  max-width: 28rem;
+}
+
+.intro {
+  position: relative;
+  width: 100%;
+  height: auto;
+}
+
+.introInner {
+  height: auto;
+}
+
+.introClip {
+  position: relative;
+  width: 100%;
+  overflow-x: clip;
+}
+
+.videoDesktop {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  transform: translateY(-110%) scale(0.25);
+  transform-origin: center center;
+  clip-path: inset(50%);
+  will-change: transform, clip-path;
+  --reel-radius: 1.2rem;
+}
+
+.videoMobile {
+  display: none;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  clip-path: inset(50%);
+  will-change: clip-path;
+  --reel-radius: 0.4rem;
+}
+
+.videoPreview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--reel-radius);
+  background-color: var(--base-200);
+  overflow: hidden;
+}
+
+.reelImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.reelImageActive {
+  opacity: 1;
+}
+
+@media (max-width: 1000px) {
+  .hero {
+    padding-top: 5rem;
+  }
+
+  .heroBottom {
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+
+  .heroBottom p {
+    text-align: right;
+    max-width: 22rem;
+  }
+
+  .videoDesktop {
+    display: none;
+  }
+
+  .videoMobile {
+    display: block;
+  }
+}

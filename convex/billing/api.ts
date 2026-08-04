@@ -15,7 +15,7 @@ import {
 	isMetricKey,
 	type MetricKey,
 } from "./config";
-import { utcDayKey } from "./model";
+import { startOfMonthKey, utcDayKey } from "./model";
 
 const resourceKindV = v.union(
 	v.literal("cf_worker"),
@@ -104,7 +104,7 @@ export const enroll = mutation({
 			billingIntervalMonths: args.billingIntervalMonths ?? 1,
 			minChargeCents: args.minChargeCents ?? 500,
 			carryoverCents: 0,
-			periodStart: utcDayKey(Date.now()),
+			periodStart: startOfMonthKey(Date.now()),
 			createdAt: Date.now(),
 		});
 	},

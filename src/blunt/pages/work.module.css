@@ -1,0 +1,49 @@
+.page {
+  position: relative;
+  width: 100%;
+  background-color: var(--base-200);
+  color: var(--base-1000);
+}
+
+.intro,
+.outro {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.intro h1,
+.outro h1 {
+  position: relative;
+  width: min(90%, 40rem);
+  text-align: center;
+}
+
+.callout {
+  z-index: 10;
+}
+
+.sectionNav,
+.sectionFooter {
+  position: absolute;
+  left: 0;
+  width: 100%;
+}
+
+.sectionNav {
+  top: 0;
+}
+
+.sectionFooter {
+  bottom: 0;
+}
+
+@media (max-width: 1000px) {
+  .callout {
+    display: none;
+  }
+}

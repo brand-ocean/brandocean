@@ -1,10 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=DM+Mono:wght@400;500&family=Host+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=DM+Mono:wght@300;400;500&family=Host+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Shadows+Into+Light&display=swap");
 @import url("https://fonts.cdnfonts.com/css/schabo");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/inter";
+@import "./blunt/styles/blunt.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -61,15 +62,24 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: var(--color-red-800);
+  --success: var(--color-emerald-500);
+  --success-foreground: var(--color-emerald-900);
+  --info: var(--color-violet-500);
+  --info-foreground: var(--color-violet-900);
+  --warning: var(--color-yellow-500);
+  --warning-foreground: var(--color-yellow-900);
+  --invert: var(--color-zinc-900);
+  --invert-foreground: var(--color-zinc-50);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -79,14 +89,25 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+  --header-height: 50px;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* Frame primitive — reui-style panel-in-a-frame surface used across the app.
+   The frame is a muted tray; panels sit inside it and bleed 1px so their
+   border lands exactly on the frame's. */
+[data-slot="frame"] {
+  --frame-radius: var(--radius-xl);
+  --frame-border-color: var(--border);
+  --frame-panel-bg: var(--card);
+  --frame-panel-border-color: var(--border);
 }
 
 /* Public share pages: pin theme tokens to light values regardless of
@@ -99,10 +120,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
@@ -116,8 +137,8 @@
   --color-card-foreground: oklch(0.145 0 0);
   --color-muted: oklch(0.97 0 0);
   --color-muted-foreground: oklch(0.556 0 0);
-  --color-primary: oklch(0.488 0.243 264.376);
-  --color-primary-foreground: oklch(0.97 0.014 254.604);
+  --color-primary: oklch(0.205 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
   --color-border: oklch(0.922 0 0);
 }
 
@@ -142,8 +163,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.708 0.17 264.376);
-  --primary-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -151,13 +172,22 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: var(--color-red-600);
+  --success: var(--color-emerald-500);
+  --success-foreground: var(--color-emerald-600);
+  --info: var(--color-violet-500);
+  --info-foreground: var(--color-violet-600);
+  --warning: var(--color-yellow-500);
+  --warning-foreground: var(--color-yellow-600);
+  --invert: var(--color-zinc-700);
+  --invert-foreground: var(--color-zinc-50);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 12%);
@@ -207,9 +237,29 @@ body {
   box-sizing: border-box;
 }
 
+/* The original BRANDOCEAN homepage now lives at /v1 and wears the blunt palette
+   and type scale. Overriding the theme tokens here re-skins every legacy
+   marketing section (hero, observation registry, work detail) in one place —
+   Tailwind utilities like `bg-base-100` read the same custom properties. */
+.marketing-area {
+  --color-base-100: #ffffeb;
+  --color-base-200: #f4f5e0;
+  --color-base-300: #0f0f0f;
+  --color-base-secondary: #7c4563;
+  --color-base-secondary-fade: rgba(15, 15, 15, 0.15);
+  --color-accent-1: #b6dedb;
+  --color-accent-2: #ffbab4;
+  --color-accent-3: #f7f780;
+  --font-heading: "SCHABO", "Barlow Condensed", sans-serif;
+  --font-body: "Host Grotesk", sans-serif;
+  --font-mono: "DM Mono", monospace;
+  --word-highlight-rgb: 255, 255, 235;
+}
+
 .marketing-area {
   background-color: var(--color-base-100);
   color: var(--color-base-300);
+  font-family: var(--font-body);
 }
 
 .marketing-area * {
@@ -232,9 +282,15 @@ body {
 .marketing-area h4 {
   text-transform: uppercase;
   font-family: var(--font-heading);
-  font-weight: 900;
+  /* SCHABO ships a single weight — matches the blunt display type. */
+  font-weight: 400;
   line-height: 0.85;
-  letter-spacing: -0.02rem;
+  letter-spacing: normal;
+}
+
+.marketing-area p {
+  font-family: var(--font-body);
+  letter-spacing: -2%;
 }
 
 @keyframes floating {
@@ -401,6 +457,15 @@ body {
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-invert: var(--invert);
+  --color-invert-foreground: var(--invert-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -432,15 +497,24 @@ body {
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.424 0.199 265.638);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.274 0.006 286.033);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: var(--color-red-600);
+  --success: var(--color-emerald-500);
+  --success-foreground: var(--color-emerald-600);
+  --info: var(--color-violet-500);
+  --info-foreground: var(--color-violet-600);
+  --warning: var(--color-yellow-500);
+  --warning-foreground: var(--color-yellow-600);
+  --invert: var(--color-zinc-700);
+  --invert-foreground: var(--color-zinc-50);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -451,8 +525,8 @@ body {
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);

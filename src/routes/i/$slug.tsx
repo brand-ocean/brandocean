@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Brandmark, Logotype } from "@/components/brand";
+import { InvoiceDownloadButtons } from "@/components/invoices/InvoiceDownloadButtons";
 import { convexHttp } from "@/lib/convex-http";
+import type { InvoiceDocumentData } from "@/lib/invoiceDocument";
 import { api } from "~convex/_generated/api";
+import { computeInvoiceTotals } from "~convex/lib/invoiceMath";
 
 export const Route = createFileRoute("/i/$slug")({
 	validateSearch: (search: Record<string, unknown>) => ({
@@ -60,13 +63,54 @@ function PublicInvoice() {
 		);
 	}
 
-	const { invoice, lines, client } = data;
-	const subtotal = lines.reduce(
-		(acc, l) => acc + l.quantity * l.unitPrice,
-		0,
-	);
-	const vat = Math.round((subtotal * invoice.vatRate) / 100);
-	const total = subtotal + vat;
+	const { invoice, lines, client, settings } = data;
+	const pricesIncludeVat = invoice.pricesIncludeVat ?? false;
+	const lineSum = lines.reduce((acc, l) => acc + l.quantity * l.unitPrice, 0);
+	const {
+		subtotalCents: subtotal,
+		vatCents: vat,
+		totalCents: total,
+	} = computeInvoiceTotals(lineSum, invoice.vatRate, pricesIncludeVat);
+
+	// Dezelfde gegevens als op de PDF / UBL e-factuur, uit de publieke payload.
+	const docData: InvoiceDocumentData | null =
+		settings && client
+			? {
+					number: invoice.number,
+					issuedAt: invoice.issuedAt,
+					dueAt: invoice.dueAt,
+					currency: invoice.currency,
+					vatRate: invoice.vatRate,
+					pricesIncludeVat,
+					lines: lines.map((l) => ({
+						description: l.description,
+						quantity: l.quantity,
+						unitPrice: l.unitPrice,
+					})),
+					business: {
+						name: settings.businessName ?? "brandocean",
+						street: settings.businessStreet,
+						postalCode: settings.businessPostalCode,
+						city: settings.businessCity,
+						countryCode: settings.businessCountryCode,
+						email: settings.businessEmail,
+						kvkNumber: settings.kvkNumber,
+						vatNumber: settings.vatNumber,
+						iban: settings.iban,
+						bic: settings.bic,
+					},
+					client: {
+						name: client.name,
+						companyName: client.companyName,
+						email: client.email,
+						street: client.street,
+						postalCode: client.postalCode,
+						city: client.city,
+						countryCode: client.countryCode,
+						vatNumber: client.vatNumber,
+					},
+				}
+			: null;
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -88,6 +132,11 @@ function PublicInvoice() {
 						Issued {new Date(invoice.issuedAt).toLocaleDateString()} · Due{" "}
 						{new Date(invoice.dueAt).toLocaleDateString()}
 					</p>
+					{docData ? (
+						<div className="flex gap-2 pt-2">
+							<InvoiceDownloadButtons data={docData} />
+						</div>
+					) : null}
 				</header>
 
 				<table className="w-full text-sm">

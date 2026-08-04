@@ -2,11 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+	Frame,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
+import { CountTabs } from "@/components/app/toolbar";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/context/ThemeContext";
 import { api } from "~convex/_generated/api";
 
@@ -14,42 +22,51 @@ export const Route = createFileRoute("/_authed/_app/settings/")({
 	component: SettingsPage,
 });
 
+const SETTINGS_TABS = [
+	{ id: "workspace", label: "Workspace" },
+	{ id: "signature", label: "Signature" },
+	{ id: "appearance", label: "Appearance" },
+	{ id: "billing", label: "Billing defaults" },
+] as const;
+
+const TAB_BLURB: Record<string, string> = {
+	workspace: "The business details printed on offertes, NDAs and invoices.",
+	signature: "Your handwritten signature, auto-applied to NDAs you sign.",
+	appearance: "How the app looks on this device.",
+	billing: "Defaults applied to every new invoice.",
+};
+
 function SettingsPage() {
 	const settings = useQuery(api.userSettings.get);
+	const [tab, setTab] = useState<string>("workspace");
 
 	return (
-		<div className="mx-auto w-full max-w-3xl space-y-10">
-			<header className="flex flex-col gap-2">
-				<h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-				<p className="text-base text-muted-foreground">
-					Workspace, branding, billing defaults.
-				</p>
-			</header>
-			{settings === undefined ? (
-				<Skeleton className="h-64" />
-			) : (
-				<Tabs defaultValue="workspace">
-					<TabsList>
-						<TabsTrigger value="workspace">Workspace</TabsTrigger>
-						<TabsTrigger value="signature">Signature</TabsTrigger>
-						<TabsTrigger value="appearance">Appearance</TabsTrigger>
-						<TabsTrigger value="billing">Billing defaults</TabsTrigger>
-					</TabsList>
-					<TabsContent value="workspace" className="pt-6">
-						<WorkspaceForm settings={settings} />
-					</TabsContent>
-					<TabsContent value="signature" className="pt-6">
-						<SignatureForm settings={settings} />
-					</TabsContent>
-					<TabsContent value="appearance" className="pt-6">
-						<AppearanceForm settings={settings} />
-					</TabsContent>
-					<TabsContent value="billing" className="pt-6">
-						<BillingForm settings={settings} />
-					</TabsContent>
-				</Tabs>
-			)}
-		</div>
+		<Frame className="mx-auto w-full max-w-4xl">
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Settings</FrameTitle>
+					<FrameDescription>{TAB_BLURB[tab]}</FrameDescription>
+				</FrameHeading>
+			</FrameHeader>
+			<CountTabs
+				value={tab}
+				onValueChange={setTab}
+				tabs={SETTINGS_TABS.map((t) => ({ id: t.id, label: t.label }))}
+			/>
+			<FramePanel>
+				{settings === undefined ? (
+					<Skeleton className="h-64" />
+				) : tab === "workspace" ? (
+					<WorkspaceForm settings={settings} />
+				) : tab === "signature" ? (
+					<SignatureForm settings={settings} />
+				) : tab === "appearance" ? (
+					<AppearanceForm settings={settings} />
+				) : (
+					<BillingForm settings={settings} />
+				)}
+			</FramePanel>
+		</Frame>
 	);
 }
 
@@ -63,9 +80,33 @@ function WorkspaceForm({ settings }: { settings: Settings }) {
 	const [businessAddress, setBusinessAddress] = useState(
 		settings?.businessAddress ?? "",
 	);
+	const [businessStreet, setBusinessStreet] = useState(
+		settings?.businessStreet ?? "",
+	);
+	const [businessPostalCode, setBusinessPostalCode] = useState(
+		settings?.businessPostalCode ?? "",
+	);
+	const [businessCity, setBusinessCity] = useState(
+		settings?.businessCity ?? "",
+	);
+	const [businessCountryCode, setBusinessCountryCode] = useState(
+		settings?.businessCountryCode ?? "",
+	);
+	const [businessEmail, setBusinessEmail] = useState(
+		settings?.businessEmail ?? "",
+	);
+	const [iban, setIban] = useState(settings?.iban ?? "");
+	const [bic, setBic] = useState(settings?.bic ?? "");
 	const [vatNumber, setVatNumber] = useState(settings?.vatNumber ?? "");
 	const [kvkNumber, setKvkNumber] = useState(settings?.kvkNumber ?? "");
 	const [saving, setSaving] = useState(false);
+	const streetId = useId();
+	const postalCodeId = useId();
+	const cityId = useId();
+	const countryId = useId();
+	const emailId = useId();
+	const ibanId = useId();
+	const bicId = useId();
 
 	return (
 		<form
@@ -76,6 +117,14 @@ function WorkspaceForm({ settings }: { settings: Settings }) {
 					await update({
 						businessName: businessName.trim() || undefined,
 						businessAddress: businessAddress.trim() || undefined,
+						businessStreet: businessStreet.trim() || undefined,
+						businessPostalCode: businessPostalCode.trim() || undefined,
+						businessCity: businessCity.trim() || undefined,
+						businessCountryCode:
+							businessCountryCode.trim().toUpperCase() || undefined,
+						businessEmail: businessEmail.trim() || undefined,
+						iban: iban.replace(/\s+/g, "").toUpperCase() || undefined,
+						bic: bic.trim().toUpperCase() || undefined,
 						vatNumber: vatNumber.trim() || undefined,
 						kvkNumber: kvkNumber.trim() || undefined,
 					});
@@ -109,6 +158,74 @@ function WorkspaceForm({ settings }: { settings: Settings }) {
 						placeholder="Street, City, Country"
 					/>
 				</Field>
+				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+					<Field>
+						<FieldLabel htmlFor={streetId}>Straat + nummer</FieldLabel>
+						<Input
+							id={streetId}
+							value={businessStreet}
+							onChange={(e) => setBusinessStreet(e.target.value)}
+							placeholder="Rooswijck 5A"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor={postalCodeId}>Postcode</FieldLabel>
+						<Input
+							id={postalCodeId}
+							value={businessPostalCode}
+							onChange={(e) => setBusinessPostalCode(e.target.value)}
+							placeholder="1081AJ"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor={cityId}>Plaats</FieldLabel>
+						<Input
+							id={cityId}
+							value={businessCity}
+							onChange={(e) => setBusinessCity(e.target.value)}
+							placeholder="Amsterdam"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor={countryId}>
+							Landcode (ISO, bv. NL)
+						</FieldLabel>
+						<Input
+							id={countryId}
+							value={businessCountryCode}
+							onChange={(e) => setBusinessCountryCode(e.target.value)}
+							placeholder="NL"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor={emailId}>Zakelijke e-mail</FieldLabel>
+						<Input
+							id={emailId}
+							type="email"
+							value={businessEmail}
+							onChange={(e) => setBusinessEmail(e.target.value)}
+							placeholder="info@brandocean.nl"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor={ibanId}>IBAN</FieldLabel>
+						<Input
+							id={ibanId}
+							value={iban}
+							onChange={(e) => setIban(e.target.value)}
+							placeholder="NL43INGB0109900731"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor={bicId}>BIC</FieldLabel>
+						<Input
+							id={bicId}
+							value={bic}
+							onChange={(e) => setBic(e.target.value)}
+							placeholder="INGBNL2A"
+						/>
+					</Field>
+				</div>
 				<Field>
 					<FieldLabel htmlFor="vat">BTW-nummer (VAT)</FieldLabel>
 					<Input

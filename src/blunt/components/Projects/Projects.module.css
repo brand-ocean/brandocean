@@ -1,0 +1,58 @@
+.projects {
+  position: relative;
+  width: 100%;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  background-color: var(--base-200);
+  color: var(--base-1000);
+}
+
+.row {
+  width: 125%;
+  display: flex;
+  gap: 1rem;
+}
+
+.project {
+  flex: 1;
+  aspect-ratio: 7 / 5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+
+.image {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0.25rem;
+}
+
+.info {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+}
+
+@media (max-width: 1000px) {
+  .projectsMobile {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    height: auto;
+    overflow: visible;
+    padding: 1rem 1.25rem 3rem;
+    align-items: stretch;
+  }
+
+  .projectsMobile .project {
+    flex: none;
+    width: 100%;
+  }
+}

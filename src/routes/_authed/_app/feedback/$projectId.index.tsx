@@ -22,6 +22,18 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameFooter,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+	FrameTitle,
+} from "@/components/app/frame";
+import { usePageTitle } from "@/components/app/page-title";
+import { TonePill } from "@/components/app/tone";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +81,7 @@ function ProjectBoardPage() {
 	const { projectId } = Route.useParams();
 	const id = projectId as Id<"feedbackProjects">;
 	const project = useQuery(api.feedback.getProject, { projectId: id });
+	usePageTitle(project?.name);
 	const [kindFilter, setKindFilter] = useState<KindFilter>("all");
 	const [selected, setSelected] = useState<Id<"comments"> | null>(null);
 	const allComments = useQuery(api.feedback.listComments, { projectId: id });
@@ -100,30 +113,35 @@ function ProjectBoardPage() {
 
 	if (project === undefined) {
 		return (
-			<div className="mx-auto w-full max-w-6xl space-y-4">
-				<Skeleton className="h-10 w-64" />
-				<Skeleton className="h-[60vh]" />
-			</div>
+			<Frame className="mx-auto w-full max-w-6xl">
+				<FramePanel>
+					<Skeleton className="mb-4 h-8 w-64" />
+					<Skeleton className="h-[50vh]" />
+				</FramePanel>
+			</Frame>
 		);
 	}
 
 	return (
-		<div className="mx-auto flex h-[calc(100dvh-3rem)] w-full max-w-6xl flex-col gap-6">
-			<div>
-				<Link
-					to="/feedback"
-					className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-				>
-					<ArrowLeftIcon className="size-4" /> All projects
-				</Link>
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div className="flex items-center gap-3">
-						<h1 className="text-2xl font-semibold tracking-tight">
-							{project.name}
-						</h1>
-						<Badge variant="secondary">{project.status}</Badge>
-					</div>
-					<div className="flex items-center gap-1.5">
+		<div className="mx-auto flex h-[calc(100dvh-6rem)] w-full max-w-6xl flex-col gap-4.5">
+			<Link
+				to="/feedback"
+				className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+			>
+				<ArrowLeftIcon className="size-4" /> All projects
+			</Link>
+			<Frame>
+				<FrameHeader>
+					<FrameHeading>
+						<div className="flex items-center gap-2">
+							<FrameTitle>{project.name}</FrameTitle>
+							<TonePill dot tone={project.status === "active" ? "success" : "muted"}>
+								{project.status}
+							</TonePill>
+						</div>
+						<FrameDescription>{project.shopifyDomain || "—"}</FrameDescription>
+					</FrameHeading>
+					<FrameActions className="flex-wrap gap-1.5">
 						{comments && comments.length > 0 && (
 							<button
 								type="button"
@@ -182,31 +200,27 @@ function ProjectBoardPage() {
 								{k}
 							</button>
 						))}
-					</div>
-				</div>
-				<p className="mt-1 text-sm text-muted-foreground">
-					{project.shopifyDomain || "—"}
-				</p>
-			</div>
-
-			<div className="flex flex-wrap items-center gap-4">
-				<Link
-					to="/feedback/$projectId/review"
-					params={{ projectId }}
-					className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-				>
-					<ImageIcon className="size-4" /> Review (screenshots)
-				</Link>
-				{project.role === "owner" && (
+					</FrameActions>
+				</FrameHeader>
+				<FrameFooter className="gap-4 sm:justify-start">
 					<Link
-						to="/feedback/$projectId/install"
+						to="/feedback/$projectId/review"
 						params={{ projectId }}
-						className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+						className="inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground"
 					>
-						<Settings2Icon className="size-4" /> Install &amp; share
+						<ImageIcon className="size-4" /> Review (screenshots)
 					</Link>
-				)}
-			</div>
+					{project.role === "owner" && (
+						<Link
+							to="/feedback/$projectId/install"
+							params={{ projectId }}
+							className="inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground"
+						>
+							<Settings2Icon className="size-4" /> Install &amp; share
+						</Link>
+					)}
+				</FrameFooter>
+			</Frame>
 
 			{comments === undefined ? (
 				<Skeleton className="h-full min-h-[24rem] flex-grow" />

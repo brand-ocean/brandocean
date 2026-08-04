@@ -1,9 +1,21 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { GaugeIcon, PlusIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { GaugeIcon, PlusIcon, ServerIcon } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+
+import { type Column, DataTable } from "@/components/app/data-table";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FrameTitle,
+} from "@/components/app/frame";
+import { type Tone, TonePill } from "@/components/app/tone";
+import { ToolbarSearch } from "@/components/app/toolbar";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -15,13 +27,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
-} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
 	Select,
@@ -31,97 +36,173 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableRow } from "@/components/ui/table";
 import { api } from "~convex/_generated/api";
 
 export const Route = createFileRoute("/_authed/_app/billing/")({
 	component: BillingPage,
 });
 
-function mandateBadge(
-	mandateStatus: string | null,
-	hasMandate: boolean,
-): { label: string; variant: "default" | "secondary" | "destructive" } {
-	if (mandateStatus === "valid") return { label: "Mandaat actief", variant: "default" };
-	if (hasMandate) return { label: "Mandaat in behandeling", variant: "secondary" };
-	return { label: "Geen mandaat", variant: "destructive" };
+type Row = {
+	id: string;
+	clientId: string;
+	clientName: string;
+	resourceCount: number;
+	markup: number;
+	billingIntervalMonths: number;
+	status: string;
+	hasMandate: boolean;
+	mandateStatus: string | null;
+};
+
+function mandate(row: Row): { label: string; tone: Tone; id: string } {
+	if (row.mandateStatus === "valid")
+		return { label: "Mandaat actief", tone: "success", id: "valid" };
+	if (row.hasMandate)
+		return { label: "In behandeling", tone: "warning", id: "pending" };
+	return { label: "Geen mandaat", tone: "danger", id: "none" };
 }
 
 function BillingPage() {
 	const rows = useQuery(api.billing.api.list);
+	const navigate = useNavigate();
+	const [q, setQ] = useState("");
+
+	const list: Row[] = useMemo(() => (rows ?? []) as Row[], [rows]);
+
+	const filtered = useMemo(() => {
+		const term = q.trim().toLowerCase();
+		if (!term) return list;
+		return list.filter((r) => r.clientName.toLowerCase().includes(term));
+	}, [list, q]);
+
+	const columns: readonly Column<Row>[] = useMemo(
+		() => [
+			{
+				id: "client",
+				header: "Klant",
+				sortValue: (r) => r.clientName,
+				cell: (r) => (
+					<div className="flex min-w-0 items-center gap-2.5">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-muted-foreground">
+							<ServerIcon className="size-3.5" />
+						</span>
+						<span className="truncate font-medium">{r.clientName}</span>
+					</div>
+				),
+			},
+			{
+				id: "resources",
+				header: "Resources",
+				sortValue: (r) => r.resourceCount,
+				cell: (r) => (
+					<span className="text-muted-foreground tabular-nums">
+						{r.resourceCount} gekoppeld
+					</span>
+				),
+			},
+			{
+				id: "markup",
+				header: "Marge",
+				sortValue: (r) => r.markup,
+				cell: (r) => <span className="tabular-nums">{r.markup}×</span>,
+			},
+			{
+				id: "interval",
+				header: "Interval",
+				sortValue: (r) => r.billingIntervalMonths,
+				cell: (r) => (
+					<span className="text-muted-foreground tabular-nums">
+						per {r.billingIntervalMonths} mnd
+					</span>
+				),
+			},
+			{
+				id: "status",
+				header: "Status",
+				sortValue: (r) => r.status,
+				cell: (r) => (
+					<TonePill dot tone={r.status === "active" ? "success" : "muted"}>
+						{r.status}
+					</TonePill>
+				),
+			},
+			{
+				id: "mandate",
+				header: "Incasso",
+				align: "right",
+				sortValue: (r) => mandate(r).id,
+				cell: (r) => {
+					const m = mandate(r);
+					return (
+						<TonePill dot tone={m.tone}>
+							{m.label}
+						</TonePill>
+					);
+				},
+			},
+		],
+		[],
+	);
 
 	return (
-		<div className="mx-auto w-full max-w-5xl space-y-10">
-			<header className="flex flex-wrap items-start justify-between gap-4">
-				<div className="flex flex-col gap-2">
-					<h1 className="text-3xl font-semibold tracking-tight">
-						Usage billing
-					</h1>
-					<p className="text-base text-muted-foreground">
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Usage billing</FrameTitle>
+					<FrameDescription>
 						Bereken klanten hun echte Cloudflare- en Convex-verbruik door, met
-						marge, en incasseer automatisch via Stripe.
-					</p>
-				</div>
-				<EnrollDialog />
-			</header>
-
-			{rows === undefined ? (
-				<div className="flex flex-col gap-2">
-					<Skeleton className="h-16" />
-					<Skeleton className="h-16" />
-					<Skeleton className="h-16" />
-				</div>
-			) : rows.length === 0 ? (
-				<Empty>
-					<EmptyHeader>
-						<EmptyMedia variant="icon">
-							<GaugeIcon />
-						</EmptyMedia>
-						<EmptyTitle>Nog geen klanten op verbruik</EmptyTitle>
-						<EmptyDescription>
-							Meld een klant aan met de knop hierboven, koppel hun Workers,
-							zones en Convex-deployments, en het verbruik wordt automatisch
-							gemeten.
-						</EmptyDescription>
-					</EmptyHeader>
-				</Empty>
-			) : (
-				<ul className="divide-y rounded-lg border bg-card">
-					{rows.map((r) => {
-						const badge = mandateBadge(r.mandateStatus, r.hasMandate);
-						return (
-							<li key={r.id}>
-								<Link
-									to="/billing/$billingClientId"
-									params={{ billingClientId: r.id }}
-									className="flex items-center justify-between gap-4 px-6 py-5 hover:bg-muted/50"
-								>
-									<div className="flex min-w-0 flex-col gap-1">
-										<span className="truncate text-base font-medium">
-											{r.clientName}
-										</span>
-										<span className="text-sm text-muted-foreground">
-											{r.resourceCount}{" "}
-											{r.resourceCount === 1 ? "resource" : "resources"} ·
-											markup {r.markup}× · per {r.billingIntervalMonths} mnd
-										</span>
-									</div>
-									<div className="flex items-center gap-2">
-										{r.status !== "active" && (
-											<Badge variant="outline">{r.status}</Badge>
-										)}
-										<Badge variant={badge.variant}>{badge.label}</Badge>
-									</div>
-								</Link>
-							</li>
-						);
-					})}
-				</ul>
-			)}
-		</div>
+						marge, en incasseer automatisch.
+					</FrameDescription>
+				</FrameHeading>
+				<FrameActions>
+					<ToolbarSearch
+						value={q}
+						onValueChange={setQ}
+						placeholder="Zoek klant…"
+					/>
+					<EnrollDialog />
+				</FrameActions>
+			</FrameHeader>
+			<DataTable
+				rows={filtered}
+				columns={columns}
+				getRowKey={(r) => r.id}
+				loading={rows === undefined}
+				noun="klanten"
+				defaultSort={{ id: "client", dir: "asc" }}
+				renderRow={(row, cells) => (
+					<TableRow
+						className="cursor-pointer"
+						onClick={() =>
+							void navigate({
+								to: "/billing/$billingClientId",
+								params: { billingClientId: row.id },
+							})
+						}
+					>
+						{cells}
+					</TableRow>
+				)}
+				empty={
+					<EmptyState
+						icon={GaugeIcon}
+						title={q ? "Geen klant gevonden" : "Nog geen klanten op verbruik"}
+						description={
+							q
+								? "Probeer een andere naam."
+								: "Meld een klant aan, koppel hun Workers, zones en Convex-deployments, en het verbruik wordt automatisch gemeten."
+						}
+						action={q ? null : <EnrollDialog />}
+					/>
+				}
+			/>
+		</Frame>
 	);
 }
 
 function EnrollDialog() {
+	const clientFieldId = useId();
 	const clients = useQuery(api.clients.list);
 	const enrolled = useQuery(api.billing.api.list);
 	const enroll = useMutation(api.billing.api.enroll);
@@ -145,7 +226,7 @@ function EnrollDialog() {
 				if (!v) setClientId("");
 			}}
 		>
-			<DialogTrigger render={<Button />}>
+			<DialogTrigger render={<Button size="sm" />}>
 				<PlusIcon data-icon="inline-start" />
 				Klant aanmelden
 			</DialogTrigger>
@@ -154,7 +235,7 @@ function EnrollDialog() {
 					<DialogTitle>Klant op verbruik zetten</DialogTitle>
 					<DialogDescription>
 						Kies een bestaande klant. Daarna koppel je hun infra en start je de
-						Stripe-incasso.
+						incasso.
 					</DialogDescription>
 				</DialogHeader>
 				<form
@@ -183,7 +264,7 @@ function EnrollDialog() {
 				>
 					<FieldGroup>
 						<Field>
-							<FieldLabel htmlFor="enroll-client">Klant</FieldLabel>
+							<FieldLabel htmlFor={clientFieldId}>Klant</FieldLabel>
 							{clients === undefined ? (
 								<Skeleton className="h-9" />
 							) : available.length === 0 ? (
@@ -196,7 +277,7 @@ function EnrollDialog() {
 									value={clientId}
 									onValueChange={(v) => setClientId(v ?? "")}
 								>
-									<SelectTrigger id="enroll-client">
+									<SelectTrigger id={clientFieldId}>
 										<SelectValue placeholder="Kies een klant…" />
 									</SelectTrigger>
 									<SelectContent>

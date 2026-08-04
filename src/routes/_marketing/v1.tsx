@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Hero } from "@/components/hero/Hero";
 import { ObservationRegistry } from "@/components/portfolio/ObservationRegistry";
 
-export const Route = createFileRoute("/_marketing/")({
+export const Route = createFileRoute("/_marketing/v1")({
 	component: MarketingHome,
 });
 

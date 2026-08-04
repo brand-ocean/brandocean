@@ -1,0 +1,134 @@
+.aboutCopy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  background-color: var(--base-800);
+  color: var(--base-1000);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+  padding-top: 10rem;
+  padding-bottom: 10rem;
+}
+
+.headline {
+  position: relative;
+  max-width: 20ch;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.callout {
+  z-index: 10;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: 4rem;
+  align-items: center;
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2.5rem;
+  max-width: 30rem;
+}
+
+.link a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: inherit;
+  text-decoration: none;
+  letter-spacing: 0;
+  padding-bottom: 0.2rem;
+}
+
+.arrow {
+  flex-shrink: 0;
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.underline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0.1rem;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.link a:hover .underline {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.media {
+  width: 100%;
+  max-width: 36rem;
+  justify-self: end;
+  aspect-ratio: 4 / 3;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: var(--base-200);
+}
+
+.media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 1000px) {
+  .inner {
+    gap: 3rem;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+
+  .headline {
+    max-width: none;
+    text-align: left;
+    font-size: 3rem;
+  }
+
+  .callout {
+    display: none;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .copy {
+    max-width: none;
+    order: 2;
+  }
+
+  .media {
+    order: 1;
+    max-width: none;
+    justify-self: stretch;
+    aspect-ratio: 16 / 10;
+  }
+}

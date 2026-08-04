@@ -12,10 +12,17 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+	Frame,
+	FrameHeader,
+	FrameHeading,
+	FramePanel,
+} from "@/components/app/frame";
+import { usePageTitle } from "@/components/app/page-title";
+import { TonePill } from "@/components/app/tone";
 import { DownloadPdfButton } from "@/components/nda/DownloadPdfButton";
 import { OfferteEditor } from "@/components/offertes/OfferteEditor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,6 +47,7 @@ function NdaDetail() {
 	const data = useQuery(api.ndas.getById, { id });
 	const healParties = useMutation(api.ndas.updateMeta);
 	const healedRef = useRef(false);
+	usePageTitle(data?.nda.title);
 
 	// Once per open, if a client is attached, refresh the party lines from that
 	// client (so the disclosing party always shows the current company name).
@@ -53,31 +61,40 @@ function NdaDetail() {
 
 	if (data === undefined) {
 		return (
-			<div className="mx-auto max-w-4xl space-y-8">
-				<Skeleton className="h-10 w-2/3" />
-				<Skeleton className="h-32" />
-				<Skeleton className="h-64" />
-			</div>
+			<Frame className="mx-auto w-full max-w-4xl">
+				<FramePanel>
+					<Skeleton className="mb-4 h-8 w-2/3" />
+					<Skeleton className="h-64" />
+				</FramePanel>
+			</Frame>
 		);
 	}
 
 	const { nda, signed } = data;
 
 	return (
-		<div className="mx-auto w-full max-w-4xl space-y-6">
-			<EditorHeader ndaId={id} title={nda.title} />
-			<NdaActionBar
-				ndaId={id}
-				slug={nda.slug}
-				shareToken={nda.shareToken}
-				language={nda.language}
-				published={nda.published}
-				publicReadable={nda.publicReadable}
-				clientId={nda.clientId}
-				locked={Boolean(nda.signedSlug)}
-				content={nda.body as JSONContent | undefined}
-				title={nda.title}
-			/>
+		<div className="mx-auto flex w-full max-w-4xl flex-col gap-4.5">
+			<Frame>
+				<FrameHeader>
+					<FrameHeading>
+						<EditorHeader ndaId={id} title={nda.title} />
+					</FrameHeading>
+				</FrameHeader>
+				<FramePanel flush className="p-2">
+					<NdaActionBar
+						ndaId={id}
+						slug={nda.slug}
+						shareToken={nda.shareToken}
+						language={nda.language}
+						published={nda.published}
+						publicReadable={nda.publicReadable}
+						clientId={nda.clientId}
+						locked={Boolean(nda.signedSlug)}
+						content={nda.body as JSONContent | undefined}
+						title={nda.title}
+					/>
+				</FramePanel>
+			</Frame>
 
 			{signed ? (
 				<Alert>
@@ -148,21 +165,21 @@ function NdaActionBar({
 	title: string;
 }) {
 	const status = locked
-		? { label: "Signed", variant: "default" as const }
+		? { label: "Signed", tone: "success" as const }
 		: !published
-			? { label: "Draft", variant: "outline" as const }
+			? { label: "Draft", tone: "muted" as const }
 			: publicReadable
-				? { label: "Public", variant: "default" as const }
-				: { label: "Shared via link", variant: "secondary" as const };
+				? { label: "Public", tone: "success" as const }
+				: { label: "Shared via link", tone: "info" as const };
 
 	return (
-		<div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2 shadow-sm">
-			<Badge variant={status.variant} className="ml-1">
+		<div className="flex flex-wrap items-center gap-2">
+			<TonePill dot tone={status.tone} className="ml-1">
 				{status.label}
-			</Badge>
-			<Badge variant="outline" className="uppercase">
+			</TonePill>
+			<TonePill tone="neutral" className="uppercase">
 				{language}
-			</Badge>
+			</TonePill>
 			<Separator orientation="vertical" className="mx-1 !h-6" />
 			<ClientPickerCompact ndaId={ndaId} clientId={clientId} />
 			<div className="ml-auto flex items-center gap-1">
@@ -471,7 +488,8 @@ function EditorHeader({ ndaId, title }: { ndaId: Id<"ndas">; title: string }) {
 					setValue(title);
 					setEditing(true);
 				}}
-				className="text-left text-3xl font-semibold tracking-tight hover:opacity-70"
+				className="-mx-1 rounded px-1 text-left text-sm font-semibold transition-colors hover:bg-muted"
+				title="Click to rename"
 			>
 				{title}
 			</button>
@@ -499,7 +517,7 @@ function EditorHeader({ ndaId, title }: { ndaId: Id<"ndas">; title: string }) {
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				onBlur={() => setEditing(false)}
-				className="h-12 text-2xl font-semibold"
+				className="h-7 text-sm font-semibold"
 			/>
 		</form>
 	);

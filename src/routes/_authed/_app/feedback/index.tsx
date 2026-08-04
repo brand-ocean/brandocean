@@ -1,9 +1,26 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { MessageSquareIcon, PlusIcon, Settings2Icon } from "lucide-react";
-import { useId, useState } from "react";
+import {
+	MessageSquareIcon,
+	PlusIcon,
+	Settings2Icon,
+	StoreIcon,
+} from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+
+import { type Column, DataTable } from "@/components/app/data-table";
+import { EmptyState } from "@/components/app/empty-state";
+import {
+	Frame,
+	FrameActions,
+	FrameDescription,
+	FrameHeader,
+	FrameHeading,
+	FrameTitle,
+} from "@/components/app/frame";
+import { type Tone, TonePill } from "@/components/app/tone";
+import { ToolbarSearch } from "@/components/app/toolbar";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -14,13 +31,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
-} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,17 +40,26 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableRow } from "@/components/ui/table";
 import { api } from "~convex/_generated/api";
 
 export const Route = createFileRoute("/_authed/_app/feedback/")({
 	component: FeedbackProjectsPage,
 });
 
-const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
-	active: "default",
-	paused: "secondary",
-	archived: "outline",
+const STATUS_TONE: Record<string, Tone> = {
+	active: "success",
+	paused: "warning",
+	archived: "muted",
+};
+
+type Row = {
+	id: string;
+	name: string;
+	shopifyDomain: string;
+	status: string;
+	openCount: number;
+	lastActivityAt: number;
 };
 
 function timeAgo(ts: number): string {
@@ -57,115 +76,160 @@ function timeAgo(ts: number): string {
 
 function FeedbackProjectsPage() {
 	const data = useQuery(api.feedback.listProjects);
+	const navigate = useNavigate();
 	const isOwner = data?.role === "owner";
 	const [q, setQ] = useState("");
-	const visibleProjects = (data?.projects ?? []).filter((p) => {
-		const t = q.trim().toLowerCase();
-		if (!t) return true;
-		return (
-			p.name.toLowerCase().includes(t) ||
-			(p.shopifyDomain ?? "").toLowerCase().includes(t)
+
+	const rows: Row[] = useMemo(() => (data?.projects ?? []) as Row[], [data]);
+
+	const filtered = useMemo(() => {
+		const term = q.trim().toLowerCase();
+		if (!term) return rows;
+		return rows.filter(
+			(p) =>
+				p.name.toLowerCase().includes(term) ||
+				(p.shopifyDomain ?? "").toLowerCase().includes(term),
 		);
-	});
+	}, [rows, q]);
 
-	return (
-		<div className="mx-auto w-full max-w-5xl space-y-10">
-			<header className="flex flex-wrap items-start justify-between gap-4">
-				<div className="flex flex-col gap-2">
-					<h1 className="text-3xl font-semibold tracking-tight">Feedback</h1>
-					<p className="text-base text-muted-foreground">
-						Visual feedback projects for the Shopify stores you build.
-					</p>
-					{data && data.projects.length > 0 && (
-						<p className="text-sm font-medium text-primary">
-							{data.projects.reduce((a, p) => a + p.openCount, 0)} open
-							across {data.projects.length} project
-							{data.projects.length === 1 ? "" : "s"}
-						</p>
-					)}
-				</div>
-				{isOwner && <NewProjectDialog />}
-			</header>
+	const totalOpen = rows.reduce((a, p) => a + p.openCount, 0);
 
-			{data === undefined ? (
-				<div className="flex flex-col gap-2">
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-					<Skeleton className="h-14" />
-				</div>
-			) : data.projects.length === 0 ? (
-				<Empty>
-					<EmptyHeader>
-						<EmptyMedia variant="icon">
-							<MessageSquareIcon />
-						</EmptyMedia>
-						<EmptyTitle>No feedback projects yet</EmptyTitle>
-						<EmptyDescription>
-							{isOwner
-								? "Create one and paste the widget snippet into the store theme."
-								: "Nothing has been shared with you yet."}
-						</EmptyDescription>
-					</EmptyHeader>
-				</Empty>
-			) : (
-				<>
-					{data.projects.length > 4 && (
-						<input
-							value={q}
-							onChange={(e) => setQ(e.target.value)}
-							placeholder="Search projects…"
-							className="mb-3 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-						/>
-					)}
-					{visibleProjects.length === 0 ? (
-						<p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-							No projects match “{q}”.
-						</p>
+	const columns: readonly Column<Row>[] = useMemo(
+		() => [
+			{
+				id: "name",
+				header: "Project",
+				sortValue: (r) => r.name,
+				cell: (r) => (
+					<div className="flex min-w-0 items-center gap-2.5">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-muted/50 text-muted-foreground">
+							<StoreIcon className="size-3.5" />
+						</span>
+						<div className="flex min-w-0 flex-col">
+							<span className="truncate font-medium">{r.name}</span>
+							<span className="truncate font-mono text-xs text-muted-foreground">
+								{r.shopifyDomain || "—"}
+							</span>
+						</div>
+					</div>
+				),
+			},
+			{
+				id: "open",
+				header: "Open comments",
+				sortValue: (r) => r.openCount,
+				cell: (r) =>
+					r.openCount > 0 ? (
+						<TonePill dot tone="warning">
+							{r.openCount >= 100 ? "99+" : r.openCount} open
+						</TonePill>
 					) : (
-				<ul className="divide-y rounded-lg border bg-card">
-					{visibleProjects.map((p) => (
-						<li
-							key={p.id}
-							className="flex items-center gap-3 px-6 py-5 hover:bg-muted/50"
-						>
-							<Link
-								to="/feedback/$projectId"
-								params={{ projectId: p.id }}
-								className="flex min-w-0 flex-1 flex-col gap-1"
-							>
-								<span className="truncate text-base font-medium">
-									{p.name}
-								</span>
-								<span className="text-sm text-muted-foreground">
-									{p.shopifyDomain || "—"} · updated{" "}
-									{timeAgo(p.lastActivityAt)}
-								</span>
-							</Link>
-							{p.openCount > 0 && (
-								<Badge>
-									{p.openCount >= 100 ? "99+" : p.openCount} open
-								</Badge>
-							)}
-							<Badge variant={statusVariant[p.status] ?? "secondary"}>
-								{p.status}
-							</Badge>
-							{isOwner && (
+						<span className="text-muted-foreground">All clear</span>
+					),
+			},
+			{
+				id: "status",
+				header: "Status",
+				sortValue: (r) => r.status,
+				cell: (r) => (
+					<TonePill dot tone={STATUS_TONE[r.status] ?? "muted"}>
+						{r.status}
+					</TonePill>
+				),
+			},
+			{
+				id: "activity",
+				header: "Last activity",
+				align: "right",
+				sortValue: (r) => r.lastActivityAt,
+				cell: (r) => (
+					<span className="text-muted-foreground tabular-nums">
+						{timeAgo(r.lastActivityAt)}
+					</span>
+				),
+			},
+			{
+				id: "install",
+				header: "",
+				className: "w-10",
+				cell: (r) =>
+					isOwner ? (
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							aria-label={`Install & share ${r.name}`}
+							render={
 								<Link
 									to="/feedback/$projectId/install"
-									params={{ projectId: p.id }}
-									className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-									title="Install & share"
-								>
-									<Settings2Icon className="size-4" />
-								</Link>
-							)}
-						</li>
-					))}
-				</ul>
-					)}
-				</>
-			)}
-		</div>
+									params={{ projectId: r.id }}
+								/>
+							}
+							onClick={(e) => e.stopPropagation()}
+						>
+							<Settings2Icon />
+						</Button>
+					) : null,
+			},
+		],
+		[isOwner],
+	);
+
+	return (
+		<Frame>
+			<FrameHeader>
+				<FrameHeading>
+					<FrameTitle>Feedback</FrameTitle>
+					<FrameDescription>
+						{rows.length > 0
+							? `${totalOpen} open across ${rows.length} project${rows.length === 1 ? "" : "s"}`
+							: "Visual feedback projects for the Shopify stores you build."}
+					</FrameDescription>
+				</FrameHeading>
+				<FrameActions>
+					<ToolbarSearch
+						value={q}
+						onValueChange={setQ}
+						placeholder="Search projects…"
+					/>
+					{isOwner ? <NewProjectDialog /> : null}
+				</FrameActions>
+			</FrameHeader>
+			<DataTable
+				rows={filtered}
+				columns={columns}
+				getRowKey={(r) => r.id}
+				loading={data === undefined}
+				noun="projects"
+				defaultSort={{ id: "activity", dir: "desc" }}
+				renderRow={(row, cells) => (
+					<TableRow
+						className="cursor-pointer"
+						onClick={() =>
+							void navigate({
+								to: "/feedback/$projectId",
+								params: { projectId: row.id },
+							})
+						}
+					>
+						{cells}
+					</TableRow>
+				)}
+				empty={
+					<EmptyState
+						icon={MessageSquareIcon}
+						title={q ? "No project matched that" : "No feedback projects yet"}
+						description={
+							q
+								? "Try another name or store domain."
+								: isOwner
+									? "Create one and paste the widget snippet into the store theme."
+									: "Nothing has been shared with you yet."
+						}
+						action={!q && isOwner ? <NewProjectDialog /> : null}
+					/>
+				}
+			/>
+		</Frame>
 	);
 }
 
@@ -228,7 +292,7 @@ function NewProjectDialog() {
 				if (!v) reset();
 			}}
 		>
-			<DialogTrigger render={<Button />}>
+			<DialogTrigger render={<Button size="sm" />}>
 				<PlusIcon data-icon="inline-start" />
 				New project
 			</DialogTrigger>
