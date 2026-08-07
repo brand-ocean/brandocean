@@ -20,3 +20,4 @@ todos.json
 # never commit share tokens or scratch dumps
 *-sharetoken.txt
 scratchpad-*.json
+.screenshots/

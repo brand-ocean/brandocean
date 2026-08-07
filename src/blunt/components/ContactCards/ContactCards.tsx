@@ -15,46 +15,46 @@ const CARDS = [
 	{
 		id: "contact-card-1",
 		frontSrc: "/images/contact/card_front.png",
-		frontAlt: "Contact card",
+		frontAlt: "Contactkaart",
 		index: "01",
-		label: "Email",
-		value: "hello@blunt.studio",
-		detailLabel: "Response",
-		detail: "Within 48 hours",
-		note: "New projects, partnerships, and general inquiries.",
+		label: "Mail",
+		value: "info@brandocean.nl",
+		detailLabel: "Reactie",
+		detail: "Binnen 24 uur",
+		note: "Nieuwe projecten, samenwerkingen en alles daartussenin.",
 	},
 	{
 		id: "contact-card-2",
 		frontSrc: "/images/contact/card_front.png",
-		frontAlt: "Contact card",
+		frontAlt: "Contactkaart",
 		index: "02",
-		label: "Phone",
-		value: "+1 (212) 555-0148",
-		detailLabel: "Hours",
-		detail: "Mon–Fri, 10–6 EST",
-		note: "Best for time-sensitive production calls.",
+		label: "Telefoon",
+		value: "06 4132 4721",
+		detailLabel: "Bereikbaar",
+		detail: "Ma–vr, 9–18 uur",
+		note: "Bel gerust. Sommige dingen zijn sneller besproken dan gemaild.",
 	},
 	{
 		id: "contact-card-3",
 		frontSrc: "/images/contact/card_front.png",
-		frontAlt: "Contact card",
+		frontAlt: "Contactkaart",
 		index: "03",
 		label: "Studio",
-		value: "New York, NY",
-		detailLabel: "Visits",
-		detail: "By appointment",
-		note: "214 Bowery, Floor 4. Bring references.",
+		value: "Amsterdam",
+		detailLabel: "Langskomen",
+		detail: "Op afspraak",
+		note: "Rooswijck 5A, 1081 AJ. Koffie staat klaar.",
 	},
 	{
 		id: "contact-card-4",
 		frontSrc: "/images/contact/card_front.png",
-		frontAlt: "Contact card",
+		frontAlt: "Contactkaart",
 		index: "04",
-		label: "Social",
-		value: "@blunt.studio",
-		detailLabel: "Channels",
+		label: "Online",
+		value: "@brandocean",
+		detailLabel: "Kanalen",
 		detail: "IG · LinkedIn",
-		note: "Process notes, launches, and open roles.",
+		note: "Werk in uitvoering, lanceringen en af en toe een blik achter de schermen.",
 	},
 ];
 
@@ -237,7 +237,7 @@ export default function ContactCards() {
 		<div className={styles.container} ref={containerRef}>
 			<section className={styles.cards} ref={cardsSectionRef}>
 				<div className={styles.sectionNav}>
-					<SectionNav left="Poke The Studio" right="Holler" />
+					<SectionNav left="Even bellen?" right="Doen" />
 				</div>
 
 				{CARDS.map((card, index) => (
@@ -274,7 +274,7 @@ export default function ContactCards() {
 				))}
 
 				<div className={styles.sectionFooter}>
-					<SectionFooter left="Your Move" right="We're Listening" />
+					<SectionFooter left="Jouw beurt" right="We luisteren" />
 				</div>
 			</section>
 		</div>

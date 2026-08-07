@@ -8,78 +8,80 @@ const POSITIONS = {
 	TOP: "-66.666%",
 };
 
+// Geen dichtgetimmerde vacatures: dit zijn de mensen waar we altijd mee willen
+// praten. Elke regel klapt open naar hetzelfde antwoord — mail ons gewoon.
 const OPENINGS = [
 	{
-		name: "Senior Designer",
-		type: "Full-time",
-		location: "New York",
-		label: "Apply",
-	},
-	{
-		name: "Motion Designer",
-		type: "Contract",
+		name: "Full-stack developer",
+		type: "Freelance",
 		location: "Remote",
-		label: "Apply",
+		label: "Mail ons",
 	},
 	{
-		name: "Creative Director",
-		type: "Full-time",
-		location: "London",
-		label: "Apply",
+		name: "Front-end developer",
+		type: "Projectbasis",
+		location: "Amsterdam",
+		label: "Mail ons",
 	},
 	{
-		name: "Brand Strategist",
-		type: "Full-time",
+		name: "Product designer",
+		type: "Freelance",
 		location: "Remote",
-		label: "Apply",
+		label: "Mail ons",
 	},
 	{
-		name: "Product Designer",
-		type: "Full-time",
-		location: "Berlin",
-		label: "Apply",
+		name: "UI/UX designer",
+		type: "Projectbasis",
+		location: "Amsterdam",
+		label: "Mail ons",
 	},
 	{
-		name: "Art Director",
-		type: "Full-time",
-		location: "Los Angeles",
-		label: "Apply",
-	},
-	{
-		name: "Design Intern",
-		type: "Internship",
-		location: "New York",
-		label: "Apply",
-	},
-	{
-		name: "Frontend Developer",
-		type: "Full-time",
+		name: "Merkontwerper",
+		type: "Freelance",
 		location: "Remote",
-		label: "Apply",
+		label: "Mail ons",
 	},
 	{
-		name: "Producer",
-		type: "Full-time",
-		location: "London",
-		label: "Apply",
+		name: "Motion designer",
+		type: "Projectbasis",
+		location: "Waar dan ook",
+		label: "Mail ons",
+	},
+	{
+		name: "AI engineer",
+		type: "Freelance",
+		location: "Remote",
+		label: "Mail ons",
+	},
+	{
+		name: "Data-analist",
+		type: "Projectbasis",
+		location: "Amsterdam",
+		label: "Mail ons",
+	},
+	{
+		name: "CRO-specialist",
+		type: "Freelance",
+		location: "Remote",
+		label: "Mail ons",
 	},
 	{
 		name: "Copywriter",
-		type: "Contract",
-		location: "Remote",
-		label: "Apply",
+		type: "Projectbasis",
+		location: "Waar dan ook",
+		label: "Mail ons",
 	},
 	{
-		name: "3D Artist",
-		type: "Full-time",
-		location: "Berlin",
-		label: "Apply",
+		name: "Stage of leerplek",
+		type: "In overleg",
+		location: "Amsterdam",
+		label: "Mail ons",
 	},
 	{
-		name: "Studio Manager",
-		type: "Full-time",
-		location: "New York",
-		label: "Apply",
+		name: "Iets heel anders",
+		type: "Verras ons",
+		location: "Waar dan ook",
+		label: "Mail ons",
 	},
 ];
 
@@ -282,7 +284,7 @@ export default function CareersList() {
 
 	return (
 		<section className={styles.careers}>
-			<p>Now Hiring Weirdos</p>
+			<p>Geen vacatures, wel altijd ruimte voor goede mensen</p>
 
 			<div className={styles.list} ref={listRef}>
 				{OPENINGS.map((opening, index) => (

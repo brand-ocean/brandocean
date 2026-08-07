@@ -10,54 +10,54 @@ import styles from "./Footer.module.css";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const OBJECTS = [
-	"Illustration",
-	"Characters",
-	"Motion",
-	"Murals",
-	"Comics",
-	"Mascots",
-	"Covers",
-	"Posters",
+	"Apps",
+	"Webshops",
+	"Dashboards",
+	"Portals",
+	"CRM",
+	"AI",
+	"Automatisering",
+	"Integraties",
 	"Branding",
-	"Type",
-	"Zines",
-	"Sketchbook",
-	"Ink",
-	"Storyboards",
-	"Loops",
-	"Key Art",
-	"Doodles",
-	"Packaging",
-	"Editorial",
-	"Stickers",
-	"Worldbuilding",
-	"Concepts",
-	"Animation",
-	"Chaos",
+	"Design",
+	"UI/UX",
+	"CRO",
+	"Data",
+	"Analytics",
+	"Marketing",
+	"SEO",
+	"Shopify",
+	"React",
+	"Convex",
+	"Animatie",
+	"Websites",
+	"Hosting",
+	"Onderhoud",
+	"Koffie",
 ];
 
 const NAV: { title: string; links: { label: string; href: BluntHref }[] }[] = [
 	{
 		title: "Studio",
 		links: [
-			{ label: "About", href: "/about" },
-			{ label: "Work", href: "/work" },
+			{ label: "Over ons", href: "/about" },
+			{ label: "Werk", href: "/work" },
 			{ label: "Expertise", href: "/expertise" },
 		],
 	},
 	{
-		title: "Company",
+		title: "Bedrijf",
 		links: [
-			{ label: "Careers", href: "/careers" },
+			{ label: "Meedoen", href: "/careers" },
 			{ label: "Contact", href: "/contact" },
 		],
 	},
 ];
 
-const SOCIAL: { label: string; href: BluntHref }[] = [
-	{ label: "Instagram", href: "/" },
-	{ label: "LinkedIn", href: "/" },
-	{ label: "X", href: "/" },
+const SOCIAL: { label: string; external: string }[] = [
+	{ label: "Instagram", external: "https://instagram.com/brandocean" },
+	{ label: "LinkedIn", external: "https://linkedin.com/company/brandocean" },
+	{ label: "Kiesbeter", external: "https://kiesbeter.app" },
 ];
 
 const PILL_VARIANTS = [styles.v1, styles.v2, styles.v3, styles.v4];
@@ -409,9 +409,10 @@ export default function Footer() {
 				<div className={`container pad ${styles.inner}`}>
 					<div className={styles.top}>
 						<div className={styles.brand}>
-							<h1>Blunt</h1>
+							<h1>Brandocean</h1>
 							<p>
-								An illustration studio making brands, characters, and worlds.
+								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.
+								Alles in één hand.
 							</p>
 						</div>
 
@@ -442,7 +443,7 @@ export default function Footer() {
 									{SOCIAL.map((link) => (
 										<li key={link.label}>
 											<p>
-												<TransitionLink href={link.href}>
+												<TransitionLink href="/" external={link.external}>
 													{link.label}
 												</TransitionLink>
 											</p>
@@ -455,15 +456,13 @@ export default function Footer() {
 
 					<div className={styles.bottom}>
 						<div className={styles.meta}>
-							<p className="mono sm">Copenhagen · Remote</p>
+							<p className="mono sm">Amsterdam · Remote</p>
 						</div>
 
 						<div className={styles.legal}>
-							<p className="mono sm">
-								© {new Date().getFullYear()} Blunt Studios
-							</p>
-							<p className="mono sm">Developed by Codegrid</p>
-							<p className="mono sm">MWT · July 2026</p>
+							<p className="mono sm">© {new Date().getFullYear()} Brandocean</p>
+							<p className="mono sm">info@brandocean.nl</p>
+							<p className="mono sm">06 4132 4721</p>
 						</div>
 					</div>
 				</div>

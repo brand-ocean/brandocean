@@ -11,21 +11,21 @@ import styles from "./Menu.module.css";
 gsap.registerPlugin(SplitText, useGSAP);
 
 const LEFT_LINKS: { label: string; href: BluntHref }[] = [
-	{ label: "about", href: "/about" },
-	{ label: "work", href: "/work" },
+	{ label: "over ons", href: "/about" },
+	{ label: "werk", href: "/work" },
 ];
 
 const RIGHT_LINKS: { label: string; href: BluntHref }[] = [
 	{ label: "expertise", href: "/expertise" },
-	{ label: "careers", href: "/careers" },
+	{ label: "meedoen", href: "/careers" },
 	{ label: "contact", href: "/contact" },
 ];
 
 const MOBILE_LINKS = [...LEFT_LINKS, ...RIGHT_LINKS];
 
-const SOCIAL_LINKS: { label: string; href: BluntHref }[] = [
-	{ label: "Instagram", href: "/" },
-	{ label: "LinkedIn", href: "/" },
+const SOCIAL_LINKS: { label: string; external: string }[] = [
+	{ label: "Instagram", external: "https://instagram.com/brandocean" },
+	{ label: "LinkedIn", external: "https://linkedin.com/company/brandocean" },
 ];
 
 export default function Menu() {
@@ -236,7 +236,7 @@ export default function Menu() {
 				<div className={styles.menuShell}>
 					<div className={`${styles.bar} ${isOpen ? styles.barOpen : ""}`}>
 						<TransitionLink href="/" className={styles.logo}>
-							BLUNT
+							BRANDOCEAN
 						</TransitionLink>
 
 						<div className={styles.desktopLeft}>
@@ -301,7 +301,8 @@ export default function Menu() {
 							{SOCIAL_LINKS.map((link) => (
 								<TransitionLink
 									key={link.label}
-									href={link.href}
+									href="/"
+									external={link.external}
 									onClick={handleNavLinkClick}
 								>
 									<TiLocationArrow

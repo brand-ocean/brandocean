@@ -27,16 +27,16 @@ const BLOCK_COLORS = [
 ];
 
 const TRANSITION_LINES = [
-	"Hold That Thought",
-	"Wet Paint Ahead",
-	"Redrawing The Screen",
+	"One Moment Please",
+	"Loading The Good Part",
+	"Building The Page",
 	"Give It A Sec",
-	"Ink Still Wet",
+	"Fetching The Work",
 	"Turning The Page",
-	"Cooking Something Weird",
+	"Shipping It Now",
 	"Don't Blink Now",
-	"Loading The Chaos",
-	"Mixing New Colors",
+	"Almost There",
+	"Still In One Hand",
 ];
 
 function shuffle(items: string[]) {

@@ -1,25 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
 import Callout from "@/blunt/components/Callout/Callout";
 import Copy from "@/blunt/components/Copy/Copy";
 import Projects from "@/blunt/components/Projects/Projects";
 import SectionFooter from "@/blunt/components/SectionFooter/SectionFooter";
 import SectionNav from "@/blunt/components/SectionNav/SectionNav";
 import styles from "@/blunt/pages/work.module.css";
+import { api } from "~convex/_generated/api";
 
-export const Route = createFileRoute("/_blunt/work")({
+export const Route = createFileRoute("/_blunt/work/")({
 	component: WorkPage,
 });
 
 function WorkPage() {
+	const items = useQuery(api.portfolio.listPublic, {});
+
 	return (
 		<main className={styles.page}>
 			<section className={styles.intro}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Drawn Out Loud
+						Work That Ships
 						<Callout
 							className={styles.callout}
-							label="Eyes open"
+							label="Ogen open"
 							rotation={-20}
 							top="0em"
 							left="0.3em"
@@ -32,30 +36,30 @@ function WorkPage() {
 					<SectionFooter
 						left={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>Roll The Reel</span>
+								<span>Scroll maar</span>
 							</Copy>
 						}
 						right={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>2017 Onward</span>
+								<span>Sinds 2005</span>
 							</Copy>
 						}
 					/>
 				</div>
 			</section>
 
-			<Projects />
+			<Projects items={items ?? []} />
 
 			<section className={styles.outro}>
 				<div className={styles.sectionNav}>
-					<SectionNav left="Still Cooking" right="All Work" />
+					<SectionNav left="Nog in de maak" right="Al het werk" />
 				</div>
 
 				<h1>
-					The Rest Is Still Drying
+					The Rest Is Under NDA
 					<Callout
 						className={styles.callout}
-						label="Coming soon"
+						label="Volgt nog"
 						variant={3}
 						rotation={15}
 						top="0.7em"
@@ -64,7 +68,7 @@ function WorkPage() {
 				</h1>
 
 				<div className={styles.sectionFooter}>
-					<SectionFooter left="Don't Blink" right="Check Back Soon" />
+					<SectionFooter left="Niet knipperen" right="Kom snel terug" />
 				</div>
 			</section>
 		</main>

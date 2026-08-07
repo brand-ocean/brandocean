@@ -200,7 +200,7 @@ export default function SmudgeRevealer({
 								{lineTwo}
 								<Callout
 									className={styles.callout}
-									label="Wipe away"
+									label="Vegen maar"
 									variant={2}
 									rotation={20}
 									top="0.15em"
@@ -215,7 +215,7 @@ export default function SmudgeRevealer({
 			<div className={styles.footer}>
 				<div className={`container ${styles.footerInner}`}>
 					<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-						<p className="mono sm">Keep Digging</p>
+						<p className="mono sm">Blijf vegen</p>
 					</Copy>
 				</div>
 			</div>

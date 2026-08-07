@@ -15,10 +15,10 @@ function ContactPage() {
 			<section className={styles.hero}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Come Bug The Studio
+						Just Say Something
 						<Callout
 							className={styles.callout}
-							label="Pull up"
+							label="Kom langs"
 							rotation={12}
 							top="0.25em"
 							right="0.5em"
@@ -31,12 +31,12 @@ function ContactPage() {
 					<SectionFooter
 						left={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>Roll The Cards</span>
+								<span>Draai de kaarten</span>
 							</Copy>
 						}
 						right={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>Say Hello</span>
+								<span>Zeg hallo</span>
 							</Copy>
 						}
 					/>

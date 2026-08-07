@@ -11,36 +11,37 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const MOBILE_BREAKPOINT = 1000;
 
+// The `name` values are placeholders — swap in the real names.
 const TEAM = [
 	{
 		id: "team-card-1",
 		frontImage: "/images/team/team_card_front_1.jpg",
 		image: "/images/team/team_img_1.jpg",
 		index: "01",
-		name: "Remy Vaandrager",
-		role: "Head Doodler",
+		name: "Naam volgt",
+		role: "Development",
 		focusLabel: "Focus",
-		focus: "Characters & Chaos",
+		focus: "Apps, platforms & integraties",
 	},
 	{
 		id: "team-card-2",
 		frontImage: "/images/team/team_card_front_2.jpg",
 		image: "/images/team/team_img_2.jpg",
 		index: "02",
-		name: "Iggy Marsh",
-		role: "Motion Gremlin",
+		name: "Naam volgt",
+		role: "Design & Branding",
 		focusLabel: "Focus",
-		focus: "Loops & Life",
+		focus: "Merk, UI/UX & animatie",
 	},
 	{
 		id: "team-card-3",
 		frontImage: "/images/team/team_card_front_3.jpg",
 		image: "/images/team/team_img_3.jpg",
 		index: "03",
-		name: "Noa Feldman",
-		role: "Word Wrangler",
+		name: "Naam volgt",
+		role: "Data & AI",
 		focusLabel: "Focus",
-		focus: "Story & Voice",
+		focus: "Automatisering & analytics",
 	},
 ];
 
@@ -219,12 +220,12 @@ export default function Team() {
 	return (
 		<section className={styles.sticky} ref={stickyRef} data-team-sticky>
 			<div className={styles.sectionNav}>
-				<SectionNav left="The Faces" right="Give It A Spin" />
+				<SectionNav left="De mensen" right="Draai ze om" />
 			</div>
 
 			<div className={styles.frame}>
 				<div className={styles.stickyHeader} ref={headerRef}>
-					<h6>Small Crew, Loud Outputo</h6>
+					<h6>Small Crew, Big Range</h6>
 				</div>
 
 				<div className={styles.cardContainer} ref={containerRef}>
@@ -263,7 +264,7 @@ export default function Team() {
 			</div>
 
 			<div className={styles.sectionFooter}>
-				<SectionFooter left="Roll Call" right="Back To Blunt" />
+				<SectionFooter left="Wie je krijgt" right="Terug naar boven" />
 			</div>
 		</section>
 	);

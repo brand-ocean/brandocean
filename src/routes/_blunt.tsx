@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { ConvexProvider } from "convex/react";
 import BluntLayout from "@/blunt/BluntLayout";
+import { convex } from "@/lib/convex";
 
 export const Route = createFileRoute("/_blunt")({
 	component: BluntShell,
@@ -7,8 +9,10 @@ export const Route = createFileRoute("/_blunt")({
 
 function BluntShell() {
 	return (
-		<BluntLayout>
-			<Outlet />
-		</BluntLayout>
+		<ConvexProvider client={convex}>
+			<BluntLayout>
+				<Outlet />
+			</BluntLayout>
+		</ConvexProvider>
 	);
 }

@@ -11,12 +11,12 @@ import styles from "./Stats.module.css";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const PARTNERS = [
-	"Adult Swim",
-	"Vans",
-	"Mailchimp",
-	"Bandcamp",
-	"Spotify",
-	"RedBull",
+	"Check in Cleaning",
+	"Forz",
+	"Het Sieraad",
+	"BRONS",
+	"Vesting Finance",
+	"Daalder",
 ];
 
 export default function Stats() {
@@ -80,10 +80,10 @@ export default function Stats() {
 				<header className={styles.header}>
 					<Copy>
 						<h4>
-							Blunt In Numbers And Receipts
+							Brandocean In Numbers
 							<Callout
 								className={styles.callout}
-								label="No fluff"
+								label="Geen praatjes"
 								variant={2}
 								rotation={-20}
 								top="0.75em"
@@ -101,8 +101,8 @@ export default function Stats() {
 						>
 							<img src="/images/stats/stats_img_1.jpg" alt="" />
 							<div className={styles.overlay}>
-								<p className="mono">Things we&apos;ve drawn</p>
-								<h4>340+</h4>
+								<p className="mono">Projecten gebouwd</p>
+								<h4>80+</h4>
 							</div>
 						</article>
 
@@ -110,18 +110,16 @@ export default function Stats() {
 							className={`${styles.card} ${styles.cardLight}`}
 							ref={setCardRef(1)}
 						>
-							<h4>60+</h4>
-							<p className={`mono ${styles.meta}`}>
-								Brands we&apos;ve drawn for
-							</p>
+							<h4>20</h4>
+							<p className={`mono ${styles.meta}`}>Jaar ervaring</p>
 						</article>
 
 						<article
 							className={`${styles.card} ${styles.cardAccent}`}
 							ref={setCardRef(2)}
 						>
-							<p className="mono">Eyeballs reached</p>
-							<h3>250M+</h3>
+							<p className="mono">Aanspreekpunt</p>
+							<h3>1</h3>
 						</article>
 					</div>
 
@@ -132,8 +130,8 @@ export default function Stats() {
 						>
 							<img src="/images/stats/stats_img_2.jpg" alt="" />
 							<div className={styles.overlay}>
-								<p className="mono">On the table right now</p>
-								<h3>14</h3>
+								<p className="mono">Verrassingen achteraf</p>
+								<h3>0</h3>
 							</div>
 						</article>
 
@@ -141,7 +139,7 @@ export default function Stats() {
 							className={`${styles.card} ${styles.cardDark}`}
 							ref={setCardRef(4)}
 						>
-							<h6>Friends of the studio</h6>
+							<h6>Voor wie we bouwden</h6>
 							<ul className={styles.list}>
 								{PARTNERS.map((name) => (
 									<li key={name}>
@@ -154,7 +152,7 @@ export default function Stats() {
 				</div>
 			</div>
 
-			<SectionFooter left="Counted twice" right="Give or take" />
+			<SectionFooter left="Twee keer geteld" right="Ongeveer" />
 		</section>
 	);
 }

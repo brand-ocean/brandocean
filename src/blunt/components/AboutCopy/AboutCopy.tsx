@@ -9,15 +9,15 @@ import styles from "./AboutCopy.module.css";
 export default function AboutCopy() {
 	return (
 		<section className={styles.aboutCopy}>
-			<SectionNav left="First Things First" right="The Origin" />
+			<SectionNav left="Eerst even dit" right="Het begin" />
 
 			<div className={`container pad ${styles.inner}`}>
 				<Copy>
 					<h5 className={styles.headline}>
-						We Turn Wild Ideas Into Art That Refuses To Sit Still Or Shut Up.
+						We Turn Loose Ideas Into Software That Actually Ships.
 						<Callout
 							className={styles.callout}
-							label="We mean it"
+							label="Beloofd"
 							variant={4}
 							rotation={12}
 							top="0.65em"
@@ -30,16 +30,18 @@ export default function AboutCopy() {
 					<div className={styles.copy}>
 						<Copy>
 							<p>
-								We started in a cramped room with too many markers and no
-								clients. Not much has changed except the room. Blunt still runs
-								on the same rule: if an idea doesn&apos;t make us laugh or
-								flinch, it goes in the bin.
+								Twintig jaar geleden begonnen met bouwen en daar nooit meer mee
+								gestopt. Front-end, back-end, branding, design, CRO, UI/UX, data
+								en automatisering zitten inmiddels in één paar handen. Bij een
+								bureau betaal je een developer, een designer en een marketeer,
+								en dan mis je nog de samenhang. Bij ons zit die samenhang er
+								vanaf de eerste schets in.
 							</p>
 						</Copy>
 						<Copy>
 							<p className={`mono ${styles.link}`}>
 								<TransitionLink href="/work">
-									Into The Work{" "}
+									Naar het werk{" "}
 									<TiLocationArrow
 										className={styles.arrow}
 										aria-hidden="true"
@@ -56,7 +58,7 @@ export default function AboutCopy() {
 				</div>
 			</div>
 
-			<SectionFooter left="There's More" right="Onward" />
+			<SectionFooter left="Er is meer" right="Verder" />
 		</section>
 	);
 }

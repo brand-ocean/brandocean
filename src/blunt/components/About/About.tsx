@@ -280,34 +280,34 @@ export default function About() {
 
 	return (
 		<section className={styles.about}>
-			<SectionNav left="Studio No. 01" right="Lat 0° / Vibe 10" />
+			<SectionNav left="Studio No. 01" right="Amsterdam / Sinds 2005" />
 
 			<div className={`container pad ${styles.inner}`}>
 				<div className={styles.headlineWrap} ref={headlineRef}>
 					<h2 className={styles.headline}>
-						<span className={styles.line}>We draw the</span>
+						<span className={styles.line}>We build the</span>
 						<span className={styles.line}>
-							<span className={styles.word}>Things</span>
+							<span className={styles.word}>Whole</span>
 							<Spot {...SPOTS[0]} />
-							<span className={styles.word}>others</span>
+							<span className={styles.word}>thing</span>
 						</span>
-						<span className={styles.line}>Are too</span>
+						<span className={styles.line}>Not just</span>
 						<span className={styles.line}>
-							<span className={styles.word}>Scared</span>
+							<span className={styles.word}>The</span>
 							<Spot {...SPOTS[1]} />
-							<span className={styles.word}>to</span>
+							<span className={styles.word}>pretty</span>
 						</span>
-						<span className={styles.line}>Even pitch</span>
+						<span className={styles.line}>Part of</span>
 						<span className={styles.line}>
-							<span className={styles.word}>Out</span>
+							<span className={styles.word}>Your</span>
 							<Spot {...SPOTS[2]} />
-							<span className={styles.word}>loud</span>
+							<span className={styles.word}>stack</span>
 						</span>
 					</h2>
 
 					<Callout
 						className={`${styles.callout} ${styles.calloutPoke}`}
-						label="Poke these"
+						label="Klik maar"
 						rotation={15}
 						top="0.75em"
 						right="-0.1em"
@@ -315,7 +315,7 @@ export default function About() {
 					/>
 					<Callout
 						className={`${styles.callout} ${styles.calloutReally}`}
-						label="Yes, really"
+						label="Echt waar"
 						variant={1}
 						rotation={-15}
 						top="calc(0.9em * 4 + 0.25em)"
@@ -324,7 +324,7 @@ export default function About() {
 				</div>
 			</div>
 
-			<SectionFooter left="Open For Trouble" right="More Below" />
+			<SectionFooter left="Altijd bereikbaar" right="Meer hieronder" />
 		</section>
 	);
 }

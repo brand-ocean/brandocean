@@ -6,6 +6,7 @@ import {
 	entryTypeV,
 	vatCategoryV,
 } from "./boekhouding/validators";
+import { portfolioBlock, portfolioMedia } from "./lib/portfolioBlocks";
 
 // Rich context captured from the clicked element at comment time, so an AI can
 // map a comment back to the exact source element/component (text is the highest
@@ -292,13 +293,22 @@ export default defineSchema({
 		ctaLabel: v.string(),
 		slug: v.string(),
 		summary: v.optional(v.string()),
-		body: v.optional(v.any()),
+		// The case-study body. Ordered, typed blocks — see lib/portfolioBlocks.
+		blocks: v.optional(v.array(portfolioBlock)),
+		// `heroImage`/`galleryMedia` are the CMS-managed (uploadable) fields.
+		// `heroImageUrl`/`gallery` are the original URL-only fields kept for the
+		// scraped brandocean.nl items; queries read the new field and fall back.
+		heroImage: v.optional(portfolioMedia),
+		galleryMedia: v.optional(v.array(portfolioMedia)),
 		heroImageUrl: v.optional(v.string()),
 		bunnyVideoUrl: v.optional(v.string()),
 		bunnyVideoId: v.optional(v.string()),
 		bunnyLibraryId: v.optional(v.string()),
 		gallery: v.optional(v.array(v.string())),
 		livePages: v.optional(v.array(v.string())),
+		// Shown on the work grid. Older items only carry the year inside the
+		// free-text `project` line, which the site parses out as a fallback.
+		year: v.optional(v.number()),
 		industry: v.optional(v.string()),
 		tags: v.optional(v.array(v.string())),
 		externalUrl: v.optional(v.string()),

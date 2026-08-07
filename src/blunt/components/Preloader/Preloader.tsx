@@ -283,7 +283,7 @@ export default function Preloader() {
 			</div>
 
 			<div className={styles.header}>
-				<h1 ref={titleRef}>Blunt Studio</h1>
+				<h1 ref={titleRef}>Brandocean</h1>
 				<div className={styles.counter}>
 					<p ref={counterRef}>000</p>
 				</div>

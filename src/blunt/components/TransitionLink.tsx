@@ -2,22 +2,33 @@ import { Link, useRouter } from "@tanstack/react-router";
 import type { MouseEvent, ReactNode } from "react";
 import { usePageTransition } from "./TransitionProvider/TransitionProvider";
 
-/** Every route the blunt marketing shell links to. */
+/**
+ * The fixed routes the blunt shell links to. The case-study route is separate
+ * because it needs params — see `TransitionLinkProps` — which keeps the nav
+ * arrays that are typed as `BluntHref` free of a param obligation.
+ */
 export type BluntHref =
 	| "/"
 	| "/about"
 	| "/work"
-	| "/sample-project"
 	| "/expertise"
 	| "/careers"
 	| "/contact";
 
-interface TransitionLinkProps {
-	href: BluntHref;
+interface TransitionLinkBaseProps {
 	children: ReactNode;
 	className?: string;
 	onClick?: () => void;
+	/** Set for off-site destinations (socials, mailto, tel) — skips the curtain. */
+	external?: string;
 }
+
+/** Only the case-study route takes params, so the two shapes stay separate. */
+type TransitionLinkProps = TransitionLinkBaseProps &
+	(
+		| { href: BluntHref; params?: undefined }
+		| { href: "/work/$slug"; params: { slug: string } }
+	);
 
 /**
  * Drop-in for `next/link` inside the blunt shell. Cancels TanStack Router's own
@@ -25,12 +36,31 @@ interface TransitionLinkProps {
  */
 export default function TransitionLink({
 	href,
+	params,
 	children,
 	className,
 	onClick,
+	external,
 }: TransitionLinkProps) {
 	const router = useRouter();
 	const runTransition = usePageTransition();
+	const resolvedPath = params ? `/work/${params.slug}` : href;
+
+	if (external) {
+		const offSite = external.startsWith("http");
+		return (
+			<a
+				href={external}
+				className={className}
+				onClick={onClick}
+				{...(offSite
+					? { target: "_blank", rel: "noopener noreferrer" }
+					: undefined)}
+			>
+				{children}
+			</a>
+		);
+	}
 
 	function handleClick(event: MouseEvent<HTMLAnchorElement>) {
 		if (
@@ -47,9 +77,28 @@ export default function TransitionLink({
 		event.preventDefault();
 		onClick?.();
 
-		if (router.state.location.pathname === href) return;
+		if (router.state.location.pathname === resolvedPath) return;
 
-		runTransition(() => router.navigate({ to: href }));
+		runTransition(() => {
+			if (params) {
+				void router.navigate({ to: "/work/$slug", params });
+			} else {
+				void router.navigate({ to: href });
+			}
+		});
+	}
+
+	if (params) {
+		return (
+			<Link
+				to="/work/$slug"
+				params={params}
+				className={className}
+				onClick={handleClick}
+			>
+				{children}
+			</Link>
+		);
 	}
 
 	return (

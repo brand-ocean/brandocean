@@ -11,53 +11,53 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 const DESKTOP_BREAKPOINT = 900;
 const SERVICES = [
 	{
-		title: "Illustration",
+		title: "Apps & Platforms",
 		items: [
-			"Editorial & Cover Art",
-			"Poster & Print Series",
-			"Spot Illustrations & Icons",
-			"Album & Merch Artwork",
-			"Custom Commissions",
+			"Dashboards & analytics",
+			"CRM & opportunity-beheer",
+			"Klant- en medewerkersportalen",
+			"Planning, roosters & facturatie",
+			"Koppelingen met bestaande systemen",
 		],
 	},
 	{
-		title: "Character Design",
+		title: "E-commerce",
 		items: [
-			"Original Characters & Casts",
-			"Mascots & Brand Creatures",
-			"Turnarounds & Expression Sheets",
-			"Character Bibles",
-			"Sticker & Emote Packs",
+			"Shopify-themes op maat",
+			"Custom webshops",
+			"Checkout & betaalflows",
+			"Productfeeds & voorraadkoppeling",
+			"CRO en A/B-testen",
 		],
 	},
 	{
-		title: "Animation & Motion",
+		title: "AI & Automatisering",
 		items: [
-			"Looping Idents & Bumpers",
-			"Character Rigs & Movement",
-			"Animated Stickers & GIFs",
-			"Social Cutdowns",
-			"Title & Transition Sequences",
+			"Mail- en documentverrijking",
+			"Classificatie & deduplicatie",
+			"AI-assistenten voor je team",
+			"Workflows zonder handwerk",
+			"Rapportages die zichzelf maken",
 		],
 	},
 	{
-		title: "Worldbuilding",
+		title: "Branding & Design",
 		items: [
-			"Illustrated Universes",
-			"Environment & Set Design",
-			"Lore & Story Development",
-			"Props & Visual Systems",
-			"Scene & Panel Layouts",
+			"Merkidentiteit & wordmarks",
+			"UI/UX-ontwerp",
+			"Marketingsites",
+			"Animatie & scroll-interactie",
+			"Designsystemen",
 		],
 	},
 	{
-		title: "Brand Art",
+		title: "Data & Marketing",
 		items: [
-			"Visual Identity & Wordmarks",
-			"Murals & Wall Art",
-			"Packaging & Label Art",
-			"Zines & Lookbooks",
-			"Launch & Campaign Visuals",
+			"Analytics-inrichting",
+			"Meta, Google & TikTok ads",
+			"SEO en technische audits",
+			"Dashboards voor management",
+			"Onderhoud & doorontwikkeling",
 		],
 	},
 ];
@@ -134,10 +134,10 @@ export default function ExpertiseServices() {
 				<div className={`container pad ${styles.headerInner}`}>
 					<div className={styles.row}>
 						<h1>
-							The Things We Nail
+							All Of It, One Hand
 							<Callout
 								className={styles.callout}
-								label="Dead on"
+								label="Precies dat"
 								variant={1}
 								rotation={-20}
 								top="0.25em"

@@ -28,36 +28,39 @@ const BIAS = [
 	{ x: 0.95, y: -4, r: 2 },
 ];
 
+// DRAFT COPY — these quotes are written by us, not yet said by the client.
+// Replace each one with a real, approved quote (and the person's name in
+// `name`) before this page goes live.
 const TESTIMONIALS = [
 	{
 		quote:
-			"Blunt built our look faster than anyone we've worked with. Strange, confident, and completely ours.",
-		name: "Ravi Menon",
-		role: "Crumb, Founder",
+			"We deden alles nog met de hand. Nu staat planning, personeel en facturatie op één plek en is het werk weer leuk.",
+		name: "Check in Cleaning",
+		role: "Hospitality · Zwolle",
 		avatar: "/images/testimonials/testimonial_img_1.jpg",
 		tone: "light",
 	},
 	{
 		quote:
-			"They gave our product a face and a mood. It feels alive now, and it knows exactly when to hold back.",
-		name: "Cleo Baptiste",
-		role: "Nettle, Head of Product",
+			"Eén aanspreekpunt voor de bouw én het beheer. Geen bureau met drie freelancers eromheen, dat scheelt enorm.",
+		name: "Forz",
+		role: "Recruitment · Amsterdam",
 		avatar: "/images/testimonials/testimonial_img_2.jpg",
 		tone: "dark",
 	},
 	{
 		quote:
-			"We came in with a mess and left with a world. Hard to find people this quick who still make it fun.",
-		name: "Otto Lindqvist",
-		role: "Sludge, Co-Founder",
+			"Vaste prijs afgesproken en die bleef staan. Geen nacalculatie, geen verrassingen achteraf.",
+		name: "DUTCHGLOBALMEDIA",
+		role: "Influencer marketing",
 		avatar: "/images/testimonials/testimonial_img_3.jpg",
 		tone: "light",
 	},
 	{
 		quote:
-			"From branding to social, they nailed every piece. Smooth process, loud results, would do it all again.",
-		name: "Nadia Karim",
-		role: "Bramble, CMO",
+			"Van eerste schets tot livegang in weken in plaats van maanden. En het ziet er ook nog eens uit.",
+		name: "Het Sieraad",
+		role: "Events · Amsterdam",
 		avatar: "/images/testimonials/testimonial_img_4.jpg",
 		tone: "dark",
 	},
@@ -302,15 +305,15 @@ export default function Testimonials() {
 	return (
 		<section className={styles.testimonials} ref={sectionRef}>
 			<div className={styles.sectionNav}>
-				<SectionNav left="The Verdict" right="Five Stars, Mostly" />
+				<SectionNav left="Wat klanten zeggen" right="Ongefilterd" />
 			</div>
 
 			<Copy splitType="words">
 				<h2 className={styles.heading}>
-					Proof We Play Well With Others
+					They Kept Working With Us
 					<Callout
 						className={styles.callout}
-						label="No edits"
+						label="Niks bijgeschaafd"
 						variant={3}
 						rotation={-15}
 						top="-0.1em"
@@ -351,7 +354,7 @@ export default function Testimonials() {
 			</div>
 
 			<div className={styles.sectionFooter}>
-				<SectionFooter left="Unfiltered Praise" right="Proof In Ink" />
+				<SectionFooter left="Hun woorden" right="Niet die van ons" />
 			</div>
 		</section>
 	);

@@ -150,16 +150,16 @@ export default function Spotlight() {
 	return (
 		<section className={styles.spotlight} ref={sectionRef}>
 			<div className={styles.sectionNav}>
-				<SectionNav left="Studio Floor" right="Center Stage" />
+				<SectionNav left="Op de werkvloer" right="Zo werkt het" />
 			</div>
 
 			<div className={styles.header}>
 				<Copy>
 					<h3>
-						We Fall Down Rabbit Holes And Come Back With Monsters
+						We Go All The Way Into Your Problem And Come Back With Software
 						<Callout
 							className={styles.callout}
-							label="Keep going"
+							label="Doorgaan"
 							rotation={-15}
 							top="0.65em"
 							left="0.35em"
@@ -184,7 +184,7 @@ export default function Spotlight() {
 			</div>
 
 			<div className={styles.sectionFooter}>
-				<SectionFooter left="Stare Longer" right="Feed Your Eyes" />
+				<SectionFooter left="Kijk rustig rond" right="Er komt meer" />
 			</div>
 		</section>
 	);

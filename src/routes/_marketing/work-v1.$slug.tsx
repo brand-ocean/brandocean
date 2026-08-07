@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "~convex/_generated/api";
 import type { Doc } from "~convex/_generated/dataModel";
 
-export const Route = createFileRoute("/_marketing/work/$slug")({
+export const Route = createFileRoute("/_marketing/work-v1/$slug")({
 	component: ProjectPage,
 });
 
@@ -365,7 +365,7 @@ function NextProject({ next }: { next: Item }) {
 	const projectName = stripYear(next.project);
 	return (
 		<Link
-			to="/work/$slug"
+			to="/work-v1/$slug"
 			params={{ slug: next.slug ?? "" }}
 			className="block"
 		>

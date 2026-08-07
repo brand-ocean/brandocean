@@ -9,34 +9,34 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const EXPERTISE = [
 	{
-		tagline: "Characters people fall for and never forget",
-		title: "Illustration",
+		tagline: "Van losse sheets naar één werkende applicatie",
+		title: "Apps & Platforms",
 		description:
-			"Hand-drawn worlds, casts of oddballs, and cover art with teeth. We make the loud, strange visuals that stop a thumb mid-scroll and hold it there.",
+			"Dashboards, CRM's, portals en planningssystemen die het werk overnemen dat nu met de hand gaat. Inclusief de integraties eromheen, want half opleveren heeft geen zin.",
 		image: "/images/expertise/expertise_card_1.jpg",
 		color: "var(--base-300)",
 	},
 	{
-		tagline: "Mascots with a pulse and a bit of an attitude",
-		title: "Character Design",
+		tagline: "Webshops die het ook op zaterdagavond doen",
+		title: "E-commerce",
 		description:
-			"Original creatures, mascots, and casts built to carry a brand. Each one gets its own face, mood, and reason to exist, ready to run wild anywhere.",
+			"Shopify-themes en custom webshops, van productpagina tot checkout. Snel, meetbaar en gebouwd om te verkopen, niet om mooi te staan in een pitchdeck.",
 		image: "/images/expertise/expertise_card_2.jpg",
 		color: "var(--base-500)",
 	},
 	{
-		tagline: "Drawings that refuse to sit still",
-		title: "Animation & Motion",
+		tagline: "AI die voorstelt, jij beslist",
+		title: "AI & Automation",
 		description:
-			"Loops, idents, and animated bumpers that give still art a heartbeat. Playful movement tuned for late-night channels, socials, and anything that flickers.",
+			"Mail die zichzelf verrijkt en categoriseert, assistenten die je team in eigen taal antwoord geven, patronen die je vooraf ziet in plaats van achteraf. Altijd met jou aan de knop.",
 		image: "/images/expertise/expertise_card_3.jpg",
 		color: "var(--base-700)",
 	},
 	{
-		tagline: "Whole universes from one weird doodle",
-		title: "Worldbuilding",
+		tagline: "Een merk dat klopt tot in de kleinste knop",
+		title: "Branding & Sites",
 		description:
-			"We take a single strange idea and grow it into a full illustrated world, complete with rules, residents, and enough chaos to keep people digging.",
+			"Identiteit, marketingsites en animatie die bij elkaar horen omdat ze door dezelfde handen gaan. Van eerste schets tot livegang, zonder dat er onderweg iets uit elkaar valt.",
 		image: "/images/expertise/expertise_card_4.jpg",
 		color: "var(--base-800)",
 	},

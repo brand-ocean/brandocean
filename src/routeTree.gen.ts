@@ -22,16 +22,16 @@ import { Route as ISlugRouteImport } from './routes/i/$slug'
 import { Route as CSlugRouteImport } from './routes/c/$slug'
 import { Route as MarketingV1RouteImport } from './routes/_marketing/v1'
 import { Route as MarketingFullRouteImport } from './routes/_marketing/full'
-import { Route as BluntWorkRouteImport } from './routes/_blunt/work'
-import { Route as BluntSampleProjectRouteImport } from './routes/_blunt/sample-project'
 import { Route as BluntExpertiseRouteImport } from './routes/_blunt/expertise'
 import { Route as BluntContactRouteImport } from './routes/_blunt/contact'
 import { Route as BluntCareersRouteImport } from './routes/_blunt/careers'
 import { Route as BluntAboutRouteImport } from './routes/_blunt/about'
 import { Route as AuthedSigninRouteImport } from './routes/_authed/signin'
 import { Route as AuthedAppRouteImport } from './routes/_authed/_app'
+import { Route as BluntWorkIndexRouteImport } from './routes/_blunt/work.index'
 import { Route as OgOSlugRouteImport } from './routes/og/o.$slug'
-import { Route as MarketingWorkSlugRouteImport } from './routes/_marketing/work.$slug'
+import { Route as MarketingWorkV1SlugRouteImport } from './routes/_marketing/work-v1.$slug'
+import { Route as BluntWorkSlugRouteImport } from './routes/_blunt/work.$slug'
 import { Route as AuthedAppTasksIndexRouteImport } from './routes/_authed/_app/tasks/index'
 import { Route as AuthedAppSpecsIndexRouteImport } from './routes/_authed/_app/specs/index'
 import { Route as AuthedAppSettingsIndexRouteImport } from './routes/_authed/_app/settings/index'
@@ -45,6 +45,7 @@ import { Route as AuthedAppDashboardIndexRouteImport } from './routes/_authed/_a
 import { Route as AuthedAppClientsIndexRouteImport } from './routes/_authed/_app/clients/index'
 import { Route as AuthedAppBillingIndexRouteImport } from './routes/_authed/_app/billing/index'
 import { Route as AuthedAppSpecsSpecIdRouteImport } from './routes/_authed/_app/specs/$specId'
+import { Route as AuthedAppPortfolioItemIdRouteImport } from './routes/_authed/_app/portfolio/$itemId'
 import { Route as AuthedAppOffertesOfferteIdRouteImport } from './routes/_authed/_app/offertes/$offerteId'
 import { Route as AuthedAppNdasNdaIdRouteImport } from './routes/_authed/_app/ndas/$ndaId'
 import { Route as AuthedAppInvoicesInvoiceIdRouteImport } from './routes/_authed/_app/invoices/$invoiceId'
@@ -121,16 +122,6 @@ const MarketingFullRoute = MarketingFullRouteImport.update({
   path: '/full',
   getParentRoute: () => MarketingRoute,
 } as any)
-const BluntWorkRoute = BluntWorkRouteImport.update({
-  id: '/work',
-  path: '/work',
-  getParentRoute: () => BluntRoute,
-} as any)
-const BluntSampleProjectRoute = BluntSampleProjectRouteImport.update({
-  id: '/sample-project',
-  path: '/sample-project',
-  getParentRoute: () => BluntRoute,
-} as any)
 const BluntExpertiseRoute = BluntExpertiseRouteImport.update({
   id: '/expertise',
   path: '/expertise',
@@ -160,15 +151,25 @@ const AuthedAppRoute = AuthedAppRouteImport.update({
   id: '/_app',
   getParentRoute: () => AuthedRoute,
 } as any)
+const BluntWorkIndexRoute = BluntWorkIndexRouteImport.update({
+  id: '/work/',
+  path: '/work/',
+  getParentRoute: () => BluntRoute,
+} as any)
 const OgOSlugRoute = OgOSlugRouteImport.update({
   id: '/og/o/$slug',
   path: '/og/o/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MarketingWorkSlugRoute = MarketingWorkSlugRouteImport.update({
+const MarketingWorkV1SlugRoute = MarketingWorkV1SlugRouteImport.update({
+  id: '/work-v1/$slug',
+  path: '/work-v1/$slug',
+  getParentRoute: () => MarketingRoute,
+} as any)
+const BluntWorkSlugRoute = BluntWorkSlugRouteImport.update({
   id: '/work/$slug',
   path: '/work/$slug',
-  getParentRoute: () => MarketingRoute,
+  getParentRoute: () => BluntRoute,
 } as any)
 const AuthedAppTasksIndexRoute = AuthedAppTasksIndexRouteImport.update({
   id: '/tasks/',
@@ -235,6 +236,12 @@ const AuthedAppSpecsSpecIdRoute = AuthedAppSpecsSpecIdRouteImport.update({
   path: '/specs/$specId',
   getParentRoute: () => AuthedAppRoute,
 } as any)
+const AuthedAppPortfolioItemIdRoute =
+  AuthedAppPortfolioItemIdRouteImport.update({
+    id: '/portfolio/$itemId',
+    path: '/portfolio/$itemId',
+    getParentRoute: () => AuthedAppRoute,
+  } as any)
 const AuthedAppOffertesOfferteIdRoute =
   AuthedAppOffertesOfferteIdRouteImport.update({
     id: '/offertes/$offerteId',
@@ -319,8 +326,6 @@ export interface FileRoutesByFullPath {
   '/careers': typeof BluntCareersRoute
   '/contact': typeof BluntContactRoute
   '/expertise': typeof BluntExpertiseRoute
-  '/sample-project': typeof BluntSampleProjectRoute
-  '/work': typeof BluntWorkRoute
   '/full': typeof MarketingFullRoute
   '/v1': typeof MarketingV1Route
   '/c/$slug': typeof CSlugRoute
@@ -330,8 +335,10 @@ export interface FileRoutesByFullPath {
   '/o/$slug': typeof OSlugRoute
   '/share/$shareToken': typeof ShareShareTokenRoute
   '/v/$slug': typeof VSlugRoute
-  '/work/$slug': typeof MarketingWorkSlugRoute
+  '/work/$slug': typeof BluntWorkSlugRoute
+  '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
+  '/work/': typeof BluntWorkIndexRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
   '/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
+  '/portfolio/$itemId': typeof AuthedAppPortfolioItemIdRoute
   '/specs/$specId': typeof AuthedAppSpecsSpecIdRoute
   '/billing/': typeof AuthedAppBillingIndexRoute
   '/clients/': typeof AuthedAppClientsIndexRoute
@@ -366,8 +374,6 @@ export interface FileRoutesByTo {
   '/careers': typeof BluntCareersRoute
   '/contact': typeof BluntContactRoute
   '/expertise': typeof BluntExpertiseRoute
-  '/sample-project': typeof BluntSampleProjectRoute
-  '/work': typeof BluntWorkRoute
   '/full': typeof MarketingFullRoute
   '/v1': typeof MarketingV1Route
   '/c/$slug': typeof CSlugRoute
@@ -377,14 +383,17 @@ export interface FileRoutesByTo {
   '/o/$slug': typeof OSlugRoute
   '/share/$shareToken': typeof ShareShareTokenRoute
   '/v/$slug': typeof VSlugRoute
-  '/work/$slug': typeof MarketingWorkSlugRoute
+  '/work/$slug': typeof BluntWorkSlugRoute
+  '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
+  '/work': typeof BluntWorkIndexRoute
   '/backup/$': typeof AuthedAppBackupSplatRoute
   '/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
+  '/portfolio/$itemId': typeof AuthedAppPortfolioItemIdRoute
   '/specs/$specId': typeof AuthedAppSpecsSpecIdRoute
   '/billing': typeof AuthedAppBillingIndexRoute
   '/clients': typeof AuthedAppClientsIndexRoute
@@ -416,8 +425,6 @@ export interface FileRoutesById {
   '/_blunt/careers': typeof BluntCareersRoute
   '/_blunt/contact': typeof BluntContactRoute
   '/_blunt/expertise': typeof BluntExpertiseRoute
-  '/_blunt/sample-project': typeof BluntSampleProjectRoute
-  '/_blunt/work': typeof BluntWorkRoute
   '/_marketing/full': typeof MarketingFullRoute
   '/_marketing/v1': typeof MarketingV1Route
   '/c/$slug': typeof CSlugRoute
@@ -428,8 +435,10 @@ export interface FileRoutesById {
   '/share/$shareToken': typeof ShareShareTokenRoute
   '/v/$slug': typeof VSlugRoute
   '/_blunt/': typeof BluntIndexRoute
-  '/_marketing/work/$slug': typeof MarketingWorkSlugRoute
+  '/_blunt/work/$slug': typeof BluntWorkSlugRoute
+  '/_marketing/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
+  '/_blunt/work/': typeof BluntWorkIndexRoute
   '/_authed/_app/backup/$': typeof AuthedAppBackupSplatRoute
   '/_authed/_app/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
   '/_authed/_app/clients/$clientId': typeof AuthedAppClientsClientIdRoute
@@ -437,6 +446,7 @@ export interface FileRoutesById {
   '/_authed/_app/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
   '/_authed/_app/ndas/$ndaId': typeof AuthedAppNdasNdaIdRoute
   '/_authed/_app/offertes/$offerteId': typeof AuthedAppOffertesOfferteIdRoute
+  '/_authed/_app/portfolio/$itemId': typeof AuthedAppPortfolioItemIdRoute
   '/_authed/_app/specs/$specId': typeof AuthedAppSpecsSpecIdRoute
   '/_authed/_app/billing/': typeof AuthedAppBillingIndexRoute
   '/_authed/_app/clients/': typeof AuthedAppClientsIndexRoute
@@ -466,8 +476,6 @@ export interface FileRouteTypes {
     | '/careers'
     | '/contact'
     | '/expertise'
-    | '/sample-project'
-    | '/work'
     | '/full'
     | '/v1'
     | '/c/$slug'
@@ -478,7 +486,9 @@ export interface FileRouteTypes {
     | '/share/$shareToken'
     | '/v/$slug'
     | '/work/$slug'
+    | '/work-v1/$slug'
     | '/og/o/$slug'
+    | '/work/'
     | '/backup/$'
     | '/billing/$billingClientId'
     | '/clients/$clientId'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/invoices/$invoiceId'
     | '/ndas/$ndaId'
     | '/offertes/$offerteId'
+    | '/portfolio/$itemId'
     | '/specs/$specId'
     | '/billing/'
     | '/clients/'
@@ -513,8 +524,6 @@ export interface FileRouteTypes {
     | '/careers'
     | '/contact'
     | '/expertise'
-    | '/sample-project'
-    | '/work'
     | '/full'
     | '/v1'
     | '/c/$slug'
@@ -525,13 +534,16 @@ export interface FileRouteTypes {
     | '/share/$shareToken'
     | '/v/$slug'
     | '/work/$slug'
+    | '/work-v1/$slug'
     | '/og/o/$slug'
+    | '/work'
     | '/backup/$'
     | '/billing/$billingClientId'
     | '/clients/$clientId'
     | '/invoices/$invoiceId'
     | '/ndas/$ndaId'
     | '/offertes/$offerteId'
+    | '/portfolio/$itemId'
     | '/specs/$specId'
     | '/billing'
     | '/clients'
@@ -562,8 +574,6 @@ export interface FileRouteTypes {
     | '/_blunt/careers'
     | '/_blunt/contact'
     | '/_blunt/expertise'
-    | '/_blunt/sample-project'
-    | '/_blunt/work'
     | '/_marketing/full'
     | '/_marketing/v1'
     | '/c/$slug'
@@ -574,8 +584,10 @@ export interface FileRouteTypes {
     | '/share/$shareToken'
     | '/v/$slug'
     | '/_blunt/'
-    | '/_marketing/work/$slug'
+    | '/_blunt/work/$slug'
+    | '/_marketing/work-v1/$slug'
     | '/og/o/$slug'
+    | '/_blunt/work/'
     | '/_authed/_app/backup/$'
     | '/_authed/_app/billing/$billingClientId'
     | '/_authed/_app/clients/$clientId'
@@ -583,6 +595,7 @@ export interface FileRouteTypes {
     | '/_authed/_app/invoices/$invoiceId'
     | '/_authed/_app/ndas/$ndaId'
     | '/_authed/_app/offertes/$offerteId'
+    | '/_authed/_app/portfolio/$itemId'
     | '/_authed/_app/specs/$specId'
     | '/_authed/_app/billing/'
     | '/_authed/_app/clients/'
@@ -711,20 +724,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingFullRouteImport
       parentRoute: typeof MarketingRoute
     }
-    '/_blunt/work': {
-      id: '/_blunt/work'
-      path: '/work'
-      fullPath: '/work'
-      preLoaderRoute: typeof BluntWorkRouteImport
-      parentRoute: typeof BluntRoute
-    }
-    '/_blunt/sample-project': {
-      id: '/_blunt/sample-project'
-      path: '/sample-project'
-      fullPath: '/sample-project'
-      preLoaderRoute: typeof BluntSampleProjectRouteImport
-      parentRoute: typeof BluntRoute
-    }
     '/_blunt/expertise': {
       id: '/_blunt/expertise'
       path: '/expertise'
@@ -767,6 +766,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_blunt/work/': {
+      id: '/_blunt/work/'
+      path: '/work'
+      fullPath: '/work/'
+      preLoaderRoute: typeof BluntWorkIndexRouteImport
+      parentRoute: typeof BluntRoute
+    }
     '/og/o/$slug': {
       id: '/og/o/$slug'
       path: '/og/o/$slug'
@@ -774,12 +780,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgOSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_marketing/work/$slug': {
-      id: '/_marketing/work/$slug'
+    '/_marketing/work-v1/$slug': {
+      id: '/_marketing/work-v1/$slug'
+      path: '/work-v1/$slug'
+      fullPath: '/work-v1/$slug'
+      preLoaderRoute: typeof MarketingWorkV1SlugRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_blunt/work/$slug': {
+      id: '/_blunt/work/$slug'
       path: '/work/$slug'
       fullPath: '/work/$slug'
-      preLoaderRoute: typeof MarketingWorkSlugRouteImport
-      parentRoute: typeof MarketingRoute
+      preLoaderRoute: typeof BluntWorkSlugRouteImport
+      parentRoute: typeof BluntRoute
     }
     '/_authed/_app/tasks/': {
       id: '/_authed/_app/tasks/'
@@ -870,6 +883,13 @@ declare module '@tanstack/react-router' {
       path: '/specs/$specId'
       fullPath: '/specs/$specId'
       preLoaderRoute: typeof AuthedAppSpecsSpecIdRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
+    '/_authed/_app/portfolio/$itemId': {
+      id: '/_authed/_app/portfolio/$itemId'
+      path: '/portfolio/$itemId'
+      fullPath: '/portfolio/$itemId'
+      preLoaderRoute: typeof AuthedAppPortfolioItemIdRouteImport
       parentRoute: typeof AuthedAppRoute
     }
     '/_authed/_app/offertes/$offerteId': {
@@ -994,6 +1014,7 @@ interface AuthedAppRouteChildren {
   AuthedAppInvoicesInvoiceIdRoute: typeof AuthedAppInvoicesInvoiceIdRoute
   AuthedAppNdasNdaIdRoute: typeof AuthedAppNdasNdaIdRoute
   AuthedAppOffertesOfferteIdRoute: typeof AuthedAppOffertesOfferteIdRoute
+  AuthedAppPortfolioItemIdRoute: typeof AuthedAppPortfolioItemIdRoute
   AuthedAppSpecsSpecIdRoute: typeof AuthedAppSpecsSpecIdRoute
   AuthedAppBillingIndexRoute: typeof AuthedAppBillingIndexRoute
   AuthedAppClientsIndexRoute: typeof AuthedAppClientsIndexRoute
@@ -1020,6 +1041,7 @@ const AuthedAppRouteChildren: AuthedAppRouteChildren = {
   AuthedAppInvoicesInvoiceIdRoute: AuthedAppInvoicesInvoiceIdRoute,
   AuthedAppNdasNdaIdRoute: AuthedAppNdasNdaIdRoute,
   AuthedAppOffertesOfferteIdRoute: AuthedAppOffertesOfferteIdRoute,
+  AuthedAppPortfolioItemIdRoute: AuthedAppPortfolioItemIdRoute,
   AuthedAppSpecsSpecIdRoute: AuthedAppSpecsSpecIdRoute,
   AuthedAppBillingIndexRoute: AuthedAppBillingIndexRoute,
   AuthedAppClientsIndexRoute: AuthedAppClientsIndexRoute,
@@ -1063,9 +1085,9 @@ interface BluntRouteChildren {
   BluntCareersRoute: typeof BluntCareersRoute
   BluntContactRoute: typeof BluntContactRoute
   BluntExpertiseRoute: typeof BluntExpertiseRoute
-  BluntSampleProjectRoute: typeof BluntSampleProjectRoute
-  BluntWorkRoute: typeof BluntWorkRoute
   BluntIndexRoute: typeof BluntIndexRoute
+  BluntWorkSlugRoute: typeof BluntWorkSlugRoute
+  BluntWorkIndexRoute: typeof BluntWorkIndexRoute
 }
 
 const BluntRouteChildren: BluntRouteChildren = {
@@ -1073,9 +1095,9 @@ const BluntRouteChildren: BluntRouteChildren = {
   BluntCareersRoute: BluntCareersRoute,
   BluntContactRoute: BluntContactRoute,
   BluntExpertiseRoute: BluntExpertiseRoute,
-  BluntSampleProjectRoute: BluntSampleProjectRoute,
-  BluntWorkRoute: BluntWorkRoute,
   BluntIndexRoute: BluntIndexRoute,
+  BluntWorkSlugRoute: BluntWorkSlugRoute,
+  BluntWorkIndexRoute: BluntWorkIndexRoute,
 }
 
 const BluntRouteWithChildren = BluntRoute._addFileChildren(BluntRouteChildren)
@@ -1083,13 +1105,13 @@ const BluntRouteWithChildren = BluntRoute._addFileChildren(BluntRouteChildren)
 interface MarketingRouteChildren {
   MarketingFullRoute: typeof MarketingFullRoute
   MarketingV1Route: typeof MarketingV1Route
-  MarketingWorkSlugRoute: typeof MarketingWorkSlugRoute
+  MarketingWorkV1SlugRoute: typeof MarketingWorkV1SlugRoute
 }
 
 const MarketingRouteChildren: MarketingRouteChildren = {
   MarketingFullRoute: MarketingFullRoute,
   MarketingV1Route: MarketingV1Route,
-  MarketingWorkSlugRoute: MarketingWorkSlugRoute,
+  MarketingWorkV1SlugRoute: MarketingWorkV1SlugRoute,
 }
 
 const MarketingRouteWithChildren = MarketingRoute._addFileChildren(

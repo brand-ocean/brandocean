@@ -38,6 +38,7 @@ import type * as invoices from "../invoices.js";
 import type * as items from "../items.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_invoiceMath from "../lib/invoiceMath.js";
+import type * as lib_portfolioBlocks from "../lib/portfolioBlocks.js";
 import type * as ndaTemplates from "../ndaTemplates.js";
 import type * as ndas from "../ndas.js";
 import type * as offertes from "../offertes.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   items: typeof items;
   "lib/auth": typeof lib_auth;
   "lib/invoiceMath": typeof lib_invoiceMath;
+  "lib/portfolioBlocks": typeof lib_portfolioBlocks;
   ndaTemplates: typeof ndaTemplates;
   ndas: typeof ndas;
   offertes: typeof offertes;

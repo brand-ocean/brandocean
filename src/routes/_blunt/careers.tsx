@@ -16,10 +16,10 @@ function CareersPage() {
 			<section className={styles.hero}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Come Make A Mess
+						Pitch Yourself
 						<Callout
 							className={styles.callout}
-							label="Aprons off"
+							label="Kom maar op"
 							rotation={-10}
 							top="0.25em"
 							left="0em"
@@ -32,12 +32,12 @@ function CareersPage() {
 					<SectionFooter
 						left={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>Open Seats</span>
+								<span>Open sollicitatie</span>
 							</Copy>
 						}
 						right={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>The Gigs</span>
+								<span>Altijd welkom</span>
 							</Copy>
 						}
 					/>

@@ -274,18 +274,18 @@ export default function HeroSpotlight() {
 				<div className={`container pad ${styles.heroInner}`}>
 					<div className={styles.heroTop}>
 						<Copy animateOnScroll={false} delay={isInitialLoad ? 6.4 : 1.125}>
-							<h1>Drawn</h1>
+							<h1>One</h1>
 						</Copy>
 					</div>
 					<div className={styles.heroBottom}>
 						<Copy animateOnScroll={false} delay={isInitialLoad ? 6.8 : 1.3}>
 							<p>
-								A digital art and illustration studio that draws loud, thinks
-								weird, and never plays it safe.
+								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.
+								Alles in één hand, voor een vaste prijs.
 							</p>
 						</Copy>
 						<Copy animateOnScroll={false} delay={isInitialLoad ? 6.6 : 1.2}>
-							<h1>Weird</h1>
+							<h1>Hand</h1>
 						</Copy>
 					</div>
 				</div>

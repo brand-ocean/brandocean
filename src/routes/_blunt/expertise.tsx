@@ -16,10 +16,10 @@ function ExpertisePage() {
 			<section className={styles.hero}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Our Bag Of Tricks
+						What We Actually Do
 						<Callout
 							className={styles.callout}
-							label="Open sesame"
+							label="Kijk mee"
 							rotation={20}
 							variant={3}
 							top="0em"
@@ -32,12 +32,12 @@ function ExpertisePage() {
 					<SectionFooter
 						left={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>The Toolkit</span>
+								<span>Het vakgebied</span>
 							</Copy>
 						}
 						right={
 							<Copy variant="scramble" animateOnScroll={false} delay={1.25}>
-								<span>Pick A Weapon</span>
+								<span>Kies maar</span>
 							</Copy>
 						}
 					/>

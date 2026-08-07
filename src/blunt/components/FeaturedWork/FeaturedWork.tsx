@@ -3,8 +3,10 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
 import { useRef } from "react";
+import type { CaseItem } from "@/blunt/utils/portfolio";
 import SectionFooter from "../SectionFooter/SectionFooter";
 import SectionNav from "../SectionNav/SectionNav";
+import TransitionLink from "../TransitionLink";
 import styles from "./FeaturedWork.module.css";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -12,44 +14,28 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 const CARD_Y_OFFSET = 5;
 const CARD_SCALE_STEP = 0.075;
 
-const PROJECTS = [
-	{
-		name: "Ghost Signal",
-		description:
-			"A cast of characters and animated bumpers built for a late-night channel.",
-		tags: ["Characters", "Animation"],
-		image: "/images/featured-work/featured_work_1.jpg",
-		color: "var(--base-400)",
-	},
-	{
-		name: "Stack House",
-		description:
-			"A full illustrated world wrapped around a weird little apartment brand.",
-		tags: ["Illustration", "Worldbuilding"],
-		image: "/images/featured-work/featured_work_2.jpg",
-		color: "var(--base-800)",
-	},
-	{
-		name: "Wet Brain",
-		description:
-			"Cover art and a mascot for an app that had no business being this fun.",
-		tags: ["Cover Art", "Mascot"],
-		image: "/images/featured-work/featured_work_3.jpg",
-		color: "var(--base-600)",
-	},
-	{
-		name: "Slow Burn",
-		description:
-			"A poster series and looping visuals for a music label that never sleeps.",
-		tags: ["Posters", "Motion"],
-		image: "/images/featured-work/featured_work_4.jpg",
-		color: "var(--base-900)",
-	},
+/** Card backgrounds cycle through the palette — they aren't a CMS field. */
+const CARD_COLORS = [
+	"var(--base-400)",
+	"var(--base-800)",
+	"var(--base-600)",
+	"var(--base-900)",
 ];
 
-export default function FeaturedWork() {
+const FALLBACK_IMAGE = "/images/featured-work/featured_work_1.jpg";
+
+export default function FeaturedWork({ items }: { items: CaseItem[] }) {
 	const sectionRef = useRef<HTMLElement>(null);
 	const cardsRef = useRef<(HTMLElement | null)[]>([]);
+
+	const projects = items.map((item, i) => ({
+		name: item.title,
+		slug: item.slug,
+		description: item.summary ?? item.category,
+		tags: item.tags ?? [],
+		image: item.heroImageUrl ?? FALLBACK_IMAGE,
+		color: CARD_COLORS[i % CARD_COLORS.length],
+	}));
 
 	useLenis(() => {
 		ScrollTrigger.update();
@@ -116,18 +102,24 @@ export default function FeaturedWork() {
 				},
 			});
 		},
-		{ scope: sectionRef },
+		// The cards only exist once the items have loaded, so the pin has to be
+		// rebuilt when they arrive.
+		{
+			scope: sectionRef,
+			dependencies: [projects.length],
+			revertOnUpdate: true,
+		},
 	);
 
 	return (
 		<section className={styles.stickyCards} ref={sectionRef}>
 			<div className={styles.sectionNav}>
-				<SectionNav left="The Good Stuff" right="04 / Chaos" />
+				<SectionNav left="Uitgelicht werk" right="04 / Projecten" />
 			</div>
 
-			{PROJECTS.map((project, i) => (
+			{projects.map((project, i) => (
 				<article
-					key={project.name}
+					key={project.slug}
 					className={styles.card}
 					style={{ backgroundColor: project.color }}
 					ref={(el) => {
@@ -139,18 +131,28 @@ export default function FeaturedWork() {
 							<p className={`mono ${styles.tags} sm`}>
 								{project.tags.join(" / ")}
 							</p>
-							<h6>{project.name}</h6>
+							<TransitionLink
+								href="/work/$slug"
+								params={{ slug: project.slug }}
+								className={styles.cardLink}
+							>
+								<h6>{project.name}</h6>
+							</TransitionLink>
 						</div>
 						<p className={styles.description}>{project.description}</p>
 					</div>
-					<div className={`${styles.col} ${styles.colMedia}`}>
+					<TransitionLink
+						href="/work/$slug"
+						params={{ slug: project.slug }}
+						className={`${styles.col} ${styles.colMedia}`}
+					>
 						<img src={project.image} alt={project.name} />
-					</div>
+					</TransitionLink>
 				</article>
 			))}
 
 			<div className={styles.sectionFooter}>
-				<SectionFooter left="Roll Through" right="Best In Show" />
+				<SectionFooter left="Scroll door" right="Meer op de werkpagina" />
 			</div>
 		</section>
 	);

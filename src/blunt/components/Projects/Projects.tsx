@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { useEffect, useRef, useState } from "react";
+import { type CaseItem, itemYear } from "@/blunt/utils/portfolio";
 import TransitionLink from "../TransitionLink";
 import styles from "./Projects.module.css";
 
@@ -7,68 +8,45 @@ const PROJECTS_PER_ROW = 9;
 const TOTAL_ROWS = 10;
 const MOBILE_BREAKPOINT = 1000;
 
+/** The grid keeps its shape while the placeholders fill in from Convex. */
+const FALLBACK_IMAGE = "/images/projects/project_img_1.jpg";
+
 interface Project {
 	name: string;
-	year: number;
+	year?: number;
 	img: string;
+	slug: string;
 }
 
-const PROJECTS: Project[] = [
-	{
-		name: "Ghost Signal",
-		year: 2024,
-		img: "/images/projects/project_img_1.jpg",
-	},
-	{ name: "Wet Brain", year: 2023, img: "/images/projects/project_img_2.jpg" },
-	{
-		name: "Checkout Dream",
-		year: 2025,
-		img: "/images/projects/project_img_3.jpg",
-	},
-	{
-		name: "Deep Space Wave",
-		year: 2022,
-		img: "/images/projects/project_img_4.jpg",
-	},
-	{ name: "Skull Fog", year: 2021, img: "/images/projects/project_img_5.jpg" },
-	{
-		name: "Stack House",
-		year: 2024,
-		img: "/images/projects/project_img_6.jpg",
-	},
-	{
-		name: "Feather Static",
-		year: 2023,
-		img: "/images/projects/project_img_7.jpg",
-	},
-	{ name: "Slow Burn", year: 2020, img: "/images/projects/project_img_8.jpg" },
-	{
-		name: "Pumpkin Hour",
-		year: 2022,
-		img: "/images/projects/project_img_9.jpg",
-	},
-	{
-		name: "Kaleido Beast",
-		year: 2021,
-		img: "/images/projects/project_img_10.jpg",
-	},
-];
+function toProject(item: CaseItem): Project {
+	return {
+		name: item.title,
+		year: itemYear(item),
+		img: item.heroImageUrl ?? FALLBACK_IMAGE,
+		slug: item.slug,
+	};
+}
 
 function ProjectCard({ project }: { project: Project }) {
 	return (
-		<TransitionLink href="/sample-project" className={styles.project}>
+		<TransitionLink
+			href="/work/$slug"
+			params={{ slug: project.slug }}
+			className={styles.project}
+		>
 			<div className={styles.image}>
 				<img src={project.img} alt={project.name} />
 			</div>
 			<div className={styles.info}>
 				<p className="mono sm">{project.name}</p>
-				<p className="mono sm">{project.year}</p>
+				<p className="mono sm">{project.year ?? ""}</p>
 			</div>
 		</TransitionLink>
 	);
 }
 
-export default function Projects() {
+export default function Projects({ items }: { items: CaseItem[] }) {
+	const projects = items.map(toProject);
 	const sectionRef = useRef<HTMLElement>(null);
 	const rowsRef = useRef<(HTMLDivElement | null)[]>([]);
 	const rowStartWidth = useRef(125);
@@ -85,6 +63,7 @@ export default function Projects() {
 		return () => window.removeEventListener("resize", updateMode);
 	}, []);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `projects.length` isn't read in the body, but the rows it renders only exist once the items load — the measurement has to re-run then.
 	useEffect(() => {
 		if (isMobile) return;
 
@@ -166,28 +145,31 @@ export default function Projects() {
 				if (row) row.style.width = "";
 			});
 		};
-	}, [isMobile]);
+		// `projects.length` matters: the rows only exist once the items have
+		// loaded, so the height measurement has to run again after they arrive.
+	}, [isMobile, projects.length]);
+
+	if (projects.length === 0) {
+		return <section className={styles.projects} />;
+	}
 
 	const rowsData: Project[][] = [];
 	let currentProjectIndex = 0;
 
 	for (let r = 0; r < TOTAL_ROWS; r++) {
-		const projects: Project[] = [];
+		const row: Project[] = [];
 		for (let c = 0; c < PROJECTS_PER_ROW; c++) {
-			projects.push(PROJECTS[currentProjectIndex % PROJECTS.length]);
+			row.push(projects[currentProjectIndex % projects.length]);
 			currentProjectIndex++;
 		}
-		rowsData.push(projects);
+		rowsData.push(row);
 	}
 
 	if (isMobile) {
 		return (
 			<section className={`${styles.projects} ${styles.projectsMobile}`}>
-				{PROJECTS.map((project) => (
-					<ProjectCard
-						key={`${project.name}-${project.year}`}
-						project={project}
-					/>
+				{projects.map((project) => (
+					<ProjectCard key={project.slug} project={project} />
 				))}
 			</section>
 		);
