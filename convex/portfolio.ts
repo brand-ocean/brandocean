@@ -262,6 +262,20 @@ function scrollScript(fraction: number): string {
 })();`;
 }
 
+/**
+ * Browser Rendering happily returns a perfectly good PNG of a 404 page, so a
+ * capture that "succeeded" can still be worthless. Check the URL actually
+ * serves before spending a screenshot on it.
+ */
+async function urlIsAlive(url: string): Promise<boolean> {
+	try {
+		const res = await fetch(url, { redirect: "follow" });
+		return res.ok;
+	} catch {
+		return false;
+	}
+}
+
 /** One Browser Rendering call. Throws with the API's own message on failure. */
 async function renderScreenshot(opts: {
 	url: string;
@@ -421,7 +435,9 @@ export const captureItemInternal = internalAction({
 		const failures: string[] = [];
 
 		let heroStorageId: Id<"_storage"> | undefined;
-		if (item.externalUrl) {
+		if (item.externalUrl && !(await urlIsAlive(item.externalUrl))) {
+			failures.push(`hero ${item.externalUrl}: site is down or moved`);
+		} else if (item.externalUrl) {
 			try {
 				const buf = await renderScreenshot({
 					url: item.externalUrl,
@@ -440,6 +456,10 @@ export const captureItemInternal = internalAction({
 
 		const galleryStorageIds: Id<"_storage">[] = [];
 		for (const shot of galleryPlan(item.livePages, item.externalUrl)) {
+			if (!(await urlIsAlive(shot.url))) {
+				failures.push(`gallery ${shot.url}: site is down or moved`);
+				continue;
+			}
 			try {
 				const buf = await renderScreenshot({
 					url: shot.url,
@@ -472,6 +492,33 @@ export const captureItemInternal = internalAction({
 			gallery: galleryStorageIds.length,
 			failures,
 		};
+	},
+});
+
+/**
+ * Drop captured artwork for one item so it falls back to its original
+ * `heroImageUrl`/`gallery`. Used when a capture turned out to be a screenshot
+ * of a dead client site.
+ */
+export const clearCapturedMedia = internalMutation({
+	args: { slug: v.string() },
+	handler: async (ctx, args) => {
+		const item = await ctx.db
+			.query("portfolioItems")
+			.withIndex("by_slug", (q) => q.eq("slug", args.slug))
+			.unique();
+		if (!item) return { cleared: false };
+		const ids = [
+			item.heroImage?.storageId,
+			...(item.galleryMedia ?? []).map((m) => m.storageId),
+		].filter((id): id is Id<"_storage"> => Boolean(id));
+		await ctx.db.patch(item._id, {
+			heroImage: undefined,
+			galleryMedia: undefined,
+			updatedAt: Date.now(),
+		});
+		for (const id of ids) await ctx.storage.delete(id);
+		return { cleared: true, deletedFiles: ids.length };
 	},
 });
 
