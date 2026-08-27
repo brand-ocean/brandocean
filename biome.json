@@ -8,19 +8,28 @@
 	"files": {
 		"ignoreUnknown": false,
 		"includes": [
-			"**/src/**/*",
-			"**/.vscode/**/*",
-			"**/index.html",
+			"apps/**/src/**/*",
+			"packages/**/src/**/*",
+			"tools/**/src/**/*",
 			"**/vite.config.ts",
-			"!**/src/routeTree.gen.ts",
-			"!**/src/styles.css"
+			"vitest.config.ts",
+			"!**/routeTree.gen.ts",
+			"!**/styles.css",
+			"!**/_generated/**",
+			"!.archive/**"
 		]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -33,4 +42,3 @@
 		}
 	}
 }
-

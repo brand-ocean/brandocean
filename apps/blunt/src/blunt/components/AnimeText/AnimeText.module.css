@@ -1,0 +1,116 @@
+.animeText {
+	position: relative;
+	width: 100%;
+	/* Runway: de woorden onthullen zich over de scroll, dus de sectie is
+	   bewust hoger dan een viewport. */
+	min-height: 175svh;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	background-color: var(--base-1000);
+	color: var(--base-100);
+	overflow: clip;
+}
+
+.inner {
+	position: relative;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding-top: 4rem;
+	padding-bottom: 4rem;
+}
+
+.copy {
+	width: min(60ch, 90%);
+}
+
+.paragraph {
+	font-family: var(--font-host-grotesk);
+	font-weight: 700;
+	font-size: clamp(1.25rem, 2.2vw, 2rem);
+	line-height: 1.15;
+	text-align: center;
+}
+
+.paragraph + .paragraph {
+	margin-top: 2rem;
+}
+
+/* Elk woord is een blokje dat oplicht en daarna zijn tekst prijsgeeft.
+   opacity + background-color worden per frame door ScrollTrigger gezet. */
+.word {
+	display: inline-block;
+	position: relative;
+	isolation: isolate;
+	margin-right: 0.2rem;
+	margin-bottom: 0.2rem;
+	padding: 0.1rem 0.2rem;
+	border-radius: 8px;
+	opacity: 0;
+}
+
+.wordText {
+	position: relative;
+	opacity: 0;
+}
+
+/* Keywords krijgen een gekleurde pil achter zich. */
+.keyword {
+	display: inline-block;
+	width: 100%;
+	height: 100%;
+	padding: 0.1rem 0;
+	border-radius: 2rem;
+	color: var(--base-1000);
+}
+
+.keyword::before {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: calc(100% + 1rem);
+	height: calc(100% + 0.1rem);
+	border-radius: 8px;
+	z-index: -1;
+}
+
+.kwBlue::before {
+	background-color: var(--base-400);
+}
+
+.kwCoral::before {
+	background-color: var(--base-800);
+}
+
+.kwYellow::before {
+	background-color: var(--base-700);
+}
+
+@media (max-width: 1000px) {
+	.animeText {
+		min-height: 150svh;
+	}
+
+	.copy {
+		width: 90%;
+	}
+}
+
+/* Bij reduced motion slaat de component de ScrollTrigger over, dus er komen
+   nooit inline styles overheen en volstaat de bronvolgorde. */
+@media (prefers-reduced-motion: reduce) {
+	.word,
+	.wordText {
+		opacity: 1;
+	}
+
+	.word {
+		background-color: transparent;
+	}
+}
