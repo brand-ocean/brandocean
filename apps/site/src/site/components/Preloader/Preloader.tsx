@@ -7,13 +7,20 @@ import { useLenis } from "lenis/react";
 import { useEffect, useRef, useState } from "react";
 import styles from "./Preloader.module.css";
 
-gsap.registerPlugin(useGSAP, SplitText, CustomEase, ScrollTrigger);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(useGSAP, SplitText, CustomEase, ScrollTrigger);
 
-if (!CustomEase.get("hop")) {
-	CustomEase.create("hop", "0.8, 0, 0.2, 1");
-}
-if (!CustomEase.get("hop2")) {
-	CustomEase.create("hop2", "0.9, 0, 0.1, 1");
+	// Moet binnen dezelfde guard: CustomEase werkt pas nadat het als plugin
+	// geregistreerd is, en op de server gebeurt dat niet.
+	if (!CustomEase.get("hop")) {
+		CustomEase.create("hop", "0.8, 0, 0.2, 1");
+	}
+	if (!CustomEase.get("hop2")) {
+		CustomEase.create("hop2", "0.9, 0, 0.1, 1");
+	}
 }
 
 export let isInitialLoad = true;

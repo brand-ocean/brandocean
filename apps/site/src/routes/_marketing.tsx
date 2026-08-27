@@ -3,7 +3,7 @@ import { ConvexProvider } from "convex/react";
 import { BrandoceanFooter } from "@/components/footer/BrandoceanFooter";
 import { LenisProvider } from "@/components/LenisProvider";
 import { Navigation } from "@/components/navigation/Navigation";
-import { convex } from "@/lib/convex";
+import { getConvexClient } from "@/lib/convex";
 
 export const Route = createFileRoute("/_marketing")({
 	component: MarketingLayout,
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_marketing")({
 
 function MarketingLayout() {
 	return (
-		<ConvexProvider client={convex}>
+		<ConvexProvider client={getConvexClient()}>
 			<LenisProvider>
 				<div className="marketing-area">
 					<Navigation />

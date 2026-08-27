@@ -9,7 +9,12 @@ import SectionFooter from "../SectionFooter/SectionFooter";
 import SectionNav from "../SectionNav/SectionNav";
 import styles from "./Spotlight.module.css";
 
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 const IMAGES = [
 	"/images/spotlight/spotlight_img_1.jpg",

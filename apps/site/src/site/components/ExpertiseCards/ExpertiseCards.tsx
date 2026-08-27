@@ -5,7 +5,12 @@ import { useLenis } from "lenis/react";
 import { useRef } from "react";
 import styles from "./ExpertiseCards.module.css";
 
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 const EXPERTISE = [
 	{

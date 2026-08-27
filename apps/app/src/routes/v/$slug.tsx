@@ -3,7 +3,7 @@ import { ConvexProvider, useMutation, useQuery } from "convex/react";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { Brandmark, Logotype } from "@/components/brand";
-import { convex } from "@/lib/convex";
+import { getConvexClient } from "@/lib/convex";
 import { convexHttp } from "@/lib/convex-http";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/v/$slug")({
 // hem niet nodig.
 function PublicSpecRoute() {
 	return (
-		<ConvexProvider client={convex}>
+		<ConvexProvider client={getConvexClient()}>
 			<PublicSpec />
 		</ConvexProvider>
 	);

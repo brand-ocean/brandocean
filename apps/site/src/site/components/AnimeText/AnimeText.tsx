@@ -7,7 +7,12 @@ import SectionFooter from "../SectionFooter/SectionFooter";
 import SectionNav from "../SectionNav/SectionNav";
 import styles from "./AnimeText.module.css";
 
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 const PARAGRAPHS = [
 	"Welkom in de hoek van het internet waar digitale ervaringen worden gebouwd, niet alleen voor de scroll, maar voor het verhaal. Dit is niet zomaar een site. Het is een werkend archief van experimenten, inzichten, en stille successen.",

@@ -8,7 +8,12 @@ import { scrambleTextStaggered } from "../../utils/textAnimations";
 import TransitionLink, { type SiteHref } from "../TransitionLink";
 import styles from "./Menu.module.css";
 
-gsap.registerPlugin(SplitText, useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(SplitText, useGSAP);
+}
 
 const LEFT_LINKS: { label: string; href: SiteHref }[] = [
 	{ label: "over ons", href: "/about" },

@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { ConvexProvider } from "convex/react";
-import { convex } from "@/lib/convex";
+import { getConvexClient } from "@/lib/convex";
 import SiteLayout from "@/site/SiteLayout";
 
 export const Route = createFileRoute("/_site")({
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_site")({
 
 function SiteShell() {
 	return (
-		<ConvexProvider client={convex}>
+		<ConvexProvider client={getConvexClient()}>
 			<SiteLayout>
 				<Outlet />
 			</SiteLayout>

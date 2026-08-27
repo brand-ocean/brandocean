@@ -4,10 +4,14 @@
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "@tanstack/react-start/server-entry",
-	// Let op: deze twee namen staan nu nog op Webflow (A-record 199.247.24.111).
-	// Een deploy met custom_domain laat Cloudflare die records overschrijven.
 	"routes": [
 		{ "pattern": "brandocean.nl", "custom_domain": true },
+		// LET OP: dit werkt pas als het bestaande `www`-record (CNAME naar
+		// brandocean.nl) uit Cloudflare DNS verwijderd is. Zolang het er staat
+		// weigert wrangler ("externally managed DNS records"). Een gewone route
+		// in plaats hiervan is geen alternatief: www CNAME't dan naar de apex,
+		// die zelf een custom domain is, en dat geeft geen geldige origin —
+		// requests hangen dan zonder de worker te bereiken.
 		{ "pattern": "www.brandocean.nl", "custom_domain": true }
 	]
 }

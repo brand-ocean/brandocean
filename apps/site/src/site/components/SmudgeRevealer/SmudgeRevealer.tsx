@@ -5,7 +5,12 @@ import Callout from "../Callout/Callout";
 import Copy from "../Copy/Copy";
 import styles from "./SmudgeRevealer.module.css";
 
-gsap.registerPlugin(useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(useGSAP);
+}
 
 const CONFIG = {
 	smoothing: 0.1,

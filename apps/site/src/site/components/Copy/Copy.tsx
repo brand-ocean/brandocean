@@ -6,7 +6,12 @@ import { useLenis } from "lenis/react";
 import React, { type ReactNode, type Ref, useRef } from "react";
 import styles from "./Copy.module.css";
 
-gsap.registerPlugin(SplitText, ScrollTrigger, useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(SplitText, ScrollTrigger, useGSAP);
+}
 
 interface CalloutEntry {
 	callout: HTMLElement;

@@ -12,9 +12,17 @@ import {
 } from "react";
 import styles from "./TransitionProvider.module.css";
 
-gsap.registerPlugin(CustomEase, SplitText, ScrollTrigger);
-if (!CustomEase.get("hop")) {
-	CustomEase.create("hop", "0.8, 0, 0.2, 1");
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(CustomEase, SplitText, ScrollTrigger);
+
+	// Moet binnen dezelfde guard: CustomEase werkt pas nadat het als plugin
+	// geregistreerd is, en op de server gebeurt dat niet.
+	if (!CustomEase.get("hop")) {
+		CustomEase.create("hop", "0.8, 0, 0.2, 1");
+	}
 }
 
 const ROWS = 4;

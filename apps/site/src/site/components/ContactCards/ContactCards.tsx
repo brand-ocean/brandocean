@@ -7,7 +7,12 @@ import SectionFooter from "../SectionFooter/SectionFooter";
 import SectionNav from "../SectionNav/SectionNav";
 import styles from "./ContactCards.module.css";
 
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+// GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
+// registreert, en workerd verbiedt timers op module-scope — dat liet de
+// SSR-boundary knappen. Registreren hoeft alleen in de browser.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 const MOBILE_BREAKPOINT = 1000;
 
