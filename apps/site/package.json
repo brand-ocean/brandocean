@@ -7,7 +7,7 @@
     "dev": "vite dev --port 2224",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "cd ../../packages/backend && convex deploy --cmd-url-env-var-name VITE_CONVEX_URL --cmd 'cd ../../apps/site && vite build && wrangler deploy'"
+    "deploy": "cd ../../packages/backend && convex deploy --env-file ../../.env.local --cmd-url-env-var-name VITE_CONVEX_URL --cmd 'cd ../../apps/site && vite build && wrangler deploy'"
   },
   "dependencies": {
     "@brandocean/backend": "workspace:*",

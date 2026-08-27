@@ -11,8 +11,8 @@
     "nanoid": "^5.1.9"
   },
   "scripts": {
-    "dev": "convex dev",
-    "deploy": "convex deploy",
+    "dev": "convex dev --env-file ../../.env.local",
+    "deploy": "convex deploy --env-file ../../.env.local",
     "test": "vitest run"
   }
 }
