@@ -1,0 +1,224 @@
+/* Ported 1:1 from blunt-main/src/app/globals.css.
+   Only change: every rule is scoped under `.bo-site` (the marketing shell wrapper)
+   so the authed dashboard keeps its own resets and typography. Class names,
+   values and media queries are otherwise untouched. */
+
+.bo-site {
+	--base-100: #ffffeb;
+	--base-200: #f4f5e0;
+	--base-300: #b6dedb;
+	--base-400: #216ad1;
+	--base-500: #ffbab4;
+	--base-600: #7c4563;
+	--base-700: #f7f780;
+	--base-800: #ff8356;
+	--base-900: #5ea85e;
+	--base-1000: #0f0f0f;
+	--font-schabo: "SCHABO", sans-serif;
+	--font-host-grotesk: "Host Grotesk", sans-serif;
+	--font-dm-mono: "DM Mono", monospace;
+	--font-shadows-into-light: "Shadows Into Light", cursive;
+
+	/* Kleur van het blokje dat een nog niet onthuld woord bedekt in
+	   AnimeText. base-100 als RGB, want het wordt met alpha gezet. */
+	--anime-word-rgb: 255, 255, 235;
+
+	/* Hoogte van de in-aanbouw-strip; als ruimte onder de footer. */
+	--coming-soon-height: 2.5rem;
+}
+
+.bo-site {
+	padding-bottom: var(--coming-soon-height);
+}
+
+.bo-site,
+.bo-site * {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	-webkit-tap-highlight-color: transparent;
+	user-select: none;
+}
+
+html.bo-site-scroll {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+html.bo-site-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+.bo-site {
+	background-color: var(--base-100);
+	color: var(--base-1000);
+}
+
+/* headers - v1 */
+.bo-site h1,
+.bo-site h2,
+.bo-site h3,
+.bo-site h4,
+.bo-site h5,
+.bo-site h6 {
+	font-family: var(--font-schabo);
+	font-weight: 400;
+	font-style: normal;
+	line-height: 0.85;
+	text-transform: uppercase;
+	letter-spacing: normal;
+}
+
+.bo-site h1 {
+	font-size: clamp(4rem, 10vw, 10rem);
+}
+
+.bo-site h2 {
+	font-size: clamp(3.5rem, 9vw, 9rem);
+}
+
+.bo-site h3 {
+	font-size: clamp(3rem, 8vw, 8rem);
+}
+
+.bo-site h4 {
+	font-size: clamp(2.5rem, 7vw, 7rem);
+}
+
+.bo-site h5 {
+	font-size: clamp(2rem, 6vw, 6rem);
+}
+
+.bo-site h6 {
+	font-size: clamp(1.5rem, 5vw, 5rem);
+}
+
+/* headers - v2 */
+.bo-site h1.v2,
+.bo-site h2.v2,
+.bo-site h3.v2,
+.bo-site h4.v2,
+.bo-site h5.v2,
+.bo-site h6.v2 {
+	font-family: var(--font-host-grotesk);
+	font-weight: 400;
+	line-height: 0.85;
+	letter-spacing: -2%;
+	text-transform: none;
+}
+
+.bo-site h1.v2 {
+	font-size: clamp(3.5rem, 9vw, 9rem);
+}
+
+.bo-site h2.v2 {
+	font-size: clamp(3rem, 8vw, 8rem);
+}
+
+.bo-site h3.v2 {
+	font-size: clamp(2.5rem, 7vw, 7rem);
+}
+
+.bo-site h4.v2 {
+	font-size: clamp(2rem, 6vw, 6rem);
+}
+
+.bo-site h5.v2 {
+	font-size: clamp(1.5rem, 5vw, 5rem);
+}
+
+.bo-site h6.v2 {
+	font-size: clamp(1.25rem, 4vw, 4rem);
+}
+
+/* p - body */
+.bo-site p {
+	font-family: var(--font-host-grotesk);
+	font-size: 1.15rem;
+	font-weight: 400;
+	letter-spacing: -2%;
+}
+
+.bo-site p.sm {
+	font-size: 1rem;
+}
+
+.bo-site p.md {
+	font-size: 1.25rem;
+}
+
+.bo-site p.lg {
+	font-size: 1.35rem;
+}
+
+/* p - mono */
+.bo-site p.mono {
+	font-family: var(--font-dm-mono);
+	font-size: 0.85rem;
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+.bo-site p.mono.sm {
+	font-size: 0.8rem;
+}
+
+.bo-site p.mono.md {
+	font-size: 0.9rem;
+}
+
+.bo-site p.mono.lg {
+	font-size: 0.95rem;
+}
+
+/* p - hand */
+.bo-site p.hand {
+	font-family: var(--font-shadows-into-light);
+	font-size: 1rem;
+	font-weight: 900;
+	text-transform: lowercase;
+	-webkit-text-stroke: 0.05px black;
+	letter-spacing: 0.5px;
+}
+
+.bo-site p.hand.sm {
+	font-size: 0.9rem;
+}
+
+.bo-site p.hand.md {
+	font-size: 1.1rem;
+}
+
+.bo-site p.hand.lg {
+	font-size: 1.2rem;
+}
+
+/* images */
+.bo-site img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* container */
+.bo-site .container {
+	position: relative;
+	width: 100%;
+	max-width: 2000px;
+	height: 100%;
+	margin: 0 auto;
+}
+
+.bo-site .pad {
+	padding: 2.25rem;
+}
+
+.bo-site .pad-media {
+	padding: 0 0.75rem;
+}
+
+@media (max-width: 1000px) {
+	.bo-site .pad {
+		padding: 1.5rem;
+	}
+}

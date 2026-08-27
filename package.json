@@ -9,16 +9,14 @@
   ],
   "scripts": {
     "dev": "concurrently -n app,convex -c blue,magenta \"cd apps/app && bun run dev\" \"cd packages/backend && bun run dev\"",
-    "dev:blunt": "cd apps/blunt && bun run dev",
     "dev:site": "cd apps/site && bun run dev",
     "dev:convex": "cd packages/backend && bun run dev",
     "build": "bun run --filter '*' build",
     "//deploy": "Geen `bun run --filter` hier: die multiplext de output door een pipe, waardoor `convex deploy` geen TTY heeft en zijn prod-bevestiging niet kan stellen.",
     "deploy:app": "cd apps/app && bun run deploy",
-    "deploy:blunt": "cd apps/blunt && bun run deploy",
     "deploy:site": "cd apps/site && bun run deploy",
     "test": "vitest run",
-    "typecheck": "for w in apps/app apps/blunt apps/site packages/ui; do (cd $w && bunx tsc --noEmit) || exit 1; done",
+    "typecheck": "for w in apps/app apps/site packages/ui; do (cd $w && bunx tsc --noEmit) || exit 1; done",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"

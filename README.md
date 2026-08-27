@@ -8,10 +8,11 @@ Monorepo met de Brandocean-apps op één gedeelde Convex-backend.
 apps/
   app/      admin tool (offertes, contracten, facturen, boekhouding, feedback,
             NDA's, specs, portfolio) + de publieke klantroutes /o /v /c /i /n /ns /share
-  blunt/    de Brandocean-website — "blunt" is de naam van het template
-            (blunt-main), niet van een merk. Home, about, work, expertise,
-            careers, contact; work-grid en cases komen uit de CMS.
-  site/     de vorige generatie van diezelfde site (/v1, /full)
+            → app.brandocean.nl
+  site/     de Brandocean-website: home, about, work, expertise, careers,
+            contact. Work-grid en cases komen uit de CMS in apps/app.
+            De vorige generatie staat ernaast op /v1 en /work-v1/$slug.
+            → brandocean.nl
 packages/
   backend/  Convex — één gedeelde deployment voor alle apps
   ui/       shadcn-primitives, brandmark, theme/language context,
@@ -34,7 +35,7 @@ Twee aliassen, in elke app hetzelfde:
 Die terugval staat in `tsconfig.json` van elke app. Daardoor werkt
 `@/components/ui/button` zonder dat elke app de primitives dupliceert, en kan een
 app een gedeeld bestand overrulen door het zelf onder dezelfde naam te zetten
-(zo laadt blunt zijn eigen `src/styles.css`).
+(zo laadt `apps/site` zijn eigen `src/styles.css`).
 
 ## Draaien
 
@@ -42,8 +43,7 @@ app een gedeeld bestand overrulen door het zelf onder dezelfde naam te zetten
 bun install
 
 bun run dev          # apps/app + convex dev
-bun run dev:blunt    # poort 2223
-bun run dev:site     # poort 2224
+bun run dev:site     # poort 2223
 bun run dev:convex   # alleen de backend
 
 bun run typecheck    # tsc over alle workspaces
@@ -58,19 +58,16 @@ injecteert de deployment-URL als `VITE_CONVEX_URL` in de build van de app:
 
 ```bash
 bun run deploy:app
-bun run deploy:blunt
 bun run deploy:site
 ```
 
-Domeinen staan in `apps/*/wrangler.jsonc`. Alleen `apps/app` heeft er nu een
-(`app.brandocean.nl`). `apps/blunt` is de publieke site en hoort op
-brandocean.nl; `apps/site` is de oude generatie en heeft alleen een domein
-nodig zolang je 'm nog wilt kunnen bekijken.
+Domeinen staan in `apps/*/wrangler.jsonc`: `apps/app` op `app.brandocean.nl`,
+`apps/site` op `brandocean.nl` en `www.brandocean.nl`.
 
 ## Nieuwe miniapp
 
 1. `apps/<naam>/` met `package.json`, `vite.config.ts`, `wrangler.jsonc` en
-   `tsconfig.json` — kopieer die van `apps/site`, dat is de kleinste.
+   `tsconfig.json` — kopieer die van `apps/site`.
 2. `src/routes/__root.tsx` en `src/router.tsx` erbij.
 3. `@source "../../../apps/<naam>/src";` toevoegen in
    `packages/ui/src/styles.css`, anders ziet Tailwind de klassen niet.

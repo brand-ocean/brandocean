@@ -9,7 +9,6 @@
 /* Tailwind moet de bronnen van alle apps + dit package zien. */
 @source "../src";
 @source "../../../apps/app/src";
-@source "../../../apps/blunt/src";
 @source "../../../apps/site/src";
 
 @custom-variant dark (&:is(.dark *));

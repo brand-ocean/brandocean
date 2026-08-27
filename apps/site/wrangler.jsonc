@@ -3,7 +3,11 @@
 	"name": "brandocean-site",
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "@tanstack/react-start/server-entry"
-	// TODO: eigen domein koppelen, bv:
-	// "routes": [{ "pattern": "brandocean.nl", "custom_domain": true }]
+	"main": "@tanstack/react-start/server-entry",
+	// Let op: deze twee namen staan nu nog op Webflow (A-record 199.247.24.111).
+	// Een deploy met custom_domain laat Cloudflare die records overschrijven.
+	"routes": [
+		{ "pattern": "brandocean.nl", "custom_domain": true },
+		{ "pattern": "www.brandocean.nl", "custom_domain": true }
+	]
 }
