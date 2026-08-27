@@ -4,19 +4,11 @@
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "@tanstack/react-start/server-entry",
+	// Beide als custom domain: wrangler beheert de DNS-records zelf. Een gewone
+	// route voor www werkt niet — die CNAME't dan naar de apex, en die is zelf
+	// een custom domain, wat geen geldige origin oplevert.
 	"routes": [
-		{ "pattern": "brandocean.nl", "custom_domain": true }
-
-		// TODO www — zet deze regel terug zodra het bestaande `www`-record
-		// (CNAME naar brandocean.nl) uit Cloudflare DNS verwijderd is:
-		//
-		//   { "pattern": "www.brandocean.nl", "custom_domain": true }
-		//
-		// Zolang dat record er staat weigert wrangler het aan te maken
-		// ("externally managed DNS records") en faalt de hele deploy. Een
-		// gewone route in plaats van een custom domain is geen uitweg: www
-		// CNAME't dan naar de apex, die zelf een custom domain is, en dat
-		// levert geen geldige origin op — requests hangen zonder de worker
-		// ooit te bereiken.
+		{ "pattern": "brandocean.nl", "custom_domain": true },
+		{ "pattern": "www.brandocean.nl", "custom_domain": true }
 	]
 }
