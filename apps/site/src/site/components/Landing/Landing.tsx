@@ -1,11 +1,12 @@
 import Callout from "../Callout/Callout";
-import SectionFooter from "../SectionFooter/SectionFooter";
 import SectionNav from "../SectionNav/SectionNav";
 import styles from "./Landing.module.css";
 
 /**
- * De coming-soon landing op `/`. Bewust één scherm: de Preloader speelt af,
- * hier staat waarom de site er nog niet is, en de Footer eronder doet de rest.
+ * De coming-soon landing op `/`. Geen menu en geen hero-sectie: de Preloader
+ * speelt af, hier staat waarom de site er nog niet is, en daaronder volgt
+ * direct de footer met het contact. De SectionNav bovenin is wat er van de
+ * navigatie over is.
  */
 export default function Landing() {
 	return (
@@ -53,18 +54,6 @@ export default function Landing() {
 					</a>
 				</div>
 			</div>
-
-			<SectionFooter
-				left="In aanbouw"
-				right={
-					<span className={styles.scrollHint}>
-						Meer hieronder
-						<span className={styles.arrow} aria-hidden="true">
-							↓
-						</span>
-					</span>
-				}
-			/>
 		</section>
 	);
 }

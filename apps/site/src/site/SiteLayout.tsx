@@ -62,13 +62,18 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 
 	const lenisOptions = isMobile ? LENIS_MOBILE : LENIS_DESKTOP;
 
+	// De coming-soon-landing draait zonder navigatie: geen menu bovenin en een
+	// footer zonder linkkolommen. Na de preloader zie je meteen de boodschap en
+	// daaronder het contact, verder niks.
+	const isComingSoon = pathname === "/";
+
 	return (
 		<div className="bo-site">
 			<TransitionProvider>
 				<ReactLenis root options={lenisOptions}>
-					<Menu />
+					{!isComingSoon && <Menu />}
 					{children}
-					<Footer key={pathname} />
+					<Footer key={pathname} minimal={isComingSoon} />
 				</ReactLenis>
 			</TransitionProvider>
 		</div>

@@ -101,7 +101,16 @@ function clamp(val: number, min: number, max: number) {
 	return Math.max(min, Math.min(max, val));
 }
 
-export default function Footer() {
+interface FooterProps {
+	/**
+	 * Coming-soon-variant: zonder de linkkolommen. Die wijzen naar pagina's die
+	 * we nog niet aanprijzen, dus op de landing blijft alleen de merknaam,
+	 * de pay-off en de contactregel over.
+	 */
+	minimal?: boolean;
+}
+
+export default function Footer({ minimal = false }: FooterProps) {
 	const sectionRef = useRef<HTMLElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [pillVariants, setPillVariants] = useState(() =>
@@ -421,18 +430,35 @@ export default function Footer() {
 							</p>
 						</div>
 
-						<div className={styles.columns}>
-							{NAV.map((group) => (
-								<div
-									key={group.title}
-									className={`${styles.column} ${styles.columnNav}`}
-								>
-									<p className="mono sm">{group.title}</p>
+						{!minimal && (
+							<div className={styles.columns}>
+								{NAV.map((group) => (
+									<div
+										key={group.title}
+										className={`${styles.column} ${styles.columnNav}`}
+									>
+										<p className="mono sm">{group.title}</p>
+										<ul>
+											{group.links.map((link) => (
+												<li key={link.label}>
+													<p>
+														<TransitionLink href={link.href}>
+															{link.label}
+														</TransitionLink>
+													</p>
+												</li>
+											))}
+										</ul>
+									</div>
+								))}
+
+								<div className={styles.column}>
+									<p className="mono sm">Connect</p>
 									<ul>
-										{group.links.map((link) => (
+										{SOCIAL.map((link) => (
 											<li key={link.label}>
 												<p>
-													<TransitionLink href={link.href}>
+													<TransitionLink href="/" external={link.external}>
 														{link.label}
 													</TransitionLink>
 												</p>
@@ -440,23 +466,8 @@ export default function Footer() {
 										))}
 									</ul>
 								</div>
-							))}
-
-							<div className={styles.column}>
-								<p className="mono sm">Connect</p>
-								<ul>
-									{SOCIAL.map((link) => (
-										<li key={link.label}>
-											<p>
-												<TransitionLink href="/" external={link.external}>
-													{link.label}
-												</TransitionLink>
-											</p>
-										</li>
-									))}
-								</ul>
 							</div>
-						</div>
+						)}
 					</div>
 
 					<div className={styles.bottom}>
