@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import { ReactLenis } from "lenis/react";
 import { type ReactNode, useEffect, useState } from "react";
+import ComingSoon from "./components/ComingSoon/ComingSoon";
 import Footer from "./components/Footer/Footer";
 import Menu from "./components/Menu/Menu";
 import TransitionProvider from "./components/TransitionProvider/TransitionProvider";
@@ -69,6 +70,7 @@ export default function BluntLayout({ children }: { children: ReactNode }) {
 					<Menu />
 					{children}
 					<Footer key={pathname} />
+					<ComingSoon />
 				</ReactLenis>
 			</TransitionProvider>
 		</div>

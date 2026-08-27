@@ -22,6 +22,13 @@
 	/* Kleur van het blokje dat een nog niet onthuld woord bedekt in
 	   AnimeText. base-100 als RGB, want het wordt met alpha gezet. */
 	--anime-word-rgb: 255, 255, 235;
+
+	/* Hoogte van de in-aanbouw-strip; als ruimte onder de footer. */
+	--coming-soon-height: 2.5rem;
+}
+
+.blunt {
+	padding-bottom: var(--coming-soon-height);
 }
 
 .blunt,

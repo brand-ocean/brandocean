@@ -4,7 +4,6 @@ import AnimeText from "@/blunt/components/AnimeText/AnimeText";
 import FeaturedWork from "@/blunt/components/FeaturedWork/FeaturedWork";
 import HeroSpotlight from "@/blunt/components/HeroSpotlight/HeroSpotlight";
 import Preloader from "@/blunt/components/Preloader/Preloader";
-import Testimonials from "@/blunt/components/Testimonials/Testimonials";
 import { api } from "~convex/_generated/api";
 
 export const Route = createFileRoute("/_blunt/")({
@@ -20,7 +19,9 @@ function Home() {
 			<HeroSpotlight />
 			<AnimeText />
 			<FeaturedWork items={featured ?? []} />
-			<Testimonials />
+			{/* Testimonials staan uit tot er goedgekeurde quotes zijn — de
+			    huidige zijn door onszelf geschreven en staan op naam van
+			    echte klanten. Terugzetten: import + <Testimonials />. */}
 		</>
 	);
 }
