@@ -5,13 +5,18 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "@tanstack/react-start/server-entry",
 	"routes": [
-		{ "pattern": "brandocean.nl", "custom_domain": true },
-		// LET OP: dit werkt pas als het bestaande `www`-record (CNAME naar
-		// brandocean.nl) uit Cloudflare DNS verwijderd is. Zolang het er staat
-		// weigert wrangler ("externally managed DNS records"). Een gewone route
-		// in plaats hiervan is geen alternatief: www CNAME't dan naar de apex,
-		// die zelf een custom domain is, en dat geeft geen geldige origin —
-		// requests hangen dan zonder de worker te bereiken.
-		{ "pattern": "www.brandocean.nl", "custom_domain": true }
+		{ "pattern": "brandocean.nl", "custom_domain": true }
+
+		// TODO www — zet deze regel terug zodra het bestaande `www`-record
+		// (CNAME naar brandocean.nl) uit Cloudflare DNS verwijderd is:
+		//
+		//   { "pattern": "www.brandocean.nl", "custom_domain": true }
+		//
+		// Zolang dat record er staat weigert wrangler het aan te maken
+		// ("externally managed DNS records") en faalt de hele deploy. Een
+		// gewone route in plaats van een custom domain is geen uitweg: www
+		// CNAME't dan naar de apex, die zelf een custom domain is, en dat
+		// levert geen geldige origin op — requests hangen zonder de worker
+		// ooit te bereiken.
 	]
 }
