@@ -1,0 +1,197 @@
+.intake {
+	position: relative;
+	width: 100%;
+	min-height: 100svh;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	background-color: var(--base-100);
+	color: var(--base-1000);
+	overflow: clip;
+}
+
+.inner {
+	position: relative;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding-top: clamp(5rem, 12vh, 8rem);
+	padding-bottom: clamp(4rem, 10vh, 6rem);
+}
+
+.panel {
+	width: min(62ch, 100%);
+	display: flex;
+	flex-direction: column;
+	gap: 1.75rem;
+}
+
+.heading {
+	font-size: clamp(2.5rem, 7vw, 5rem);
+	line-height: 0.85;
+}
+
+.lead {
+	font-family: var(--font-host-grotesk);
+	font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+	line-height: 1.4;
+	max-width: 48ch;
+}
+
+/* Voortgang zonder percentage: een streepje per vraag. De bezoeker ziet dat er
+   vragen bij kunnen komen zonder dat een balk terugspringt. */
+.progress {
+	display: flex;
+	gap: 0.35rem;
+	align-items: center;
+}
+
+.tick {
+	width: 1.75rem;
+	height: 3px;
+	border-radius: 2px;
+	background-color: var(--base-1000);
+	opacity: 0.15;
+}
+
+.tickDone {
+	opacity: 1;
+}
+
+.tickCurrent {
+	opacity: 0.55;
+}
+
+.question {
+	font-family: var(--font-host-grotesk);
+	font-size: clamp(1.4rem, 2.6vw, 2rem);
+	line-height: 1.15;
+	font-weight: 600;
+}
+
+.detail {
+	font-family: var(--font-host-grotesk);
+	font-size: 1rem;
+	line-height: 1.4;
+	opacity: 0.65;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.label {
+	opacity: 0.65;
+}
+
+.input,
+.textarea {
+	width: 100%;
+	font-family: var(--font-host-grotesk);
+	font-size: 1.05rem;
+	line-height: 1.4;
+	color: var(--base-1000);
+	background-color: transparent;
+	border: 1px solid rgba(15, 15, 15, 0.25);
+	border-radius: 0.4rem;
+	padding: 0.85rem 1rem;
+	transition: border-color 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus {
+	outline: none;
+	border-color: var(--base-400);
+}
+
+.textarea {
+	min-height: 9rem;
+	resize: vertical;
+}
+
+.row {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+	gap: 1rem;
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.button {
+	font-family: var(--font-dm-mono);
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	background-color: var(--base-1000);
+	color: var(--base-100);
+	border: none;
+	border-radius: 2rem;
+	padding: 0.85rem 1.75rem;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.button:hover:not(:disabled) {
+	background-color: var(--base-400);
+}
+
+.button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.hint {
+	opacity: 0.55;
+}
+
+.error {
+	color: var(--base-600);
+}
+
+/* Wachtscherm terwijl het model leest. Bewust rustig: geen spinner die suggereert
+   dat er een machine aan het werk is. */
+.thinking {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.pulse {
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background-color: var(--base-400);
+	animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.25;
+	}
+}
+
+.summary {
+	font-family: var(--font-host-grotesk);
+	font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pulse {
+		animation: none;
+	}
+}

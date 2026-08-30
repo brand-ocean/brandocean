@@ -65,7 +65,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 	// De coming-soon-landing draait zonder navigatie: geen menu bovenin en een
 	// footer zonder linkkolommen. Na de preloader zie je meteen de boodschap en
 	// daaronder het contact, verder niks.
-	const isComingSoon = pathname === "/";
+	const isComingSoon = pathname === "/" || pathname === "/start";
 
 	return (
 		<div className="bo-site">

@@ -800,6 +800,73 @@ export default defineSchema({
 	// geen veld dat je uit kunt zetten. En omdat ik hier zelf de klant ben die
 	// zijn eigen leverancier belt, valt dit buiten art. 11.7 Tw: het is geen
 	// telemarketing.
+	// --- Intake: het gesprek dat een formulier lijkt --------------------------
+	//
+	// Iemand op brandocean.nl vult een paar vragen in. Wat hij niet ziet is dat
+	// er na elk antwoord opnieuw gekeken wordt wat er nog ontbreekt, en dat er
+	// aan het eind een technisch voorstel uit rolt dat in onze eigen stack denkt.
+	// Voor hem is het een formulier met doordachte vragen. Dat is de bedoeling.
+	//
+	// `summary` is wat de klant terugkrijgt. `brief` is het echte werk en is
+	// alleen voor mij — architectuur, fases, risico's, wat er nog onduidelijk is.
+	intakes: defineTable({
+		// Publiek startpunt, dus geen ownerId: er is nog geen klant. Koppelen aan
+		// een `clients`-record kan later, als er een echt traject van komt.
+		clientId: v.optional(v.id("clients")),
+		token: v.string(),
+
+		// Wat de bezoeker zelf invulde voordat de vragen begonnen.
+		name: v.optional(v.string()),
+		email: v.optional(v.string()),
+		company: v.optional(v.string()),
+
+		// "vragen" = nog bezig, "denkt" = model is aan het werk, "klaar" = brief
+		// staat er, "afgebroken" = te lang stil blijven liggen.
+		status: v.union(
+			v.literal("vragen"),
+			v.literal("denkt"),
+			v.literal("klaar"),
+			v.literal("afgebroken"),
+		),
+
+		summary: v.optional(v.string()),
+		brief: v.optional(v.string()),
+		// Waar het model op uitkwam qua aanpak, apart zodat ik erop kan filteren.
+		stackAdvies: v.optional(v.string()),
+		// Kosten bijhouden, want dit staat publiek en tokens zijn geld.
+		tokensUsed: v.optional(v.number()),
+		modelUsed: v.optional(v.string()),
+
+		// Grof IP-hash voor ratelimiting. Nooit het IP zelf.
+		ipHash: v.optional(v.string()),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_token", ["token"])
+		.index("by_status", ["status"])
+		.index("by_created", ["createdAt"]),
+
+	// Eén vraag met het antwoord erbij. `generated` scheidt de vragen waarmee we
+	// altijd beginnen van de vragen die het model erbij bedacht — handig als ik
+	// wil zien of het doorvragen ergens toe leidde.
+	intakeAnswers: defineTable({
+		intakeId: v.id("intakes"),
+		order: v.number(),
+		question: v.string(),
+		detail: v.optional(v.string()),
+		answer: v.optional(v.string()),
+		generated: v.boolean(),
+		answeredAt: v.optional(v.number()),
+	}).index("by_intake", ["intakeId", "order"]),
+
+	// Ratelimiting per IP-hash per tijdvenster. Zelfde vorm als
+	// feedbackRateBuckets, zodat het opruimen er ook hetzelfde uitziet.
+	intakeRateBuckets: defineTable({
+		ipHash: v.string(),
+		windowStart: v.number(),
+		count: v.number(),
+	}).index("by_ip_window", ["ipHash", "windowStart"]),
+
 	voiceTasks: defineTable({
 		ownerId: v.id("users"),
 		company: v.string(),

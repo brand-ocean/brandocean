@@ -49,6 +49,7 @@ type Leaf = {
 		| "/dashboard"
 		| "/offertes"
 		| "/specs"
+		| "/intakes"
 		| "/ndas"
 		| "/clients"
 		| "/invoices"
@@ -85,6 +86,7 @@ const NAV: readonly NavEntry[] = [
 		items: [
 			{ title: "Offertes", to: "/offertes" },
 			{ title: "Vragen", to: "/specs" },
+			{ title: "Intakes", to: "/intakes" },
 			{ title: "NDAs", to: "/ndas" },
 			{ title: "Invoices", to: "/invoices" },
 		],

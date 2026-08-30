@@ -433,6 +433,13 @@ export default function Footer({ minimal = false }: FooterProps) {
 								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.
 								Alles in één hand.
 							</p>
+							{minimal && (
+								<p className={styles.cta}>
+									<TransitionLink href="/start">
+										Iets te bouwen? Vertel het ons →
+									</TransitionLink>
+								</p>
+							)}
 						</div>
 
 						{!minimal && (
