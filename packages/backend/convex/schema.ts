@@ -826,6 +826,9 @@ export default defineSchema({
 		// pas als er een adres is. Anders betaal je voor een lead die je niet
 		// kunt terugbellen.
 		status: v.union(
+			// Alleen een mailadres achtergelaten, geen gesprek gevoerd. Dat is de
+			// enige vorm die nu op de site staat; het vragenpad ligt stil.
+			v.literal("aanmelding"),
 			v.literal("vragen"),
 			v.literal("denkt"),
 			v.literal("contact"),

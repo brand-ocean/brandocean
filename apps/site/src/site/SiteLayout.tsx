@@ -1,8 +1,8 @@
 import { useRouterState } from "@tanstack/react-router";
 import { ReactLenis } from "lenis/react";
 import { type ReactNode, useEffect, useState } from "react";
+import AanmeldenModal from "./components/Aanmelden/AanmeldenModal";
 import Footer from "./components/Footer/Footer";
-import IntakeModal from "./components/Intake/IntakeModal";
 import Menu from "./components/Menu/Menu";
 import TransitionProvider from "./components/TransitionProvider/TransitionProvider";
 import "lenis/dist/lenis.css";
@@ -67,7 +67,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 	// De coming-soon-landing draait zonder navigatie: geen menu bovenin en een
 	// footer zonder linkkolommen. Na de preloader zie je meteen de boodschap en
 	// daaronder het contact, verder niks.
-	const isComingSoon = pathname === "/" || pathname === "/start";
+	const isComingSoon = pathname === "/";
 
 	return (
 		<div className="bo-site">
@@ -81,7 +81,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 						onStart={() => setIntakeOpen(true)}
 					/>
 					{intakeOpen ? (
-						<IntakeModal onClose={() => setIntakeOpen(false)} />
+						<AanmeldenModal onClose={() => setIntakeOpen(false)} />
 					) : null}
 				</ReactLenis>
 			</TransitionProvider>

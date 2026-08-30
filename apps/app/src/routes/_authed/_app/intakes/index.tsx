@@ -21,6 +21,7 @@ export const Route = createFileRoute("/_authed/_app/intakes/")({
 });
 
 const STATUS_TONE: Record<Doc<"intakes">["status"], Tone> = {
+	aanmelding: "neutral",
 	vragen: "info",
 	denkt: "warning",
 	contact: "info",
@@ -29,6 +30,7 @@ const STATUS_TONE: Record<Doc<"intakes">["status"], Tone> = {
 };
 
 const STATUS_LABEL: Record<Doc<"intakes">["status"], string> = {
+	aanmelding: "Alleen mail",
 	vragen: "Bezig",
 	denkt: "Leest terug",
 	contact: "Wacht op adres",

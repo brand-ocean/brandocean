@@ -156,6 +156,33 @@ export const setContact = mutation({
 	},
 });
 
+/**
+ * Alleen een mailadres. Geen vragen, geen model, geen kosten — iemand die zegt
+ * "hou me op de hoogte". De vragenkant staat er nog voor als we hem terugzetten.
+ */
+export const aanmelden = mutation({
+	args: { email: v.string(), ip: v.optional(v.string()) },
+	returns: v.null(),
+	handler: async (ctx, args): Promise<null> => {
+		if (!args.email.includes("@") || args.email.length > 200) {
+			throw new ConvexError("ongeldig_adres");
+		}
+		const ipHash = args.ip ? await hashIp(args.ip) : "onbekend";
+		await enforceRateLimit(ctx, ipHash);
+
+		const now = Date.now();
+		await ctx.db.insert("intakes", {
+			email: args.email.trim(),
+			status: "aanmelding",
+			ipHash,
+			token: crypto.randomUUID().replace(/-/g, ""),
+			createdAt: now,
+			updatedAt: now,
+		});
+		return null;
+	},
+});
+
 export const getByToken = query({
 	args: { token: v.string() },
 	handler: async (ctx, args) => {
@@ -251,6 +278,9 @@ export const setStatus = internalMutation({
 	args: {
 		intakeId: v.id("intakes"),
 		status: v.union(
+			// Alleen een mailadres achtergelaten, geen gesprek gevoerd. Dat is de
+			// enige vorm die nu op de site staat; het vragenpad ligt stil.
+			v.literal("aanmelding"),
 			v.literal("vragen"),
 			v.literal("denkt"),
 			v.literal("contact"),

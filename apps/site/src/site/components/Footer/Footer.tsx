@@ -509,7 +509,7 @@ export default function Footer({ minimal = false, onStart }: FooterProps) {
 							{minimal && onStart ? (
 								<p className={styles.cta}>
 									<button type="button" onClick={onStart}>
-										Iets te bouwen? Vertel het ons →
+										Iets te bouwen? Laat je mail achter →
 									</button>
 								</p>
 							) : null}
@@ -563,7 +563,6 @@ export default function Footer({ minimal = false, onStart }: FooterProps) {
 						<div className={styles.legal}>
 							<p className="mono sm">© {new Date().getFullYear()} Brandocean</p>
 							<p className="mono sm">info@brandocean.nl</p>
-							<p className="mono sm">06 4132 4721</p>
 						</div>
 					</div>
 				</div>

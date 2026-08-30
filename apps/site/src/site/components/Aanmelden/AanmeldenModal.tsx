@@ -1,11 +1,11 @@
 import { useRef } from "react";
-import Intake from "./Intake";
-import styles from "./IntakeModal.module.css";
+import Aanmelden from "./Aanmelden";
+import styles from "./AanmeldenModal.module.css";
 
 /**
- * Het gesprek als overlay op de coming-soon-pagina. Geen navigatie weg van de
- * pagina, dus lagere drempel om te beginnen — en wat hij al ingevuld heeft
- * blijft staan, want de token gaat naar localStorage.
+ * Overlay op de coming-soon-pagina. Eén veld: een mailadres. Het vragenpad dat
+ * hier eerst zat staat nog in convex/intakeAi.ts en in de history — het is
+ * uitgezet, niet weggegooid.
  */
 export default function IntakeModal({ onClose }: { onClose: () => void }) {
 	const overlayRef = useRef<HTMLDivElement>(null);
@@ -24,7 +24,7 @@ export default function IntakeModal({ onClose }: { onClose: () => void }) {
 			// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: overlay vangt escape en klik-buiten
 			role="dialog"
 			aria-modal="true"
-			aria-label="Vertel wat je wilt maken"
+			aria-label="Laat je mailadres achter"
 			// biome-ignore lint/a11y/noNoninteractiveTabindex: nodig om Escape te kunnen vangen
 			tabIndex={-1}
 		>
@@ -37,7 +37,7 @@ export default function IntakeModal({ onClose }: { onClose: () => void }) {
 				>
 					×
 				</button>
-				<Intake onClose={onClose} />
+				<Aanmelden onClose={onClose} />
 			</div>
 		</div>
 	);

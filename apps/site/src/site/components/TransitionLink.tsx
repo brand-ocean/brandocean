@@ -13,8 +13,7 @@ export type SiteHref =
 	| "/work"
 	| "/expertise"
 	| "/careers"
-	| "/contact"
-	| "/start";
+	| "/contact";
 
 interface TransitionLinkBaseProps {
 	children: ReactNode;
