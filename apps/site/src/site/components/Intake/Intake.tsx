@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
 import styles from "./Intake.module.css";
@@ -11,6 +11,22 @@ const EERSTE_DETAIL = "In je eigen woorden. Twee zinnen is genoeg.";
 
 const OPSLAG_SLEUTEL = "brandocean.intake.token";
 
+// localStorage bestaat niet op de server, dus dit gaat via
+// useSyncExternalStore met een aparte serversnapshot. Een `typeof window`-tak in
+// de render zou de eerste client-render laten afwijken van de HTML die de server
+// stuurde, en dan klapt de hydratie — precies de mismatch die React meldt.
+const luisteraars = new Set<() => void>();
+
+function abonneer(luisteraar: () => void): () => void {
+	luisteraars.add(luisteraar);
+	// Een tweede tabblad dat de intake start, telt hier ook.
+	window.addEventListener("storage", luisteraar);
+	return () => {
+		luisteraars.delete(luisteraar);
+		window.removeEventListener("storage", luisteraar);
+	};
+}
+
 function leesToken(): string | null {
 	try {
 		return window.localStorage.getItem(OPSLAG_SLEUTEL);
@@ -20,12 +36,18 @@ function leesToken(): string | null {
 	}
 }
 
+/** Op de server is er nooit een token. Zo rendert hij daar altijd vraag één. */
+function leesTokenOpServer(): null {
+	return null;
+}
+
 function bewaarToken(token: string): void {
 	try {
 		window.localStorage.setItem(OPSLAG_SLEUTEL, token);
 	} catch {
 		// Niet erg. Zonder opslag verlies je alleen het hervatten.
 	}
+	for (const luisteraar of luisteraars) luisteraar();
 }
 
 /**
@@ -38,21 +60,12 @@ function bewaarToken(token: string): void {
  * gebruiken.
  */
 export default function Intake({ onClose }: { onClose?: () => void }) {
-	// Lazy initializer in plaats van een effect: localStorage wordt één keer
-	// gelezen, op de client, bij de eerste render.
-	const [token, setToken] = useState<string | null>(() =>
-		typeof window === "undefined" ? null : leesToken(),
-	);
+	const token = useSyncExternalStore(abonneer, leesToken, leesTokenOpServer);
 
 	return token ? (
 		<Gesprek token={token} onClose={onClose} />
 	) : (
-		<EersteVraag
-			onStarted={(t) => {
-				bewaarToken(t);
-				setToken(t);
-			}}
-		/>
+		<EersteVraag onStarted={bewaarToken} />
 	);
 }
 
