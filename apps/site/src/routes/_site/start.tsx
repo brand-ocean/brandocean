@@ -21,10 +21,13 @@ export const Route = createFileRoute("/_site/start")({
 			// start loopt hierlangs. Cloudflare zet het echte adres in
 			// CF-Connecting-IP; Convex hasht het en bewaart alleen die hash.
 			POST: async ({ request }) => {
-				let body: { name?: string; email?: string; company?: string } = {};
+				let body: { firstAnswer?: string } = {};
 				try {
 					body = await request.json();
 				} catch {
+					return Response.json({ error: "bad_request" }, { status: 400 });
+				}
+				if (!body.firstAnswer?.trim()) {
 					return Response.json({ error: "bad_request" }, { status: 400 });
 				}
 
@@ -35,9 +38,7 @@ export const Route = createFileRoute("/_site/start")({
 
 				try {
 					const { token } = await convexHttp.mutation(api.intakes.start, {
-						name: body.name?.slice(0, 120),
-						email: body.email?.slice(0, 200),
-						company: body.company?.slice(0, 200),
+						firstAnswer: body.firstAnswer,
 						ip,
 					});
 					return Response.json({ token });

@@ -85,7 +85,10 @@ export const advance = internalAction({
 		const data = await ctx.runQuery(internal.intakes.getForAi, {
 			intakeId: args.intakeId,
 		});
-		if (!data || data.intake.status !== "vragen") return null;
+		if (!data) return null;
+		if (data.intake.status !== "vragen" && data.intake.status !== "contact") {
+			return null;
+		}
 
 		await ctx.runMutation(internal.intakes.setStatus, {
 			intakeId: args.intakeId,
@@ -94,7 +97,10 @@ export const advance = internalAction({
 
 		try {
 			const rondes = data.answers.filter((a) => a.generated).length;
-			const magNogVragen = rondes < MAX_VRAAGRONDES * MAX_VRAGEN_PER_RONDE;
+			// Kwam hij hier via het adresformulier, dan was doorvragen al klaar.
+			const magNogVragen =
+				data.intake.status === "vragen" &&
+				rondes < MAX_VRAAGRONDES * MAX_VRAGEN_PER_RONDE;
 			const gesprek = transcript(data.answers);
 
 			if (magNogVragen) {
@@ -143,8 +149,19 @@ export const advance = internalAction({
 				}
 			}
 
-			// Genoeg gehoord. Twee stukken tekst uit één call: wat de klant
-			// terugkrijgt, en wat ik erover moet weten.
+			// Genoeg gehoord — maar de brief is de duurste stap en heeft alleen zin
+			// als we weten wie het was. Geen adres? Dan wachten we hier. De modal
+			// vraagt er dan om en `setContact` zet ons opnieuw aan het werk.
+			if (!data.intake.email) {
+				await ctx.runMutation(internal.intakes.setStatus, {
+					intakeId: args.intakeId,
+					status: "contact",
+				});
+				return null;
+			}
+
+			// Twee stukken tekst uit één call: wat de klant terugkrijgt, en wat ik
+			// erover moet weten.
 			const { text, tokens } = await callOpenRouter(
 				MODEL_BRIEF,
 				[
@@ -182,10 +199,11 @@ export const advance = internalAction({
 			});
 		} catch (error) {
 			// Niet in "denkt" laten hangen: dan ziet de bezoeker een spinner die
-			// nooit stopt. Terug naar vragen, dan kan hij het opnieuw proberen.
+			// nooit stopt. Terug naar waar hij vandaan kwam, dan kan hij het
+			// opnieuw proberen.
 			await ctx.runMutation(internal.intakes.setStatus, {
 				intakeId: args.intakeId,
-				status: "vragen",
+				status: data.intake.email ? "contact" : "vragen",
 			});
 			throw error;
 		}

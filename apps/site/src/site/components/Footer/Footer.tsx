@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
 import Matter from "matter-js";
 import { useEffect, useRef, useState } from "react";
+import { PRELOADER_KLAAR } from "../Preloader/Preloader";
 import TransitionLink, { type SiteHref } from "../TransitionLink";
 import styles from "./Footer.module.css";
 
@@ -14,6 +15,10 @@ if (typeof window !== "undefined") {
 	gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
+// De badges die in de footer naar beneden vallen. Gemengd met opzet: wat we
+// bouwen, waarmee we het bouwen, en waar we het over hebben in 2026. Ze staan
+// er om herkend te worden, niet om compleet te zijn — vandaar dat "Koffie"
+// achteraan mag blijven staan.
 const OBJECTS = [
 	"Apps",
 	"Webshops",
@@ -38,6 +43,49 @@ const OBJECTS = [
 	"Websites",
 	"Hosting",
 	"Onderhoud",
+
+	// Waar het in 2026 over gaat
+	"AI-agents",
+	"Voice AI",
+	"RAG",
+	"MCP",
+	"Copilots",
+	"Semantisch zoeken",
+	"Realtime",
+	"Edge",
+
+	// Waarmee we bouwen
+	"TanStack",
+	"Astro",
+	"TypeScript",
+	"Tailwind",
+	"Cloudflare",
+	"Workers",
+	"Three.js",
+	"GSAP",
+
+	// Wat we opleveren
+	"Klantportalen",
+	"Betalingen",
+	"Abonnementen",
+	"Facturatie",
+	"Boekhouding",
+	"Offertes",
+	"E-mailflows",
+	"Webhooks",
+	"API's",
+	"Migraties",
+	"Meertalig",
+
+	// Waar we op letten
+	"Toegankelijkheid",
+	"Performance",
+	"Core Web Vitals",
+	"Designsystemen",
+	"Motion",
+	"Security",
+	"AVG",
+
 	"Koffie",
 ];
 
@@ -108,9 +156,11 @@ interface FooterProps {
 	 * de pay-off en de contactregel over.
 	 */
 	minimal?: boolean;
+	/** Opent het intakegesprek als overlay. Alleen zinvol met `minimal`. */
+	onStart?: () => void;
 }
 
-export default function Footer({ minimal = false }: FooterProps) {
+export default function Footer({ minimal = false, onStart }: FooterProps) {
 	const sectionRef = useRef<HTMLElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [pillVariants, setPillVariants] = useState(() =>
@@ -379,17 +429,40 @@ export default function Footer({ minimal = false }: FooterProps) {
 				updatePositions();
 			};
 
-			const trigger = ScrollTrigger.create({
-				trigger: section,
-				start: "top bottom",
-				once: true,
-				onEnter: () => {
-					initPhysics();
-				},
-			});
+			// Op een gewone pagina scrol je naar de footer toe en zie je ze vallen.
+			// Maar als de footer zélf de pagina is, is "top bottom" al waar bij het
+			// laden: dan valt alles achter het voorscherm en zie je bij het optillen
+			// een gelande stapel. Vandaar dat de landing op het voorscherm wacht.
+			let gestart = false;
+			const startEens = () => {
+				if (gestart) return;
+				gestart = true;
+				initPhysics();
+			};
+
+			let trigger: ScrollTrigger | null = null;
+			let wachtTimeout: ReturnType<typeof setTimeout> | null = null;
+
+			if (minimal) {
+				window.addEventListener(PRELOADER_KLAAR, startEens, { once: true });
+				cleanupFns.push(() =>
+					window.removeEventListener(PRELOADER_KLAAR, startEens),
+				);
+				// Tweede bezoek: dan slaat het voorscherm zichzelf over en komt het
+				// signaal nooit. Niet eindeloos wachten.
+				wachtTimeout = setTimeout(startEens, 4000);
+			} else {
+				trigger = ScrollTrigger.create({
+					trigger: section,
+					start: "top bottom",
+					once: true,
+					onEnter: startEens,
+				});
+			}
 
 			return () => {
-				trigger.kill();
+				trigger?.kill();
+				if (wachtTimeout) clearTimeout(wachtTimeout);
 				clearTimeout(topWallTimeout);
 				cancelAnimationFrame(rafId);
 				cleanupFns.forEach((fn) => fn());
@@ -433,13 +506,13 @@ export default function Footer({ minimal = false }: FooterProps) {
 								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.
 								Alles in één hand.
 							</p>
-							{minimal && (
+							{minimal && onStart ? (
 								<p className={styles.cta}>
-									<TransitionLink href="/start">
+									<button type="button" onClick={onStart}>
 										Iets te bouwen? Vertel het ons →
-									</TransitionLink>
+									</button>
 								</p>
-							)}
+							) : null}
 						</div>
 
 						{!minimal && (
@@ -484,7 +557,7 @@ export default function Footer({ minimal = false }: FooterProps) {
 
 					<div className={styles.bottom}>
 						<div className={styles.meta}>
-							<p className="mono sm">Amsterdam · Remote</p>
+							<p className="mono sm">Amsterdam, Buitenveldert · Rooswijck 5A</p>
 						</div>
 
 						<div className={styles.legal}>

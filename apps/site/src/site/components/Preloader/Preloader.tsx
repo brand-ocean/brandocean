@@ -25,6 +25,9 @@ if (typeof window !== "undefined") {
 
 export let isInitialLoad = true;
 
+/** Gaat af zodra het voorscherm weg is. De footer hangt hieraan op de landing. */
+export const PRELOADER_KLAAR = "bo:preloader-klaar";
+
 const IMAGES = [
 	"/images/preloader/preloader_img_1.jpg",
 	"/images/preloader/preloader_img_2.jpg",
@@ -144,6 +147,9 @@ export default function Preloader() {
 							setLoaderAnimating(false);
 							setShowPreloader(false);
 							ScrollTrigger.refresh(true);
+							// De footer wacht hierop als hij zelf de pagina is: zijn
+							// badges moeten vallen terwijl je kijkt, niet hierachter.
+							window.dispatchEvent(new CustomEvent(PRELOADER_KLAAR));
 						}, 100);
 					},
 				});

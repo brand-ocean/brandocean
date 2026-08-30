@@ -822,9 +822,13 @@ export default defineSchema({
 
 		// "vragen" = nog bezig, "denkt" = model is aan het werk, "klaar" = brief
 		// staat er, "afgebroken" = te lang stil blijven liggen.
+		// "contact" is de knip: het model weet genoeg, maar we schrijven de brief
+		// pas als er een adres is. Anders betaal je voor een lead die je niet
+		// kunt terugbellen.
 		status: v.union(
 			v.literal("vragen"),
 			v.literal("denkt"),
+			v.literal("contact"),
 			v.literal("klaar"),
 			v.literal("afgebroken"),
 		),

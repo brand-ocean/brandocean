@@ -68,24 +68,29 @@ function requireOwner(userId: Id<"users"> | null): Id<"users"> {
 
 // --- publiek ---------------------------------------------------------------
 
+/**
+ * Ontstaat pas bij het eerste antwoord, niet bij het openen van de modal. Dat
+ * scheelt lege records van mensen die even keken, en het eerste antwoord is het
+ * eerste echte signaal dat er iemand zit.
+ *
+ * Contactgegevens komen bewust achteraan — zie `setContact`.
+ */
 export const start = mutation({
 	args: {
-		name: v.optional(v.string()),
-		email: v.optional(v.string()),
-		company: v.optional(v.string()),
+		firstAnswer: v.string(),
 		ip: v.optional(v.string()),
 	},
 	returns: v.object({ token: v.string() }),
 	handler: async (ctx, args): Promise<{ token: string }> => {
+		if (args.firstAnswer.trim().length < 2) {
+			throw new ConvexError("leeg_antwoord");
+		}
 		const ipHash = args.ip ? await hashIp(args.ip) : "onbekend";
 		await enforceRateLimit(ctx, ipHash);
 
 		const now = Date.now();
 		const token = crypto.randomUUID().replace(/-/g, "");
 		const intakeId = await ctx.db.insert("intakes", {
-			name: args.name,
-			email: args.email,
-			company: args.company,
 			status: "vragen",
 			ipHash,
 			createdAt: now,
@@ -100,10 +105,54 @@ export const start = mutation({
 				question: seed.question,
 				detail: seed.detail,
 				generated: false,
+				// De eerste vraag staat al beantwoord: die stelden we in de modal
+				// voordat er een record was.
+				answer: index === 0 ? args.firstAnswer.slice(0, 4000) : undefined,
+				answeredAt: index === 0 ? now : undefined,
 			});
 		}
 
 		return { token };
+	},
+});
+
+/**
+ * De mail, gevraagd nadat alle vragen beantwoord zijn. Pas hierna mag de dure
+ * brief geschreven worden: zonder adres kun je er toch niets mee.
+ */
+export const setContact = mutation({
+	args: {
+		token: v.string(),
+		name: v.string(),
+		email: v.string(),
+		company: v.optional(v.string()),
+	},
+	returns: v.null(),
+	handler: async (ctx, args): Promise<null> => {
+		const intake = await ctx.db
+			.query("intakes")
+			.withIndex("by_token", (q) => q.eq("token", args.token))
+			.first();
+		if (!intake) throw new ConvexError("not_found");
+		if (!args.email.includes("@")) throw new ConvexError("ongeldig_adres");
+
+		await ctx.db.patch(intake._id, {
+			name: args.name.slice(0, 120),
+			email: args.email.slice(0, 200),
+			company: args.company?.slice(0, 200),
+			updatedAt: Date.now(),
+		});
+
+		const answers = await ctx.db
+			.query("intakeAnswers")
+			.withIndex("by_intake", (q) => q.eq("intakeId", intake._id))
+			.collect();
+		if (answers.every((a) => a.answer && a.answer.trim().length > 0)) {
+			await ctx.scheduler.runAfter(0, internal.intakeAi.advance, {
+				intakeId: intake._id,
+			});
+		}
+		return null;
 	},
 });
 
@@ -204,6 +253,7 @@ export const setStatus = internalMutation({
 		status: v.union(
 			v.literal("vragen"),
 			v.literal("denkt"),
+			v.literal("contact"),
 			v.literal("klaar"),
 			v.literal("afgebroken"),
 		),

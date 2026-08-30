@@ -2,6 +2,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { ReactLenis } from "lenis/react";
 import { type ReactNode, useEffect, useState } from "react";
 import Footer from "./components/Footer/Footer";
+import IntakeModal from "./components/Intake/IntakeModal";
 import Menu from "./components/Menu/Menu";
 import TransitionProvider from "./components/TransitionProvider/TransitionProvider";
 import "lenis/dist/lenis.css";
@@ -45,6 +46,7 @@ const LENIS_DESKTOP = {
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
 	const [isMobile, setIsMobile] = useState(false);
+	const [intakeOpen, setIntakeOpen] = useState(false);
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	useEffect(() => {
@@ -73,7 +75,14 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 				<ReactLenis root options={lenisOptions}>
 					{!isComingSoon && <Menu />}
 					{children}
-					<Footer key={pathname} minimal={isComingSoon} />
+					<Footer
+						key={pathname}
+						minimal={isComingSoon}
+						onStart={() => setIntakeOpen(true)}
+					/>
+					{intakeOpen ? (
+						<IntakeModal onClose={() => setIntakeOpen(false)} />
+					) : null}
 				</ReactLenis>
 			</TransitionProvider>
 		</div>
