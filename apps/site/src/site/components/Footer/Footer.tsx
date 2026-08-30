@@ -423,6 +423,11 @@ export default function Footer({ minimal = false }: FooterProps) {
 				<div className={`container pad ${styles.inner}`}>
 					<div className={styles.top}>
 						<div className={styles.brand}>
+							{minimal && (
+								<p className={`mono sm ${styles.eyebrow}`}>
+									Nieuwe site — binnenkort
+								</p>
+							)}
 							<h1>Brandocean</h1>
 							<p>
 								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.

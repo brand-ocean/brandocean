@@ -189,3 +189,10 @@
 		gap: 0.35rem;
 	}
 }
+
+/* Label boven het woordmerk in de coming-soon-variant, waar de footer de
+   hele pagina is en er verder niets staat dat zegt dat de site nog komt. */
+.eyebrow {
+	margin-bottom: 0.75rem;
+	opacity: 0.7;
+}
