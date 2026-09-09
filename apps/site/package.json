@@ -13,6 +13,7 @@
     "@brandocean/backend": "workspace:*",
     "@brandocean/ui": "workspace:*",
     "@gsap/react": "^2.1.2",
+    "@quickdrawjs/react": "^0.2.0",
     "@tanstack/react-devtools": "^0.9.4",
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
@@ -29,5 +30,8 @@
     "react-icons": "^5.7.0",
     "sonner": "^2.0.7",
     "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.10.0"
   }
 }

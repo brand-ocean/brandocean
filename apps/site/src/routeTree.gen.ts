@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SiteRouteImport } from './routes/_site'
 import { Route as MarketingRouteImport } from './routes/_marketing'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PreviewSlugRouteImport } from './routes/preview.$slug'
 import { Route as SiteHomeRouteImport } from './routes/_site/home'
 import { Route as SiteExpertiseRouteImport } from './routes/_site/expertise'
 import { Route as SiteContactRouteImport } from './routes/_site/contact'
@@ -34,6 +35,11 @@ const MarketingRoute = MarketingRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreviewSlugRoute = PreviewSlugRouteImport.update({
+  id: '/preview/$slug',
+  path: '/preview/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SiteHomeRoute = SiteHomeRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof SiteContactRoute
   '/expertise': typeof SiteExpertiseRoute
   '/home': typeof SiteHomeRoute
+  '/preview/$slug': typeof PreviewSlugRoute
   '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
   '/work/': typeof SiteWorkIndexRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/contact': typeof SiteContactRoute
   '/expertise': typeof SiteExpertiseRoute
   '/home': typeof SiteHomeRoute
+  '/preview/$slug': typeof PreviewSlugRoute
   '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
   '/work': typeof SiteWorkIndexRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/_site/contact': typeof SiteContactRoute
   '/_site/expertise': typeof SiteExpertiseRoute
   '/_site/home': typeof SiteHomeRoute
+  '/preview/$slug': typeof PreviewSlugRoute
   '/_marketing/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/_site/work/$slug': typeof SiteWorkSlugRoute
   '/_site/work/': typeof SiteWorkIndexRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/expertise'
     | '/home'
+    | '/preview/$slug'
     | '/work-v1/$slug'
     | '/work/$slug'
     | '/work/'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/expertise'
     | '/home'
+    | '/preview/$slug'
     | '/work-v1/$slug'
     | '/work/$slug'
     | '/work'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/_site/contact'
     | '/_site/expertise'
     | '/_site/home'
+    | '/preview/$slug'
     | '/_marketing/work-v1/$slug'
     | '/_site/work/$slug'
     | '/_site/work/'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MarketingRoute: typeof MarketingRouteWithChildren
   SiteRoute: typeof SiteRouteWithChildren
+  PreviewSlugRoute: typeof PreviewSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preview/$slug': {
+      id: '/preview/$slug'
+      path: '/preview/$slug'
+      fullPath: '/preview/$slug'
+      preLoaderRoute: typeof PreviewSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_site/home': {
@@ -317,6 +337,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MarketingRoute: MarketingRouteWithChildren,
   SiteRoute: SiteRouteWithChildren,
+  PreviewSlugRoute: PreviewSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

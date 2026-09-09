@@ -1,0 +1,115 @@
+diff --git a/node_modules/@quickdrawjs/core/.bun-tag-8226fba2f60583a0 b/.bun-tag-8226fba2f60583a0
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/@quickdrawjs/core/.bun-tag-d42a5ebf54f0d423 b/.bun-tag-d42a5ebf54f0d423
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/editor.js b/src/editor.js
+index 28bba64c33109196c6b50d0646fd0e0c38a616fc..5507d83a35cc168121a3ad0367a8f886b7787734 100644
+--- a/src/editor.js
++++ b/src/editor.js
+@@ -7,7 +7,7 @@ import { Store, newId } from './store.js'
+ import { themeOf, SIZES, FONT_SIZES, GEO_IDS, COLOR_IDS, GRID_IDS, GRID_STEP, GRID_MAJOR } from './palette.js'
+ import {
+   localBounds, pageBounds, toLocal, drawShape, hitShape, marqueeHits,
+-  scaleShape, textLayout, noteLayout, NOTE_W, sampleLinePts,
++  scaleShape, textLayout, noteLayout, NOTE_W, noteW, sampleLinePts,
+ } from './shapes.js'
+ import { boundsUnion, boundsExpand, boundsContain, clamp, rotWith } from './geometry.js'
+ 
+@@ -928,7 +928,7 @@ export class Editor {
+       // text block, so committing doesn't jump the text — 20 = NOTE_PAD
+       const yStart = Math.max(20, lay.boxH / 2 - lay.textH / 2)
+       pos = this.pageToScreen(shape.x + 20 * s, shape.y + yStart * s)
+-      w = (NOTE_W - 40) * s
++      w = (noteW(shape.props) - 40) * s
+       h = lay.textH * s
+       align = 'center'
+       ta.style.font = `500 ${lay.fontSize * s * z}px ${lay.font}`
+diff --git a/src/shapes.js b/src/shapes.js
+index 92a36917ccfb6f1491f3a664efaff02ee32a9e8e..298ae43f2b42584e3011603759eedc5b71bb20d5 100644
+--- a/src/shapes.js
++++ b/src/shapes.js
+@@ -16,6 +16,9 @@ import { strokeOutline } from './freehand.js'
+ 
+ export const NOTE_W = 200
+ const NOTE_PAD = 20
++// Brandocean-patch: een sticky mag een eigen breedte hebben (props.w);
++// zonder w blijft het de standaard 200.
++export const noteW = (p) => Math.max(120, p.w || NOTE_W)
+ const LABEL_PAD = 12
+ 
+ // semi fill: a near-opaque wash of the paper, so the shape occludes what's
+@@ -46,7 +49,7 @@ export function localBounds(shape) {
+     }
+     case 'note': {
+       const l = noteLayout(shape)
+-      return { x: 0, y: 0, w: NOTE_W * (p.scale || 1), h: l.boxH * (p.scale || 1) }
++      return { x: 0, y: 0, w: noteW(p) * (p.scale || 1), h: l.boxH * (p.scale || 1) }
+     }
+     case 'image':
+       return { x: 0, y: 0, w: p.w, h: p.h }
+@@ -167,9 +170,9 @@ export function noteLayout(shape) {
+   const fontSize = NOTE_FONT_SIZES[p.size]
+   const font = FONTS[p.font || 'draw']
+   const lh = fontSize * 1.35
+-  const lines = wrapLines(p.text, font, fontSize, NOTE_W - NOTE_PAD * 2)
++  const lines = wrapLines(p.text, font, fontSize, noteW(p) - NOTE_PAD * 2)
+   const textH = lines.length * lh
+-  const l = { lines, fontSize, font, lh, textH, boxH: Math.max(NOTE_W, textH + NOTE_PAD * 2) }
++  const l = { lines, fontSize, font, lh, textH, boxH: Math.max(Math.min(NOTE_W, noteW(p)), textH + NOTE_PAD * 2) }
+   layoutCache.set(p, l)
+   return l
+ }
+@@ -234,6 +237,13 @@ function geoPath(shape) {
+     }
+   } else {
+     const poly = geoPolygon(p.geo, p.w, p.h)
++    // Brandocean-patch: een strakke rechthoek krijgt ronde hoeken (props.radius, standaard 8)
++    if (p.geo === 'rectangle' && p.dash !== 'draw') {
++      const r = Math.min(p.radius ?? 8, p.w / 2, p.h / 2)
++      path.roundRect(0, 0, Math.max(1, p.w), Math.max(1, p.h), r)
++      geoPathCache.set(p, path)
++      return path
++    }
+     if (p.dash === 'draw') {
+       const pts = wobblePolyline(poly, shape.id, { step: 22, amp: Math.min(2.2, (p.w + p.h) / 160 + 0.6) })
+       const n = pts.length / 2
+@@ -367,7 +377,7 @@ export function drawShape(ctx, shape, opts) {
+       const path = geoPath(shape)
+       fillPath(ctx, path, p, theme)
+       ctx.strokeStyle = col.stroke
+-      strokeStyled(ctx, p.dash, SIZES[p.size])
++      strokeStyled(ctx, p.dash, p.strokeWidth ?? SIZES[p.size] /* Brandocean-patch: dunnere rand per shape */)
+       ctx.stroke(path)
+       ctx.setLineDash([])
+       if (opts.hideText !== 'label') drawLabel(ctx, geoLabelLayout(shape), col.stroke, p.w, p.h)
+@@ -427,7 +437,7 @@ export function drawShape(ctx, shape, opts) {
+       ctx.scale(s, s)
+       ctx.fillStyle = col.note
+       ctx.beginPath()
+-      ctx.roundRect(0, 0, NOTE_W, l.boxH, 6)
++      ctx.roundRect(0, 0, noteW(p), l.boxH, 6)
+       ctx.shadowColor = 'rgba(20, 16, 8, 0.22)'
+       ctx.shadowBlur = 10
+       ctx.shadowOffsetY = 4
+@@ -443,7 +453,7 @@ export function drawShape(ctx, shape, opts) {
+       let y = Math.max(NOTE_PAD, l.boxH / 2 - l.textH / 2) + bl
+       if (opts.hideText !== 'text') {
+         for (const line of l.lines) {
+-          ctx.fillText(line.text, NOTE_W / 2, y)
++          ctx.fillText(line.text, noteW(p) / 2, y)
+           y += l.lh
+         }
+       }
+@@ -592,6 +602,10 @@ export function scaleShape(shape, sx, sy) {
+       return { ...shape, props: { ...p, scale: Math.max(0.2, (p.scale || 1) * s), ...(p.autosize === false && p.w ? { w: p.w * sx } : {}) } }
+     }
+     case 'note': {
++      // Brandocean-patch: zijhandvat = breder/smaller (tekst herloopt),
++      // hoekhandvat = schalen zoals voorheen, boven/onder doet niets.
++      if (sy === 1 && sx !== 1) return { ...shape, props: { ...p, w: Math.max(120, noteW(p) * sx) } }
++      if (sx === 1 && sy !== 1) return shape
+       const s = Math.sqrt(Math.abs(sx * sy))
+       return { ...shape, props: { ...p, scale: Math.max(0.3, (p.scale || 1) * s) } }
+     }

@@ -1,0 +1,77 @@
+{
+	"/": {
+		"src": "/preview/goudse-poort/home.jpg",
+		"w": 640,
+		"h": 1183
+	},
+	"/verenigingen": {
+		"src": "/preview/goudse-poort/verenigingen.jpg",
+		"w": 640,
+		"h": 1754
+	},
+	"/parkmanagement": {
+		"src": "/preview/goudse-poort/parkmanagement.jpg",
+		"w": 640,
+		"h": 909
+	},
+	"/bewegwijzering": {
+		"src": "/preview/goudse-poort/bewegwijzering.jpg",
+		"w": 640,
+		"h": 562
+	},
+	"/camerabewaking": {
+		"src": "/preview/goudse-poort/camerabewaking.jpg",
+		"w": 640,
+		"h": 642
+	},
+	"/gladheidsbestrijding": {
+		"src": "/preview/goudse-poort/gladheidsbestrijding.jpg",
+		"w": 640,
+		"h": 946
+	},
+	"/groenvoorziening": {
+		"src": "/preview/goudse-poort/groenvoorziening.jpg",
+		"w": 640,
+		"h": 1026
+	},
+	"/verzekeringen": {
+		"src": "/preview/goudse-poort/verzekeringen.jpg",
+		"w": 640,
+		"h": 896
+	},
+	"/keurmerk-veilig-ondernemen": {
+		"src": "/preview/goudse-poort/keurmerk-veilig-ondernemen.jpg",
+		"w": 640,
+		"h": 822
+	},
+	"/bedrijven": {
+		"src": "/preview/goudse-poort/bedrijven.jpg",
+		"w": 640,
+		"h": 1681
+	},
+	"/ontwikkelstrategie": {
+		"src": "/preview/goudse-poort/ontwikkelstrategie.jpg",
+		"w": 640,
+		"h": 748
+	},
+	"/nieuws": {
+		"src": "/preview/goudse-poort/nieuws.jpg",
+		"w": 640,
+		"h": 1932
+	},
+	"/nieuwsbrieven": {
+		"src": "/preview/goudse-poort/nieuwsbrieven.jpg",
+		"w": 640,
+		"h": 990
+	},
+	"/contact": {
+		"src": "/preview/goudse-poort/contact.jpg",
+		"w": 640,
+		"h": 615
+	},
+	"/privacybeleid": {
+		"src": "/preview/goudse-poort/privacybeleid.jpg",
+		"w": 640,
+		"h": 1776
+	}
+}

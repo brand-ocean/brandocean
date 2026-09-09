@@ -55,5 +55,8 @@
     "skills": [
       "@tanstack/*"
     ]
+  },
+  "patchedDependencies": {
+    "@quickdrawjs/core@0.2.0": "patches/@quickdrawjs%2Fcore@0.2.0.patch"
   }
 }
