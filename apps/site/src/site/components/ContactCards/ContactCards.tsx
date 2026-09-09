@@ -26,7 +26,7 @@ const CARDS = [
 		value: "info@brandocean.nl",
 		detailLabel: "Reactie",
 		detail: "Binnen 24 uur",
-		note: "Nieuwe projecten, samenwerkingen en alles daartussenin.",
+		note: "Kennismaken, vragen over het maandbedrag en alles daartussenin.",
 	},
 	{
 		id: "contact-card-2",

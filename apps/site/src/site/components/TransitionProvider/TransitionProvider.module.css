@@ -19,8 +19,8 @@
   height: 100svh;
   flex: 1;
   width: 100%;
-  transform: scaleX(0);
-  transform-origin: left center;
+  transform: scaleY(0);
+  transform-origin: center bottom;
   will-change: transform;
 }
 

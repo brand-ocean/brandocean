@@ -4,16 +4,20 @@
    values and media queries are otherwise untouched. */
 
 .bo-site {
-	--base-100: #ffffeb;
-	--base-200: #f4f5e0;
-	--base-300: #b6dedb;
-	--base-400: #216ad1;
-	--base-500: #ffbab4;
-	--base-600: #7c4563;
-	--base-700: #f7f780;
-	--base-800: #ff8356;
-	--base-900: #5ea85e;
-	--base-1000: #0f0f0f;
+	/* Palet "middernacht + messing" (MISSIE-VISIE.md): diep blauw als
+	   donkere basis, messing als warm accent, rookblauw als rustige
+	   tussenkleur. De tokens behouden hun oude rol: 100/200 licht,
+	   400 koel accent, 800 warm accent, 1000 donker. */
+	--base-100: #f4f1ea;
+	--base-200: #eae5da;
+	--base-300: #c9dce6;
+	--base-400: #5b8ca8;
+	--base-500: #e6d3c9;
+	--base-600: #14314f;
+	--base-700: #e3c27a;
+	--base-800: #c98a2e;
+	--base-900: #3c6e9f;
+	--base-1000: #0b1d33;
 	--font-schabo: "SCHABO", sans-serif;
 	--font-host-grotesk: "Host Grotesk", sans-serif;
 	--font-dm-mono: "DM Mono", monospace;
@@ -21,7 +25,7 @@
 
 	/* Kleur van het blokje dat een nog niet onthuld woord bedekt in
 	   AnimeText. base-100 als RGB, want het wordt met alpha gezet. */
-	--anime-word-rgb: 255, 255, 235;
+	--anime-word-rgb: 244, 241, 234;
 }
 
 .bo-site,
@@ -45,6 +49,15 @@ html.bo-site-scroll::-webkit-scrollbar {
 .bo-site {
 	background-color: var(--base-100);
 	color: var(--base-1000);
+}
+
+/* Het menu schuift dit blok omhoog en dimt het; zie Menu.tsx. Bewust geen
+   will-change: transform — een transform op deze wrapper maakt hem het
+   referentiekader voor position: fixed, en daarmee voor alles wat
+   ScrollTrigger pint. Dan verdwijnt een gepinde sectie zodra hij in beeld is. */
+.bo-site .bo-page {
+	position: relative;
+	z-index: 0;
 }
 
 /* headers - v1 */

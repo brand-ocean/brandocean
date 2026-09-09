@@ -15,21 +15,21 @@ if (typeof window !== "undefined") {
 }
 
 const PARAGRAPHS = [
-	"Welkom in de hoek van het internet waar digitale ervaringen worden gebouwd, niet alleen voor de scroll, maar voor het verhaal. Dit is niet zomaar een site. Het is een werkend archief van experimenten, inzichten, en stille successen.",
-	"Wij zijn Brandocean. Wij ontwerpen met ritme, bouwen met zorg, en geloven dat elk detail een reden verdient om te bestaan. Van eerste schets tot finale lancering, alles hier is gemaakt met intentie en misschien een beetje koffie. Deze ruimte is gebouwd voor beweging, betekenis, en experimenteren tot het klikt.",
+	"Je bedrijf draait op sheets, mail en losse tools. Elke dag typt iemand iets over, controleert iemand iets na, stuurt iemand iets door. Dat werk hoort niet bij mensen. Dat hoort bij software. Maar een eigen developer kost meer dan je omzet toelaat, en een bureau levert op en verdwijnt.",
+	"Wij zijn Brandocean. Wij bouwen elke maand verder aan jouw bedrijf. Geen project met een einddatum, maar een vaste afdeling voor een vast bedrag. Apps, webshops, AI en automatisering die het handwerk overnemen, terwijl jij aan de knop blijft. Wat we bouwen maken we af. Het werkt pas als het op zaterdagavond ook werkt.",
 ];
 
 // Welk keyword welke pil krijgt. De v1-groepen, omgezet naar het sitepalet.
 const KEYWORD_COLORS: Record<string, string> = {
-	hoek: styles.kwBlue,
-	inzichten: styles.kwBlue,
-	lancering: styles.kwBlue,
-	scroll: styles.kwCoral,
-	ritme: styles.kwCoral,
-	koffie: styles.kwCoral,
-	archief: styles.kwYellow,
-	detail: styles.kwYellow,
-	experimenteren: styles.kwYellow,
+	sheets: styles.kwBlue,
+	software: styles.kwBlue,
+	developer: styles.kwBlue,
+	brandocean: styles.kwCoral,
+	maand: styles.kwCoral,
+	afdeling: styles.kwCoral,
+	handwerk: styles.kwYellow,
+	knop: styles.kwYellow,
+	zaterdagavond: styles.kwYellow,
 };
 
 // Hoeveel woorden tegelijk in de reveal zitten — hoger is een tragere,

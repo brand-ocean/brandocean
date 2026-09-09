@@ -15,7 +15,7 @@ if (typeof window !== "undefined") {
 const EXPERTISE = [
 	{
 		tagline: "Van losse sheets naar één werkende applicatie",
-		title: "Apps & Platforms",
+		title: "Apps & platforms",
 		description:
 			"Dashboards, CRM's, portals en planningssystemen die het werk overnemen dat nu met de hand gaat. Inclusief de integraties eromheen, want half opleveren heeft geen zin.",
 		image: "/images/expertise/expertise_card_1.jpg",
@@ -23,7 +23,7 @@ const EXPERTISE = [
 	},
 	{
 		tagline: "Webshops die het ook op zaterdagavond doen",
-		title: "E-commerce",
+		title: "Webshops",
 		description:
 			"Shopify-themes en custom webshops, van productpagina tot checkout. Snel, meetbaar en gebouwd om te verkopen, niet om mooi te staan in een pitchdeck.",
 		image: "/images/expertise/expertise_card_2.jpg",
@@ -31,7 +31,7 @@ const EXPERTISE = [
 	},
 	{
 		tagline: "AI die voorstelt, jij beslist",
-		title: "AI & Automation",
+		title: "AI & automatisering",
 		description:
 			"Mail die zichzelf verrijkt en categoriseert, assistenten die je team in eigen taal antwoord geven, patronen die je vooraf ziet in plaats van achteraf. Altijd met jou aan de knop.",
 		image: "/images/expertise/expertise_card_3.jpg",
@@ -39,9 +39,9 @@ const EXPERTISE = [
 	},
 	{
 		tagline: "Een merk dat klopt tot in de kleinste knop",
-		title: "Branding & Sites",
+		title: "Merk & sites",
 		description:
-			"Identiteit, marketingsites en animatie die bij elkaar horen omdat ze door dezelfde handen gaan. Van eerste schets tot livegang, zonder dat er onderweg iets uit elkaar valt.",
+			"Identiteit, marketingsites en animatie die bij elkaar horen omdat ze door dezelfde handen gaan. Livegang is bij ons de start, niet het einde. Daarna bouwen we elke maand verder.",
 		image: "/images/expertise/expertise_card_4.jpg",
 		color: "var(--base-800)",
 	},

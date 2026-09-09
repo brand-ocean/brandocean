@@ -9,6 +9,7 @@ import { usePageTransition } from "./TransitionProvider/TransitionProvider";
  */
 export type SiteHref =
 	| "/"
+	| "/home"
 	| "/about"
 	| "/work"
 	| "/expertise"

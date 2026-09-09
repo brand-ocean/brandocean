@@ -15,7 +15,7 @@ function ContactPage() {
 			<section className={styles.hero}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Just Say Something
+						Zeg gewoon iets
 						<Callout
 							className={styles.callout}
 							label="Kom langs"

@@ -37,14 +37,14 @@ const BLOCK_COLORS = [
 const TRANSITION_LINES = [
 	"One Moment Please",
 	"Loading The Good Part",
-	"Building The Page",
-	"Give It A Sec",
-	"Fetching The Work",
-	"Turning The Page",
-	"Shipping It Now",
-	"Don't Blink Now",
-	"Almost There",
-	"Still In One Hand",
+	"Even bouwen",
+	"Momentje",
+	"Werk ophalen",
+	"Pagina omslaan",
+	"Bijna live",
+	"Niet knipperen",
+	"Bijna klaar",
+	"Elke maand verder",
 ];
 
 function shuffle(items: string[]) {
@@ -156,15 +156,16 @@ export default function TransitionProvider({
 
 			tl.set(gridRef.current, { pointerEvents: "all" });
 
+			// Verticaal, net als het menu: van onder naar boven dicht.
 			tl.set(blocksRef.current, {
-				transformOrigin: "left center",
-				scaleX: 0,
+				transformOrigin: "center bottom",
+				scaleY: 0,
 			});
 
 			tl.set(wordsRef.current, { y: "100%" });
 
 			tl.to(blocksRef.current, {
-				scaleX: 1,
+				scaleY: 1,
 				duration: 1.25,
 				ease: "hop",
 				stagger: 0.075,
@@ -195,9 +196,10 @@ export default function TransitionProvider({
 			},
 		});
 
+		// En weer naar boven open, zoals het menu sluit.
 		tl.set(blocksRef.current, {
-			transformOrigin: "right center",
-			scaleX: 1,
+			transformOrigin: "center top",
+			scaleY: 1,
 		});
 
 		tl.to(wordsRef.current, {
@@ -210,7 +212,7 @@ export default function TransitionProvider({
 		tl.to(
 			blocksRef.current,
 			{
-				scaleX: 0,
+				scaleY: 0,
 				duration: 1.25,
 				ease: "hop",
 				stagger: -0.075,

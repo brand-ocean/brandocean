@@ -16,7 +16,7 @@ function CareersPage() {
 			<section className={styles.hero}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Pitch Yourself
+						Kom erbij
 						<Callout
 							className={styles.callout}
 							label="Kom maar op"

@@ -85,7 +85,7 @@ export default function Stats() {
 				<header className={styles.header}>
 					<Copy>
 						<h4>
-							Brandocean In Numbers
+							Brandocean in cijfers
 							<Callout
 								className={styles.callout}
 								label="Geen praatjes"
@@ -106,7 +106,7 @@ export default function Stats() {
 						>
 							<img src="/images/stats/stats_img_1.jpg" alt="" />
 							<div className={styles.overlay}>
-								<p className="mono">Projecten gebouwd</p>
+								<p className="mono">Bedrijven geholpen</p>
 								<h4>80+</h4>
 							</div>
 						</article>
@@ -144,7 +144,7 @@ export default function Stats() {
 							className={`${styles.card} ${styles.cardDark}`}
 							ref={setCardRef(4)}
 						>
-							<h6>Voor wie we bouwden</h6>
+							<h6>Voor wie we bouwen</h6>
 							<ul className={styles.list}>
 								{PARTNERS.map((name) => (
 									<li key={name}>

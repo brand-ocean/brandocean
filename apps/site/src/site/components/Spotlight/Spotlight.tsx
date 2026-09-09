@@ -161,7 +161,7 @@ export default function Spotlight() {
 			<div className={styles.header}>
 				<Copy>
 					<h3>
-						We Go All The Way Into Your Problem And Come Back With Software
+						Wij duiken in je bedrijf en komen terug met software die het handwerk overneemt
 						<Callout
 							className={styles.callout}
 							label="Doorgaan"

@@ -24,20 +24,25 @@
 	padding-bottom: 4rem;
 }
 
+/* Ruwweg 70% van het scherm, zoals Arin het aanwees. */
 .copy {
-	width: min(60ch, 90%);
+	width: 72%;
 }
 
-.paragraph {
+/* `.animeText .paragraph` en niet alleen `.paragraph`: de globale
+   `.bo-site p` (1.15rem) wint anders op specificiteit. Ongeveer 2x p.lg,
+   tussen de lopende tekst en de h6.v2-kop in. */
+.animeText .paragraph {
 	font-family: var(--font-host-grotesk);
 	font-weight: 700;
-	font-size: clamp(1.25rem, 2.2vw, 2rem);
-	line-height: 1.15;
+	font-size: clamp(1.5rem, 2.2vw, 2.5rem);
+	line-height: 1.1;
+	letter-spacing: -2%;
 	text-align: center;
 }
 
-.paragraph + .paragraph {
-	margin-top: 2rem;
+.animeText .paragraph + .paragraph {
+	margin-top: 1em;
 }
 
 /* Elk woord is een blokje dat oplicht en daarna zijn tekst prijsgeeft.

@@ -41,7 +41,8 @@
 .background {
 	display: flex;
 	align-items: center;
-	background-color: var(--base-900);
+	/* Complement van het navlogo-blauw (hue 222): hue 42, amber. */
+	background-color: var(--base-800);
 	z-index: 2;
 }
 
@@ -54,9 +55,11 @@
 	text-align: center;
 }
 
-.foregroundInner {
+/* `.hero` erbij voor specificiteit: `.bo-site .pad` zet anders zijn eigen
+   padding-top (2.25rem) over deze heen en dan schuift de kop onder de nav. */
+.hero .foregroundInner {
 	justify-content: space-between;
-	padding-top: 8rem;
+	padding-top: 10rem;
 	padding-bottom: 2rem;
 }
 
@@ -109,8 +112,8 @@
 	.footerInner {
 		padding: 1.5rem;
 	}
-	.foregroundInner {
-		padding-top: 7rem;
+	.hero .foregroundInner {
+		padding-top: 8rem;
 	}
 
 	.foreground h1 {

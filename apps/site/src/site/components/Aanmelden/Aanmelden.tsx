@@ -55,10 +55,11 @@ export default function Aanmelden({ onClose }: { onClose: () => void }) {
 
 	return (
 		<form className={styles.panel} onSubmit={submit}>
-			<p className={styles.kop}>Iets te bouwen?</p>
+			<p className={styles.kop}>Handwerk zat?</p>
 			<p className={styles.lead}>
-				Laat je mailadres achter, dan nemen we contact op. Liever meteen zelf
-				mailen? Dat mag ook, naar{" "}
+				Laat je mailadres achter, dan plannen we een gesprek over wat er in
+				jouw bedrijf nog met de hand gaat. Liever meteen zelf mailen? Dat mag
+				ook, naar{" "}
 				<a className={styles.link} href="mailto:info@brandocean.nl">
 					info@brandocean.nl
 				</a>

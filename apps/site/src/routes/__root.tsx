@@ -21,6 +21,11 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{ title: "BRANDOCEAN" },
+			{
+				name: "description",
+				content:
+					"De digitale afdeling van het mkb. Apps, webshops en AI voor een vast bedrag per maand. Elke maand een stap verder.",
+			},
 		],
 		links: [
 			{ rel: "stylesheet", href: appCss },

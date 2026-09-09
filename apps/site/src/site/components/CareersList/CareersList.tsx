@@ -19,7 +19,7 @@ const OPENINGS = [
 	},
 	{
 		name: "Front-end developer",
-		type: "Projectbasis",
+		type: "Vast per maand",
 		location: "Amsterdam",
 		label: "Mail ons",
 	},
@@ -31,7 +31,7 @@ const OPENINGS = [
 	},
 	{
 		name: "UI/UX designer",
-		type: "Projectbasis",
+		type: "Vast per maand",
 		location: "Amsterdam",
 		label: "Mail ons",
 	},
@@ -43,7 +43,7 @@ const OPENINGS = [
 	},
 	{
 		name: "Motion designer",
-		type: "Projectbasis",
+		type: "Vast per maand",
 		location: "Waar dan ook",
 		label: "Mail ons",
 	},
@@ -55,7 +55,7 @@ const OPENINGS = [
 	},
 	{
 		name: "Data-analist",
-		type: "Projectbasis",
+		type: "Vast per maand",
 		location: "Amsterdam",
 		label: "Mail ons",
 	},
@@ -67,7 +67,7 @@ const OPENINGS = [
 	},
 	{
 		name: "Copywriter",
-		type: "Projectbasis",
+		type: "Vast per maand",
 		location: "Waar dan ook",
 		label: "Mail ons",
 	},

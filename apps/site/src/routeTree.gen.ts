@@ -11,7 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SiteRouteImport } from './routes/_site'
 import { Route as MarketingRouteImport } from './routes/_marketing'
-import { Route as SiteIndexRouteImport } from './routes/_site/index'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as SiteHomeRouteImport } from './routes/_site/home'
 import { Route as SiteExpertiseRouteImport } from './routes/_site/expertise'
 import { Route as SiteContactRouteImport } from './routes/_site/contact'
 import { Route as SiteCareersRouteImport } from './routes/_site/careers'
@@ -30,9 +31,14 @@ const MarketingRoute = MarketingRouteImport.update({
   id: '/_marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SiteIndexRoute = SiteIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteHomeRoute = SiteHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => SiteRoute,
 } as any)
 const SiteExpertiseRoute = SiteExpertiseRouteImport.update({
@@ -82,31 +88,34 @@ const MarketingWorkV1SlugRoute = MarketingWorkV1SlugRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof SiteIndexRoute
+  '/': typeof IndexRoute
   '/full': typeof MarketingFullRoute
   '/v1': typeof MarketingV1Route
   '/about': typeof SiteAboutRoute
   '/careers': typeof SiteCareersRoute
   '/contact': typeof SiteContactRoute
   '/expertise': typeof SiteExpertiseRoute
+  '/home': typeof SiteHomeRoute
   '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
   '/work/': typeof SiteWorkIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof SiteIndexRoute
+  '/': typeof IndexRoute
   '/full': typeof MarketingFullRoute
   '/v1': typeof MarketingV1Route
   '/about': typeof SiteAboutRoute
   '/careers': typeof SiteCareersRoute
   '/contact': typeof SiteContactRoute
   '/expertise': typeof SiteExpertiseRoute
+  '/home': typeof SiteHomeRoute
   '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
   '/work': typeof SiteWorkIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_marketing': typeof MarketingRouteWithChildren
   '/_site': typeof SiteRouteWithChildren
   '/_marketing/full': typeof MarketingFullRoute
@@ -115,7 +124,7 @@ export interface FileRoutesById {
   '/_site/careers': typeof SiteCareersRoute
   '/_site/contact': typeof SiteContactRoute
   '/_site/expertise': typeof SiteExpertiseRoute
-  '/_site/': typeof SiteIndexRoute
+  '/_site/home': typeof SiteHomeRoute
   '/_marketing/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/_site/work/$slug': typeof SiteWorkSlugRoute
   '/_site/work/': typeof SiteWorkIndexRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/careers'
     | '/contact'
     | '/expertise'
+    | '/home'
     | '/work-v1/$slug'
     | '/work/$slug'
     | '/work/'
@@ -142,11 +152,13 @@ export interface FileRouteTypes {
     | '/careers'
     | '/contact'
     | '/expertise'
+    | '/home'
     | '/work-v1/$slug'
     | '/work/$slug'
     | '/work'
   id:
     | '__root__'
+    | '/'
     | '/_marketing'
     | '/_site'
     | '/_marketing/full'
@@ -155,13 +167,14 @@ export interface FileRouteTypes {
     | '/_site/careers'
     | '/_site/contact'
     | '/_site/expertise'
-    | '/_site/'
+    | '/_site/home'
     | '/_marketing/work-v1/$slug'
     | '/_site/work/$slug'
     | '/_site/work/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   MarketingRoute: typeof MarketingRouteWithChildren
   SiteRoute: typeof SiteRouteWithChildren
 }
@@ -182,11 +195,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_site/': {
-      id: '/_site/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof SiteIndexRouteImport
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_site/home': {
+      id: '/_site/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof SiteHomeRouteImport
       parentRoute: typeof SiteRoute
     }
     '/_site/expertise': {
@@ -276,7 +296,7 @@ interface SiteRouteChildren {
   SiteCareersRoute: typeof SiteCareersRoute
   SiteContactRoute: typeof SiteContactRoute
   SiteExpertiseRoute: typeof SiteExpertiseRoute
-  SiteIndexRoute: typeof SiteIndexRoute
+  SiteHomeRoute: typeof SiteHomeRoute
   SiteWorkSlugRoute: typeof SiteWorkSlugRoute
   SiteWorkIndexRoute: typeof SiteWorkIndexRoute
 }
@@ -286,7 +306,7 @@ const SiteRouteChildren: SiteRouteChildren = {
   SiteCareersRoute: SiteCareersRoute,
   SiteContactRoute: SiteContactRoute,
   SiteExpertiseRoute: SiteExpertiseRoute,
-  SiteIndexRoute: SiteIndexRoute,
+  SiteHomeRoute: SiteHomeRoute,
   SiteWorkSlugRoute: SiteWorkSlugRoute,
   SiteWorkIndexRoute: SiteWorkIndexRoute,
 }
@@ -294,6 +314,7 @@ const SiteRouteChildren: SiteRouteChildren = {
 const SiteRouteWithChildren = SiteRoute._addFileChildren(SiteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   MarketingRoute: MarketingRouteWithChildren,
   SiteRoute: SiteRouteWithChildren,
 }

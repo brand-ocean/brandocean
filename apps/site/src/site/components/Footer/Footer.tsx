@@ -4,7 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
 import Matter from "matter-js";
 import { useEffect, useRef, useState } from "react";
-import { PRELOADER_KLAAR } from "../Preloader/Preloader";
+import { isEersteBezoek, PRELOADER_KLAAR } from "../Preloader/Preloader";
 import TransitionLink, { type SiteHref } from "../TransitionLink";
 import styles from "./Footer.module.css";
 
@@ -86,6 +86,7 @@ const OBJECTS = [
 	"Security",
 	"AVG",
 
+	"Elke maand",
 	"Koffie",
 ];
 
@@ -443,14 +444,16 @@ export default function Footer({ minimal = false, onStart }: FooterProps) {
 			let trigger: ScrollTrigger | null = null;
 			let wachtTimeout: ReturnType<typeof setTimeout> | null = null;
 
-			if (minimal) {
+			if (minimal && isEersteBezoek()) {
 				window.addEventListener(PRELOADER_KLAAR, startEens, { once: true });
 				cleanupFns.push(() =>
 					window.removeEventListener(PRELOADER_KLAAR, startEens),
 				);
-				// Tweede bezoek: dan slaat het voorscherm zichzelf over en komt het
-				// signaal nooit. Niet eindeloos wachten.
-				wachtTimeout = setTimeout(startEens, 4000);
+				// Vangnet, mocht het signaal om wat voor reden ook uitblijven.
+				wachtTimeout = setTimeout(startEens, 8000);
+			} else if (minimal) {
+				// Geen voorscherm (refresh of tweede pagina): meteen vallen.
+				startEens();
 			} else {
 				trigger = ScrollTrigger.create({
 					trigger: section,
@@ -503,13 +506,13 @@ export default function Footer({ minimal = false, onStart }: FooterProps) {
 							)}
 							<h1>Brandocean</h1>
 							<p>
-								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.
-								Alles in één hand.
+								De digitale afdeling van het mkb. Apps, webshops en AI voor een
+								vast bedrag per maand, vanuit Amsterdam.
 							</p>
 							{minimal && onStart ? (
 								<p className={styles.cta}>
 									<button type="button" onClick={onStart}>
-										Iets te bouwen? Laat je mail achter →
+										Handwerk zat? Laat je mail achter →
 									</button>
 								</p>
 							) : null}
@@ -538,7 +541,7 @@ export default function Footer({ minimal = false, onStart }: FooterProps) {
 								))}
 
 								<div className={styles.column}>
-									<p className="mono sm">Connect</p>
+									<p className="mono sm">Volgen</p>
 									<ul>
 										{SOCIAL.map((link) => (
 											<li key={link.label}>

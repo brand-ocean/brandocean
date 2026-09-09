@@ -16,7 +16,7 @@ if (typeof window !== "undefined") {
 const DESKTOP_BREAKPOINT = 900;
 const SERVICES = [
 	{
-		title: "Apps & Platforms",
+		title: "Apps & platforms",
 		items: [
 			"Dashboards & analytics",
 			"CRM & opportunity-beheer",
@@ -26,7 +26,7 @@ const SERVICES = [
 		],
 	},
 	{
-		title: "E-commerce",
+		title: "Webshops",
 		items: [
 			"Shopify-themes op maat",
 			"Custom webshops",
@@ -36,7 +36,7 @@ const SERVICES = [
 		],
 	},
 	{
-		title: "AI & Automatisering",
+		title: "AI & automatisering",
 		items: [
 			"Mail- en documentverrijking",
 			"Classificatie & deduplicatie",
@@ -46,7 +46,7 @@ const SERVICES = [
 		],
 	},
 	{
-		title: "Branding & Design",
+		title: "Merk & design",
 		items: [
 			"Merkidentiteit & wordmarks",
 			"UI/UX-ontwerp",
@@ -56,13 +56,13 @@ const SERVICES = [
 		],
 	},
 	{
-		title: "Data & Marketing",
+		title: "Data & marketing",
 		items: [
 			"Analytics-inrichting",
 			"Meta, Google & TikTok ads",
 			"SEO en technische audits",
 			"Dashboards voor management",
-			"Onderhoud & doorontwikkeling",
+			"Doorontwikkeling, elke maand",
 		],
 	},
 ];
@@ -139,7 +139,7 @@ export default function ExpertiseServices() {
 				<div className={`container pad ${styles.headerInner}`}>
 					<div className={styles.row}>
 						<h1>
-							All Of It, One Hand
+							Alles, één afdeling
 							<Callout
 								className={styles.callout}
 								label="Precies dat"

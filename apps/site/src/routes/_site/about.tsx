@@ -14,9 +14,9 @@ function AboutPage() {
 	return (
 		<main className={styles.page}>
 			<SmudgeRevealer
-				lineOne="Wipe Here"
-				lineTwo="To Meet Us"
-				copy="Twenty Years Of Building. One Person You Have To Call."
+				lineOne="Veeg hier"
+				lineTwo="Wij zitten eronder"
+				copy="Twintig jaar bouwen. Eén afdeling die blijft."
 			/>
 			<Spotlight />
 			<AboutCopy />

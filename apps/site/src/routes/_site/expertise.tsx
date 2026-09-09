@@ -16,7 +16,7 @@ function ExpertisePage() {
 			<section className={styles.hero}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						What We Actually Do
+						Wat we elke maand doen
 						<Callout
 							className={styles.callout}
 							label="Kijk mee"

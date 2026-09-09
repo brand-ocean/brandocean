@@ -4,7 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
 import { useEffect, useRef, useState } from "react";
 import Copy from "../Copy/Copy";
-import { isInitialLoad } from "../Preloader/Preloader";
+import { isEersteBezoek } from "../Preloader/Preloader";
 import styles from "./HeroSpotlight.module.css";
 
 // GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
@@ -96,6 +96,8 @@ export default function HeroSpotlight() {
 	const mobileRef = useRef<HTMLDivElement>(null);
 	const stateRef = useRef<HeroState | null>(null);
 	const rafRef = useRef(0);
+	// Alleen timing, geen DOM: server (true) en client mogen verschillen.
+	const eersteBezoek = isEersteBezoek();
 
 	useLenis(() => {
 		ScrollTrigger.update();
@@ -109,7 +111,7 @@ export default function HeroSpotlight() {
 			if (!intro) return;
 
 			const mm = gsap.matchMedia();
-			const introDelay = isInitialLoad ? 6.5 : 1.15;
+			const introDelay = eersteBezoek ? 6.5 : 1.15;
 
 			mm.add(`(min-width: ${DESKTOP_MIN}px)`, () => {
 				if (!videoContainer) return;
@@ -264,7 +266,7 @@ export default function HeroSpotlight() {
 
 			return () => mm.revert();
 		},
-		{ scope: introRef },
+		{ scope: introRef, dependencies: [eersteBezoek] },
 	);
 
 	useEffect(() => {
@@ -278,19 +280,20 @@ export default function HeroSpotlight() {
 			<section className={styles.hero}>
 				<div className={`container pad ${styles.heroInner}`}>
 					<div className={styles.heroTop}>
-						<Copy animateOnScroll={false} delay={isInitialLoad ? 6.4 : 1.125}>
-							<h1>One</h1>
+						<Copy animateOnScroll={false} delay={eersteBezoek ? 6.4 : 1.125}>
+							<h1>Elke</h1>
 						</Copy>
 					</div>
 					<div className={styles.heroBottom}>
-						<Copy animateOnScroll={false} delay={isInitialLoad ? 6.8 : 1.3}>
+						<Copy animateOnScroll={false} delay={eersteBezoek ? 6.8 : 1.3}>
 							<p>
-								Digitaal bureau uit Amsterdam. Apps, webshops, AI en marketing.
-								Alles in één hand, voor een vaste prijs.
+								Wij zijn de digitale afdeling van bedrijven die geen eigen
+								developers hebben. Apps, webshops en AI, voor een vast bedrag per
+								maand. Elke maand een stap verder.
 							</p>
 						</Copy>
-						<Copy animateOnScroll={false} delay={isInitialLoad ? 6.6 : 1.2}>
-							<h1>Hand</h1>
+						<Copy animateOnScroll={false} delay={eersteBezoek ? 6.6 : 1.2}>
+							<h1>Maand</h1>
 						</Copy>
 					</div>
 				</div>

@@ -20,7 +20,7 @@ function WorkPage() {
 			<section className={styles.intro}>
 				<Copy animateOnScroll={false} delay={1.125}>
 					<h1>
-						Work That Ships
+						Werk dat draait
 						<Callout
 							className={styles.callout}
 							label="Ogen open"
@@ -56,7 +56,7 @@ function WorkPage() {
 				</div>
 
 				<h1>
-					The Rest Is Under NDA
+					De rest valt onder NDA
 					<Callout
 						className={styles.callout}
 						label="Volgt nog"

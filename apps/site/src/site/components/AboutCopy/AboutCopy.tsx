@@ -14,7 +14,7 @@ export default function AboutCopy() {
 			<div className={`container pad ${styles.inner}`}>
 				<Copy>
 					<h5 className={styles.headline}>
-						We Turn Loose Ideas Into Software That Actually Ships.
+						Wij bouwen elke maand verder aan jouw bedrijf.
 						<Callout
 							className={styles.callout}
 							label="Beloofd"
@@ -31,11 +31,11 @@ export default function AboutCopy() {
 						<Copy>
 							<p>
 								Twintig jaar geleden begonnen met bouwen en daar nooit meer mee
-								gestopt. Front-end, back-end, branding, design, CRO, UI/UX, data
-								en automatisering zitten inmiddels in één paar handen. Bij een
-								bureau betaal je een developer, een designer en een marketeer,
-								en dan mis je nog de samenhang. Bij ons zit die samenhang er
-								vanaf de eerste schets in.
+								gestopt. Front-end, back-end, design, data en AI zitten
+								inmiddels in één hoofd. Een bureau levert een project op en
+								verdwijnt. Wij blijven. Voor een vast bedrag per maand zijn wij
+								de digitale afdeling van jouw bedrijf, en elke maand staat er
+								weer iets dat gisteren nog handwerk was.
 							</p>
 						</Copy>
 						<Copy>

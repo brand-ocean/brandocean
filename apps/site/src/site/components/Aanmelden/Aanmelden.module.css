@@ -44,7 +44,7 @@
 	font-size: 1.05rem;
 	color: var(--base-1000);
 	background-color: transparent;
-	border: 1px solid rgba(15, 15, 15, 0.25);
+	border: 1px solid rgba(11, 29, 51, 0.25);
 	border-radius: 0.4rem;
 	padding: 0.85rem 1rem;
 	transition: border-color 0.2s ease;

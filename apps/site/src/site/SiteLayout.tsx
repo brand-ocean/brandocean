@@ -5,44 +5,16 @@ import AanmeldenModal from "./components/Aanmelden/AanmeldenModal";
 import Footer from "./components/Footer/Footer";
 import Menu from "./components/Menu/Menu";
 import TransitionProvider from "./components/TransitionProvider/TransitionProvider";
+import { LENIS_DESKTOP, LENIS_MOBILE, MOBILE_BREAKPOINT } from "./lenis";
 import "lenis/dist/lenis.css";
-
-const MOBILE_BREAKPOINT = 1000;
-
-const LENIS_EASING = (t: number) => Math.min(1, 1.001 - 2 ** (-10 * t));
-
-const LENIS_SHARED = {
-	easing: LENIS_EASING,
-	direction: "vertical",
-	gestureDirection: "vertical",
-	smooth: true,
-	infinite: false,
-	wheelMultiplier: 1,
-	orientation: "vertical",
-	smoothWheel: true,
-	syncTouch: true,
-} as const;
-
-const LENIS_MOBILE = {
-	...LENIS_SHARED,
-	duration: 0.8,
-	smoothTouch: true,
-	touchMultiplier: 1.5,
-	lerp: 0.09,
-};
-
-const LENIS_DESKTOP = {
-	...LENIS_SHARED,
-	duration: 1.2,
-	smoothTouch: false,
-	touchMultiplier: 2,
-	lerp: 0.1,
-};
 
 /**
  * Port of blunt-main's ClientLayout. The extra `.bo-site` wrapper scopes the
  * template's global reset/typography so the authed dashboard is untouched, and
  * `bo-site-scroll` hides the native scrollbar only while marketing pages mount.
+ *
+ * De coming-soon-landing op `/` gebruikt deze schil niet; die heeft zijn eigen
+ * ComingSoonLayout.
  */
 export default function SiteLayout({ children }: { children: ReactNode }) {
 	const [isMobile, setIsMobile] = useState(false);
@@ -62,24 +34,17 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 		return () => document.documentElement.classList.remove("bo-site-scroll");
 	}, []);
 
-	const lenisOptions = isMobile ? LENIS_MOBILE : LENIS_DESKTOP;
-
-	// De coming-soon-landing draait zonder navigatie: geen menu bovenin en een
-	// footer zonder linkkolommen. Na de preloader zie je meteen de boodschap en
-	// daaronder het contact, verder niks.
-	const isComingSoon = pathname === "/";
-
 	return (
 		<div className="bo-site">
 			<TransitionProvider>
-				<ReactLenis root options={lenisOptions}>
-					{!isComingSoon && <Menu />}
-					{children}
-					<Footer
-						key={pathname}
-						minimal={isComingSoon}
-						onStart={() => setIntakeOpen(true)}
-					/>
+				<ReactLenis root options={isMobile ? LENIS_MOBILE : LENIS_DESKTOP}>
+					<Menu />
+					{/* `.bo-page` is wat het menu omhoog schuift en dimt zodra het
+					    opengaat; zie Menu.tsx. */}
+					<div className="bo-page">
+						{children}
+						<Footer key={pathname} onStart={() => setIntakeOpen(true)} />
+					</div>
 					{intakeOpen ? (
 						<AanmeldenModal onClose={() => setIntakeOpen(false)} />
 					) : null}

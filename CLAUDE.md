@@ -12,3 +12,7 @@ Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+## Skills
+
+AGENTS.md contains the TanStack Intent skill-loading workflow: run `bunx @tanstack/intent@latest list`, then `bunx @tanstack/intent@latest load <package>#<skill>` before editing TanStack code.

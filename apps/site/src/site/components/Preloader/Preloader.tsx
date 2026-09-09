@@ -4,7 +4,7 @@ import { CustomEase } from "gsap/CustomEase";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useLenis } from "lenis/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import styles from "./Preloader.module.css";
 
 // GSAP's ticker schiet een requestAnimationFrame in zodra een plugin zich
@@ -24,6 +24,39 @@ if (typeof window !== "undefined") {
 }
 
 export let isInitialLoad = true;
+
+/**
+ * Het voorscherm is voor het eerste bezoek. Binnen dezelfde browsersessie
+ * (sessionStorage) slaan we het bij een refresh of een tweede pagina over.
+ */
+const GEZIEN_KEY = "bo:preloader-gezien";
+
+function gezien() {
+	try {
+		return sessionStorage.getItem(GEZIEN_KEY) === "1";
+	} catch {
+		return false;
+	}
+}
+
+function markeerGezien() {
+	try {
+		sessionStorage.setItem(GEZIEN_KEY, "1");
+	} catch {
+		// Private mode zonder storage: dan gewoon elke keer het voorscherm.
+	}
+}
+
+// Eén keer lezen, bij het laden van de module en dus vóór de eerste render:
+// `markeerGezien` (in het effect van het voorscherm) mag het lopende
+// voorscherm niet halverwege laten verdwijnen. Pas als het weg is zet de
+// unmount `isInitialLoad` om, en dan is het antwoord voor de rest nee.
+const alGezienBijLaden = typeof window !== "undefined" && gezien();
+
+/** Synchrone variant voor effecten (Footer, HeroSpotlight). */
+export function isEersteBezoek() {
+	return isInitialLoad && !alGezienBijLaden;
+}
 
 /** Gaat af zodra het voorscherm weg is. De footer hangt hieraan op de landing. */
 export const PRELOADER_KLAAR = "bo:preloader-klaar";
@@ -63,7 +96,14 @@ export default function Preloader() {
 	const counterRef = useRef<HTMLParagraphElement>(null);
 	const colorOverlaysRef = useRef<(HTMLDivElement | null)[]>([]);
 	const darkOverlayRef = useRef<HTMLDivElement>(null);
-	const [showPreloader, setShowPreloader] = useState(isInitialLoad);
+	// Server en client renderen allebei eerst mét voorscherm (anders klaagt
+	// hydratie, en useSyncExternalStore laat React de hele boom opnieuw
+	// mounten met een verweesde Lenis als gevolg). Vóór de eerste paint haalt
+	// de layout-effect hem weg als dit geen eerste bezoek is.
+	const [showPreloader, setShowPreloader] = useState(true);
+	useLayoutEffect(() => {
+		if (!isEersteBezoek()) setShowPreloader(false);
+	}, []);
 	const [loaderAnimating, setLoaderAnimating] = useState(false);
 	const lenis = useLenis();
 
@@ -81,7 +121,7 @@ export default function Preloader() {
 
 	useGSAP(
 		() => {
-			if (!showPreloader) return;
+			if (!showPreloader || !isEersteBezoek()) return;
 
 			const root = preloaderRef.current;
 			const title = titleRef.current;
@@ -89,6 +129,7 @@ export default function Preloader() {
 			if (!root || !title || !counterEl) return;
 
 			setLoaderAnimating(true);
+			markeerGezien();
 
 			let cancelled = false;
 			let split: SplitText | null = null;
@@ -278,6 +319,9 @@ export default function Preloader() {
 				cancelled = true;
 				tl?.kill();
 				split?.revert();
+				// Ook als het voorscherm voortijdig weggaat (bij een overgeslagen
+				// bezoek mount het tijdens hydratie heel even): Lenis weer aan.
+				setLoaderAnimating(false);
 			};
 		},
 		{ scope: preloaderRef, dependencies: [showPreloader] },

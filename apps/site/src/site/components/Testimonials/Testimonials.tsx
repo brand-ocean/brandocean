@@ -55,7 +55,7 @@ const TESTIMONIALS = [
 	},
 	{
 		quote:
-			"Vaste prijs afgesproken en die bleef staan. Geen nacalculatie, geen verrassingen achteraf.",
+			"Vast bedrag per maand en dat blijft staan. Geen nacalculatie, geen verrassingen achteraf.",
 		name: "DUTCHGLOBALMEDIA",
 		role: "Influencer marketing",
 		avatar: "/images/testimonials/testimonial_img_3.jpg",
@@ -63,7 +63,7 @@ const TESTIMONIALS = [
 	},
 	{
 		quote:
-			"Van eerste schets tot livegang in weken in plaats van maanden. En het ziet er ook nog eens uit.",
+			"Live in weken in plaats van maanden, en daarna ging het gewoon door. Elke maand staat er weer iets nieuws.",
 		name: "Het Sieraad",
 		role: "Events · Amsterdam",
 		avatar: "/images/testimonials/testimonial_img_4.jpg",

@@ -230,7 +230,7 @@ export default function Team() {
 
 			<div className={styles.frame}>
 				<div className={styles.stickyHeader} ref={headerRef}>
-					<h6>Small Crew, Big Range</h6>
+					<h6>Klein team, alles erin</h6>
 				</div>
 
 				<div className={styles.cardContainer} ref={containerRef}>
