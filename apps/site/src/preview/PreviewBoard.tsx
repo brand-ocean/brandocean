@@ -135,7 +135,7 @@ export default function PreviewBoard({ preview }: { preview: ClientPreview }) {
 		const b = boundsRef.current?.[key];
 		if (!ed || !b) return;
 		setStep(-1);
-		ed.followBounds(b, { animate: 350 });
+		showBounds(ed, b, { animate: 350 });
 	};
 
 	// looproute: stap voor stap door het bord, ook met de pijltjestoetsen
@@ -144,7 +144,7 @@ export default function PreviewBoard({ preview }: { preview: ClientPreview }) {
 		const st = stationsRef.current[i];
 		if (!ed || !st) return;
 		setStep(i);
-		ed.followBounds(st.bounds, { animate: 400 });
+		showBounds(ed, st.bounds, { animate: 400 });
 	};
 	const stepCount = stationsRef.current.length;
 
@@ -182,7 +182,7 @@ export default function PreviewBoard({ preview }: { preview: ClientPreview }) {
 		} catch {
 			// niets te wissen
 		}
-		ed.followBounds(built.bounds.all, { animate: 300 });
+		showBounds(ed, built.bounds.all, { animate: 300 });
 	};
 
 	const exportPng = async () => {
@@ -229,7 +229,7 @@ export default function PreviewBoard({ preview }: { preview: ClientPreview }) {
 						// Twee keer, omdat het canvas zijn maat soms pas na de eerste
 						// layout kent en dan op een verkeerde zoom blijft staan.
 						const focus = () => {
-							if (b) editor.followBounds(b.proposed, { animate: 0 });
+							if (b) showBounds(editor, b.proposed, { animate: 0 });
 						};
 						window.requestAnimationFrame(focus);
 						window.setTimeout(focus, 250);
@@ -444,12 +444,46 @@ function hash(s: string): string {
 	return (h >>> 0).toString(36);
 }
 
+/**
+ * Quickdraw's followBounds is cover-fit (de box vult het scherm en wordt
+ * bijgesneden). Wij willen contain-fit: alles in beeld, met wat lucht. Dus
+ * rekken we de box eerst op naar de verhouding van het scherm.
+ */
+function showBounds(
+	ed: QuickdrawEditor,
+	b: Bounds,
+	opts?: { animate?: number },
+	margin = 0.06,
+) {
+	const { w, h } = ed.viewSize();
+	const box = {
+		x: b.x - b.w * margin,
+		y: b.y - b.h * margin,
+		w: b.w * (1 + 2 * margin),
+		h: b.h * (1 + 2 * margin),
+	};
+	if (w > 1 && h > 1) {
+		const view = w / h;
+		if (box.w / box.h < view) {
+			const nw = box.h * view;
+			box.x -= (nw - box.w) / 2;
+			box.w = nw;
+		} else {
+			const nh = box.w / view;
+			box.y -= (nh - box.h) / 2;
+			box.h = nh;
+		}
+	}
+	ed.followBounds(box, opts);
+}
+
 // Minimale typen voor wat we van Quickdraw gebruiken; de volledige typen
 // komen mee met het package, maar de component wordt dynamisch geladen.
 type Bounds = { x: number; y: number; w: number; h: number };
 type QuickdrawEditor = {
 	store: { getSnapshot(): Snapshot; loadSnapshot(s: Snapshot): void };
 	followBounds(b: Bounds, opts?: { animate?: number }): void;
+	viewSize(): { w: number; h: number };
 	fitContent(opts?: { margin?: number; animate?: number }): void;
 	exportImage(opts?: {
 		background?: boolean;

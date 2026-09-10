@@ -57,13 +57,30 @@ export type StationAt =
 	| "nu-tree"
 	| "straks-story"
 	| "straks-tree"
-	| "straks-loose";
+	| "straks-loose"
+	| "automations";
 
 /** Eén stap in het gesprek: grote kop op het bord, één regel eronder. */
 export type Station = {
 	at: StationAt;
 	title: string;
 	line: string;
+};
+
+/** Eén ding dat we automatiseren: kop, wat het doet, in welke fase. */
+export type Automation = {
+	name: string;
+	text: string;
+	level?: Level;
+};
+
+/** Losstaand blok op het bord: alles wat nu handwerk is en straks vanzelf gaat. */
+export type Automations = {
+	title: string;
+	intro: string;
+	items: Automation[];
+	/** Eén regel onder de lijst, bv. waar het op gebouwd is. */
+	footer?: string;
 };
 
 export type ClientPreview = {
@@ -81,6 +98,7 @@ export type ClientPreview = {
 	current: Sitemap;
 	proposed: Sitemap;
 	levels?: Record<Level, string>;
+	automations?: Automations;
 	/** De volgorde waarin je het bord doorloopt tijdens het gesprek. */
 	walkthrough?: Station[];
 };

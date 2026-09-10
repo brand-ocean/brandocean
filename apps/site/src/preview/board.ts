@@ -1,4 +1,5 @@
 import type {
+	Automations,
 	Callout,
 	ClientPreview,
 	Level,
@@ -70,6 +71,9 @@ const NOTE_W = 280;
 const NOTE_PAD = 20;
 const NOTE_FONT = 16;
 const NOTE_GAP = 30; // ruimte tussen kolom en sticky
+const AUTO_W = 400; // brede stickies in het automatiseringsblok
+const AUTO_COLS = 3;
+const AUTO_GAP = 20;
 
 // Quickdraw-tekst: FONT_SIZES.s = 20px, geschaald met `scale`.
 const BASE = 20;
@@ -701,6 +705,62 @@ function emitSitemapBlock(
 	};
 }
 
+/** Losstaand blok: kop, korte alinea, brede stickies onder elkaar, één regel eronder. */
+function emitAutomations(
+	out: Rec[],
+	id: string,
+	a: Automations,
+	left: number,
+	top: number,
+): Box {
+	out.push(
+		text(`${id}-title`, left, top, a.title.toUpperCase(), {
+			size: "xl",
+			color: "orange",
+		}),
+	);
+	const blockW = AUTO_W * AUTO_COLS + AUTO_GAP * (AUTO_COLS - 1);
+	const introW = Math.min(blockW, 760);
+	let y = top + 74;
+	out.push(
+		text(`${id}-intro`, left, y, a.intro, {
+			scale: 0.9,
+			color: "black",
+			autosize: false,
+			w: introW,
+		}),
+	);
+	y += textH(a.intro, 0.9, introW) + 40;
+	// stickies in kolommen; elke nieuwe sticky komt in de kolom die het minst vol is
+	const colY = Array.from({ length: AUTO_COLS }, () => y);
+	a.items.forEach((it, i) => {
+		const lvl = it.level ? `  ·  N${it.level}` : "";
+		const body = `AUTOMATISCH${lvl}\n${it.name}\n${it.text}`;
+		const h = noteH(body, AUTO_W);
+		const col = colY.indexOf(Math.min(...colY));
+		const nx = left + col * (AUTO_W + AUTO_GAP);
+		out.push(
+			note(`${id}-a${i}`, nx, colY[col], body, { color: "green", w: AUTO_W }),
+		);
+		colY[col] += h + 16;
+	});
+	y = Math.max(...colY);
+	if (a.footer) {
+		y += 14;
+		out.push(
+			text(`${id}-footer`, left, y, a.footer, {
+				font: "mono",
+				scale: 0.7,
+				color: "orange",
+				autosize: false,
+				w: introW,
+			}),
+		);
+		y += textH(a.footer, 0.7, introW);
+	}
+	return { x: left, y: top, w: blockW, h: y - top };
+}
+
 export function buildBoard(preview: ClientPreview): {
 	snapshot: Snapshot;
 	bounds: BoardBounds;
@@ -765,6 +825,29 @@ export function buildBoard(preview: ClientPreview): {
 		undefined,
 	);
 
+	// losstaand blok rechts van straks: wat we automatiseren
+	let auto: Box | null = null;
+	if (preview.automations) {
+		const autoLeft = propLeft + prop.w + BLOCK_GAP;
+		auto = emitAutomations(
+			out,
+			`${slug}-auto`,
+			preview.automations,
+			autoLeft,
+			blocksTop,
+		);
+		out.push(
+			line(
+				`${slug}-divider2`,
+				autoLeft - BLOCK_GAP / 2,
+				blocksTop - 40,
+				0,
+				Math.max(cur.h, prop.h, auto.h) + 80,
+				{ dash: "dotted", color: "grey" },
+			),
+		);
+	}
+
 	// scheidingslijn tussen nu en straks
 	out.push(
 		line(
@@ -785,6 +868,7 @@ export function buildBoard(preview: ClientPreview): {
 		"straks-story": prop.story,
 		"straks-tree": prop.tree,
 		"straks-loose": prop.loose,
+		automations: auto,
 	};
 	const stations: StationBounds[] = [];
 	const labelW = 560;
@@ -845,8 +929,8 @@ export function buildBoard(preview: ClientPreview): {
 		all: {
 			x: -40,
 			y: -40,
-			w: propLeft + prop.w + 80,
-			h: blocksTop + Math.max(cur.h, prop.h) + 80,
+			w: (auto ? auto.x + auto.w : propLeft + prop.w) + 80,
+			h: blocksTop + Math.max(cur.h, prop.h, auto?.h ?? 0) + 80,
 		},
 	};
 

@@ -21,6 +21,80 @@ export const goudsePoort: ClientPreview = {
 		2: "Werkplek parkmanager",
 		3: "Gebiedsplatform",
 	},
+	automations: {
+		title: "Wat we automatiseren",
+		intro:
+			"Dit is waar wij het verschil maken. Geen losse website met een contactformulier, maar één systeem waarin meldingen, leden, diensten en cijfers vanzelf hun weg vinden. Elk blok hieronder is werk dat nu met de hand gaat, en straks niet meer.",
+		footer:
+			"Gebouwd op TanStack en Convex: één bron van waarheid, alles realtime, code en data van Goudse Poort. Wij bouwen, jullie beslissen.",
+		items: [
+			{
+				name: "Meldpunt dat zichzelf doorzet",
+				text: "Een ondernemer meldt met foto en plek. De melding gaat automatisch naar de juiste partij (gemeente, groen, beveiliging) en de melder krijgt de status terug. Niets meer overtypen of nabellen.",
+				level: 2,
+			},
+			{
+				name: "Werkplek van de parkmanager",
+				text: "Eén overzicht: open meldingen, contracten die aflopen, leden die nog niet betaald hebben, taken. Elke ochtend een kort overzicht in de mail, zodat de dag begint met wat er speelt.",
+				level: 2,
+			},
+			{
+				name: "Bedrijvenregister dat bijblijft",
+				text: "Koppeling met het Handelsregister: nieuwe vestigingen en vertrekkers worden gesignaleerd. Elk bedrijf houdt zijn eigen profiel bij. Geen logo-grid meer dat verouderd raakt.",
+				level: 1,
+			},
+			{
+				name: "Lid worden in één stap",
+				text: "Aanmelden op de site is meteen lid: welkomstmail, toegang tot het portaal, op de nieuwsbrieflijst, in het register. Geen mailtjes heen en weer.",
+				level: 2,
+			},
+			{
+				name: "Contributie en facturen",
+				text: "Jaarlijkse facturen en incasso gaan vanzelf, met herinneringen. De penningmeester ziet live wie betaald heeft, zonder Excel.",
+				level: 2,
+			},
+			{
+				name: "Diensten en contracten",
+				text: "Surveillance, alarmopvolging, verzekering: online aanvragen, contract erbij, verlenging op tijd aangekondigd. Het bedrijf ziet zijn eigen diensten in het portaal.",
+				level: 2,
+			},
+			{
+				name: "KVO-rapportage uit het meldpunt",
+				text: "Incidentcijfers per maand en per categorie komen rechtstreeks uit de meldingen. Het dossier voor de hercertificering bouwt zichzelf op.",
+				level: 2,
+			},
+			{
+				name: "Nieuws één keer schrijven",
+				text: "Een bericht op de site gaat automatisch als nieuwsbrief en naar LinkedIn. Het archief staat op de site. Nooit meer een nieuwspagina die stilstaat.",
+				level: 1,
+			},
+			{
+				name: "Werkzaamheden en verkeer op de kaart",
+				text: "Wegwerkzaamheden en afsluitingen komen op de kaart en gaan als bericht naar de bedrijven in die straat. Ondernemers weten het voordat ze in de file staan.",
+				level: 3,
+			},
+			{
+				name: "ALV zonder papier",
+				text: "Agenda en stukken online, uitnodiging en herinnering vanzelf, stemmen op afstand met geteld quorum, notulen in het archief.",
+				level: 2,
+			},
+			{
+				name: "Vrije panden op de kaart",
+				text: "Beschikbaar aanbod per pand komt automatisch binnen van makelaars en staat op de kaart. Vragen van geïnteresseerden landen bij de parkmanager.",
+				level: 3,
+			},
+			{
+				name: "Vragen beantwoord door AI",
+				text: "Een assistent op de site beantwoordt vragen uit de eigen inhoud (parkeren, KVO, lid worden, wie doet wat) en zet de rest netjes door naar de parkmanager, met de vraag er al bij.",
+				level: 3,
+			},
+			{
+				name: "Jaarverslag met één druk op de knop",
+				text: "Meldingen, leden, diensten en uitgaven worden het hele jaar bijgehouden. Het jaarverslag en de verantwoording aan de gemeente staan altijd klaar.",
+				level: 3,
+			},
+		],
+	},
 	walkthrough: [
 		{
 			at: "intro",
@@ -46,6 +120,11 @@ export const goudsePoort: ClientPreview = {
 			at: "straks-tree",
 			title: "Wat er slim kan",
 			line: "Gele stickies zijn ideeën voor automatisering. N1, N2, N3 zeggen in welke fase.",
+		},
+		{
+			at: "automations",
+			title: "Wat er vanzelf kan",
+			line: "Alles wat nu handwerk is, op een rij. Elk blok is een stuk werk dat na oplevering niemand meer hoeft te doen.",
 		},
 		{
 			at: "straks-loose",
