@@ -189,6 +189,54 @@
 	z-index: 20;
 }
 
+/* Zoomknoppen in de kijkversie, rechtsonder */
+.zoom {
+	position: absolute;
+	right: 14px;
+	bottom: 14px;
+	z-index: 5;
+	display: inline-flex;
+	align-items: center;
+	height: 32px;
+	padding: 0 2px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--popover);
+	box-shadow: var(--shadow-sm);
+}
+
+.zoomBtn,
+.zoomPct {
+	height: 28px;
+	border: 0;
+	border-radius: calc(var(--radius) - 1px);
+	background: transparent;
+	color: var(--foreground);
+	font: inherit;
+	cursor: pointer;
+}
+
+.zoomBtn {
+	width: 30px;
+	font-size: 1.1rem;
+	line-height: 1;
+}
+
+.zoomPct {
+	min-width: 52px;
+	padding: 0 6px;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--muted-foreground);
+}
+
+.zoomBtn:hover,
+.zoomPct:hover {
+	background: var(--accent);
+	color: var(--foreground);
+}
+
 .hintLink {
 	appearance: none;
 	border: 0;

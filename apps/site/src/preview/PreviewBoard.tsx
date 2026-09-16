@@ -307,6 +307,14 @@ export default function PreviewBoard({
 		return best;
 	};
 
+	/** In- of uitzoomen rond het midden van het scherm. */
+	const zoomBy = (mult: number) => {
+		const ed = editorRef.current;
+		if (!ed) return;
+		const { w, h } = ed.viewSize();
+		ed.zoomAt(w / 2, h / 2, mult, { animate: 140 });
+	};
+
 	/** Camera naar een kaart (met wat lucht) en even laten oplichten. */
 	const flyTo = (card: CardRef) => {
 		const ed = editorRef.current;
@@ -829,6 +837,38 @@ export default function PreviewBoard({
 				</div>
 			</header>
 
+			{/* Kijkversie: zoomknoppen rechtsonder, want er is geen werkbalk */}
+			{share && ready && phase !== "welcome" ? (
+				<div className={styles.zoom} aria-label="Zoom">
+					<button
+						type="button"
+						className={styles.zoomBtn}
+						aria-label="Uitzoomen"
+						onClick={() => zoomBy(1 / 1.25)}
+					>
+						−
+					</button>
+					<button
+						type="button"
+						className={styles.zoomPct}
+						title="Alles in beeld"
+						onClick={() => goTo("all")}
+					>
+						{camTick >= 0 && editorRef.current
+							? `${Math.round(editorRef.current.camera.z * 100)}%`
+							: "100%"}
+					</button>
+					<button
+						type="button"
+						className={styles.zoomBtn}
+						aria-label="Inzoomen"
+						onClick={() => zoomBy(1.25)}
+					>
+						+
+					</button>
+				</div>
+			) : null}
+
 			{share ? (
 				<p className={styles.hint} hidden={!ready || phase === "welcome"}>
 					Sleep om rond te kijken, scroll of knijp om te zoomen.
@@ -1274,6 +1314,12 @@ type QuickdrawEditor = {
 	screenToPage(sx: number, sy: number): { x: number; y: number };
 	pageToScreen(px: number, py: number): { x: number; y: number };
 	followBounds(b: Bounds, opts?: { animate?: number }): void;
+	zoomAt(
+		sx: number,
+		sy: number,
+		mult: number,
+		opts?: { animate?: number },
+	): void;
 	viewSize(): { w: number; h: number };
 	fitContent(opts?: { margin?: number; animate?: number }): void;
 	setTool(tool: string): void;
