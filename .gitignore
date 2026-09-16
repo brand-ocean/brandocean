@@ -23,3 +23,6 @@ todos.json
 scratchpad-*.json
 .screenshots/
 package-lock.json
+
+# lokale worker-secrets (wrangler / cloudflare vite plugin)
+.dev.vars

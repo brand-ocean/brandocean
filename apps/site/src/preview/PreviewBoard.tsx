@@ -50,7 +50,7 @@ type View = "route" | keyof BoardBounds;
  * Rechtermuisknop geeft een menu met thema, raster, passend maken en
  * PNG-export.
  *
- * Met `share` is het de deelversie voor de klant: het bord is alleen te
+ * Met `share` is het de kijkversie voor de klant (/preview/<slug>): het bord is alleen te
  * bekijken (slepen en zoomen, niet tekenen of verplaatsen), een welkomstkaart
  * legt uit wat het is, een gids onderin loopt de route stap voor stap, en na
  * de laatste stap komt de vraag: zullen we afspreken? Wat de klant op zijn
@@ -400,11 +400,10 @@ export default function PreviewBoard({
 		}
 	});
 
-	/** Deellink naar één kaart: opent de deelversie precies daar. */
+	/** Deellink naar één kaart: opent de kijkversie precies daar. */
 	const copyCardLink = async (card: CardRef) => {
-		const url = new URL(window.location.href);
-		url.search = `?deel=1&focus=${encodeURIComponent(card.id)}`;
-		url.hash = "";
+		const url = new URL(`/preview/${preview.slug}`, window.location.origin);
+		url.searchParams.set("focus", card.id);
 		try {
 			await navigator.clipboard.writeText(url.toString());
 			setCopied(true);
@@ -451,11 +450,9 @@ export default function PreviewBoard({
 		URL.revokeObjectURL(url);
 	};
 
-	/** Kopieert de deelbare link (?deel=1) en laat even zien dat het gelukt is. */
+	/** Kopieert de kijklink (/preview/<slug>) en laat even zien dat het gelukt is. */
 	const copyShareLink = async () => {
-		const url = new URL(window.location.href);
-		url.search = "?deel=1";
-		url.hash = "";
+		const url = new URL(`/preview/${preview.slug}`, window.location.origin);
 		try {
 			await navigator.clipboard.writeText(url.toString());
 			setCopied(true);

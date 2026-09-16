@@ -21,6 +21,7 @@ import { Route as SiteAboutRouteImport } from './routes/_site/about'
 import { Route as MarketingV1RouteImport } from './routes/_marketing/v1'
 import { Route as MarketingFullRouteImport } from './routes/_marketing/full'
 import { Route as SiteWorkIndexRouteImport } from './routes/_site/work.index'
+import { Route as PreviewSlugBeheerRouteImport } from './routes/preview.$slug_.beheer'
 import { Route as SiteWorkSlugRouteImport } from './routes/_site/work.$slug'
 import { Route as MarketingWorkV1SlugRouteImport } from './routes/_marketing/work-v1.$slug'
 
@@ -82,6 +83,11 @@ const SiteWorkIndexRoute = SiteWorkIndexRouteImport.update({
   path: '/work/',
   getParentRoute: () => SiteRoute,
 } as any)
+const PreviewSlugBeheerRoute = PreviewSlugBeheerRouteImport.update({
+  id: '/preview/$slug_/beheer',
+  path: '/preview/$slug/beheer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SiteWorkSlugRoute = SiteWorkSlugRouteImport.update({
   id: '/work/$slug',
   path: '/work/$slug',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/preview/$slug': typeof PreviewSlugRoute
   '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
+  '/preview/$slug/beheer': typeof PreviewSlugBeheerRoute
   '/work/': typeof SiteWorkIndexRoute
 }
 export interface FileRoutesByTo {
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/preview/$slug': typeof PreviewSlugRoute
   '/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/work/$slug': typeof SiteWorkSlugRoute
+  '/preview/$slug/beheer': typeof PreviewSlugBeheerRoute
   '/work': typeof SiteWorkIndexRoute
 }
 export interface FileRoutesById {
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/preview/$slug': typeof PreviewSlugRoute
   '/_marketing/work-v1/$slug': typeof MarketingWorkV1SlugRoute
   '/_site/work/$slug': typeof SiteWorkSlugRoute
+  '/preview/$slug_/beheer': typeof PreviewSlugBeheerRoute
   '/_site/work/': typeof SiteWorkIndexRoute
 }
 export interface FileRouteTypes {
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/preview/$slug'
     | '/work-v1/$slug'
     | '/work/$slug'
+    | '/preview/$slug/beheer'
     | '/work/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/preview/$slug'
     | '/work-v1/$slug'
     | '/work/$slug'
+    | '/preview/$slug/beheer'
     | '/work'
   id:
     | '__root__'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/preview/$slug'
     | '/_marketing/work-v1/$slug'
     | '/_site/work/$slug'
+    | '/preview/$slug_/beheer'
     | '/_site/work/'
   fileRoutesById: FileRoutesById
 }
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   MarketingRoute: typeof MarketingRouteWithChildren
   SiteRoute: typeof SiteRouteWithChildren
   PreviewSlugRoute: typeof PreviewSlugRoute
+  PreviewSlugBeheerRoute: typeof PreviewSlugBeheerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SiteWorkIndexRouteImport
       parentRoute: typeof SiteRoute
     }
+    '/preview/$slug_/beheer': {
+      id: '/preview/$slug_/beheer'
+      path: '/preview/$slug/beheer'
+      fullPath: '/preview/$slug/beheer'
+      preLoaderRoute: typeof PreviewSlugBeheerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_site/work/$slug': {
       id: '/_site/work/$slug'
       path: '/work/$slug'
@@ -338,6 +358,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingRoute: MarketingRouteWithChildren,
   SiteRoute: SiteRouteWithChildren,
   PreviewSlugRoute: PreviewSlugRoute,
+  PreviewSlugBeheerRoute: PreviewSlugBeheerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
