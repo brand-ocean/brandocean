@@ -57,6 +57,23 @@ export type BoardBounds = Record<"all" | "current" | "proposed", Box>;
 /** Eén stap van de looproute, met de bounds waar de camera heen moet. */
 export type StationBounds = { title: string; bounds: Box };
 
+/**
+ * Iets op het bord waar je naartoe kunt: een pagina-kaart, een sectie erin,
+ * een sticky of een automatisering. Voor zoeken, spotlight, stemmen en
+ * "deel dit stukje". `id` is het shape-id, dus stabiel per bord.
+ */
+export type CardRef = {
+	id: string;
+	kind: "page" | "section" | "sticky" | "auto";
+	label: string;
+	sub?: string;
+	box: Box;
+	level?: Level;
+};
+
+/** Niveaufilter: alleen deze niveaus vol, de rest vervaagd. Leeg = alles. */
+export type BuildOptions = { levels?: Set<Level> | null };
+
 const COL_W = 300;
 const COL_GAP = 40;
 const ROW_GAP = 90;
@@ -115,6 +132,12 @@ const KIND_LABEL: Record<Callout["kind"], string> = {
 
 let z = 0;
 const nextZ = () => ++z;
+
+// Per build: de verzamelde kaarten en het actieve niveaufilter.
+let cards: CardRef[] = [];
+let levelFilter: Set<Level> | null = null;
+const faded = (lvl: Level | undefined) =>
+	!!levelFilter && lvl !== undefined && !levelFilter.has(lvl);
 
 function lines(text: string, fontPx: number, maxW: number): number {
 	const perLine = Math.max(8, Math.floor(maxW / (fontPx * CHAR)));
@@ -339,9 +362,22 @@ function emitPage(
 ): { h: number; anchors: Map<string, Box> } {
 	const anchors = new Map<string, Box>();
 	const h = pageHeight(p, showTags);
+	// niveaufilter: een pagina vervaagt als al haar secties een niveau hebben
+	// en geen daarvan meedoet
+	const pageFaded =
+		showTags &&
+		p.sections.length > 0 &&
+		p.sections.every((s) => s.level !== undefined && faded(s.level));
 	// root: primary (oranje), gewone pagina: accent met voorgrondtekst (zwart),
 	// intern: chart-2 (violet). De kaart zelf is de card-kleur (grijs, solid).
-	const headColor = p.internal ? "violet" : "black";
+	const headColor = pageFaded ? "grey" : p.internal ? "violet" : "black";
+	cards.push({
+		id: `${id}-card`,
+		kind: "page",
+		label: p.title,
+		sub: p.path,
+		box: { x, y, w: COL_W, h },
+	});
 
 	out.push(
 		geo(`${id}-card`, x, y, COL_W, h, {
@@ -376,9 +412,19 @@ function emitPage(
 		const sh = sectionHeight(s, showTags);
 		const sid = `${id}-s${i}`;
 		const tag = showTags ? s.tag : undefined;
+		const dim = showTags && faded(s.level);
+		const ink = dim ? "grey" : "black";
+		cards.push({
+			id: sid,
+			kind: "section",
+			label: s.name,
+			sub: p.title,
+			box: { x: x + PAD, y: cy, w: COL_W - PAD * 2, h: sh },
+			level: s.level,
+		});
 		out.push(
 			geo(sid, x + PAD, cy, COL_W - PAD * 2, sh, {
-				color: tag ? TAG_COLOR[tag] : "black",
+				color: dim ? "grey" : tag ? TAG_COLOR[tag] : "black",
 				fill: "none",
 				dash: tag === "weg" ? "dashed" : "solid",
 			}),
@@ -394,7 +440,7 @@ function emitPage(
 		out.push(
 			text(`${sid}-name`, x + PAD + 10, ty, s.name, {
 				scale: NAME_SCALE,
-				color: "black",
+				color: ink,
 				autosize: false,
 				w: nameW(s, showTags),
 			}),
@@ -404,7 +450,7 @@ function emitPage(
 				text(`${sid}-lvl`, x + COL_W - PAD - 34, ty + 2, `N${s.level}`, {
 					scale: SMALL_SCALE,
 					font: "mono",
-					color: "orange",
+					color: dim ? "grey" : "orange",
 				}),
 			);
 		}
@@ -413,7 +459,7 @@ function emitPage(
 			out.push(
 				text(`${sid}-desc`, x + PAD + 10, ty, s.description, {
 					scale: DESC_SCALE,
-					color: "black",
+					color: ink,
 					autosize: false,
 					w: COL_W - PAD * 2 - 20,
 				}),
@@ -425,7 +471,7 @@ function emitPage(
 				text(`${sid}-tag`, x + PAD + 10, ty, TAG_TEXT[tag], {
 					scale: SMALL_SCALE,
 					font: "mono",
-					color: TAG_COLOR[tag],
+					color: dim ? "grey" : TAG_COLOR[tag],
 				}),
 			);
 		}
@@ -454,6 +500,13 @@ function emitCallouts(
 		const ny = Math.max(cursor, wantY);
 		const body = `${KIND_LABEL[c.kind]}\n${c.text}`;
 		const h = noteH(body);
+		cards.push({
+			id: `${id}-c${i}`,
+			kind: "sticky",
+			label: c.text,
+			sub: KIND_LABEL[c.kind],
+			box: { x: nx, y: ny, w: NOTE_W, h },
+		});
 		out.push(note(`${id}-c${i}`, nx, ny, body, { color: KIND_COLOR[c.kind] }));
 		if (anchor) {
 			// pijl van de linkerrand van de sticky naar de rechterrand van de sectie
@@ -739,8 +792,19 @@ function emitAutomations(
 		const h = noteH(body, AUTO_W);
 		const col = colY.indexOf(Math.min(...colY));
 		const nx = left + col * (AUTO_W + AUTO_GAP);
+		cards.push({
+			id: `${id}-a${i}`,
+			kind: "auto",
+			label: it.name,
+			sub: a.title,
+			box: { x: nx, y: colY[col], w: AUTO_W, h },
+			level: it.level,
+		});
 		out.push(
-			note(`${id}-a${i}`, nx, colY[col], body, { color: "green", w: AUTO_W }),
+			note(`${id}-a${i}`, nx, colY[col], body, {
+				color: faded(it.level) ? "grey" : "green",
+				w: AUTO_W,
+			}),
 		);
 		colY[col] += h + 16;
 	});
@@ -761,12 +825,18 @@ function emitAutomations(
 	return { x: left, y: top, w: blockW, h: y - top };
 }
 
-export function buildBoard(preview: ClientPreview): {
+export function buildBoard(
+	preview: ClientPreview,
+	opts: BuildOptions = {},
+): {
 	snapshot: Snapshot;
 	bounds: BoardBounds;
 	stations: StationBounds[];
+	cards: CardRef[];
 } {
 	z = 0;
+	cards = [];
+	levelFilter = opts.levels?.size ? opts.levels : null;
 	const out: Rec[] = [];
 	const assets: Asset[] = [];
 	const slug = preview.slug;
@@ -934,5 +1004,5 @@ export function buildBoard(preview: ClientPreview): {
 		},
 	};
 
-	return { snapshot: { document: { store } }, bounds, stations };
+	return { snapshot: { document: { store } }, bounds, stations, cards };
 }

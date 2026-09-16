@@ -1,0 +1,243 @@
+/* Menu's op het bord, naar Relume: wit vlak met dunne rand, 8px lucht boven
+   en onder, items van 28px met 8px marge en eigen radius, zoekveld bovenin,
+   sneltoets als chipje rechts, ↵ bij het gefocuste item. Wordt gebruikt door
+   het merkmenu (Base UI dropdown) en het rechtermuisknopmenu. Selectors zijn
+   bewust twee klassen diep, zodat ze winnen van de Tailwind-utilities uit het
+   ui-package. */
+
+.popup {
+	display: flex;
+	flex-direction: column;
+	width: min(256px, calc(100vw - 16px));
+	max-height: 80vh;
+	padding: 8px 0;
+	border: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
+	border-radius: var(--radius);
+	background: var(--popover);
+	color: var(--popover-foreground);
+	box-shadow: var(--shadow-lg);
+	font-family: var(--font-sans);
+	font-size: 0.875rem;
+	line-height: 1.3;
+	box-sizing: border-box;
+	outline: none;
+	animation: menuIn 100ms ease-out;
+}
+
+.popup.sub {
+	width: auto;
+	min-width: 180px;
+}
+
+.popup.wide {
+	width: min(300px, calc(100vw - 16px));
+}
+
+@keyframes menuIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.search {
+	padding: 0 8px 8px;
+}
+
+.popup .input {
+	display: block;
+	width: 100%;
+	height: 32px;
+	padding: 0 10px;
+	border: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
+	border-radius: var(--radius);
+	background: var(--popover);
+	color: var(--foreground);
+	font: inherit;
+	box-sizing: border-box;
+	outline: none;
+}
+
+.popup .input::placeholder {
+	color: var(--muted-foreground);
+}
+
+.popup .input:focus-visible {
+	border-color: var(--ring);
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+
+.label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.popup .item {
+	flex-shrink: 0;
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-auto-columns: min-content;
+	grid-auto-flow: column;
+	align-items: center;
+	gap: 8px;
+	height: 28px;
+	margin: 0 8px;
+	padding: 0 8px;
+	border: 0;
+	border-radius: calc(var(--radius) - 1px);
+	background: none;
+	color: var(--foreground);
+	font: inherit;
+	text-align: start;
+	text-decoration: none;
+	cursor: pointer;
+	white-space: nowrap;
+	outline: none;
+	transition: background 200ms ease-out;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.popup .item.hasIcon {
+	grid-template-columns: min-content 1fr;
+}
+
+.popup .item:hover,
+.popup .item:focus-visible,
+.popup .item[data-highlighted],
+.popup .item[data-popup-open],
+.popup .item[data-open] {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.popup .item[data-disabled],
+.popup .item[aria-disabled="true"] {
+	color: var(--muted-foreground);
+	cursor: default;
+}
+
+.popup .item[data-checked] .label,
+.popup .item[aria-checked="true"] .label {
+	font-weight: 500;
+}
+
+.icon {
+	display: inline-flex;
+	width: 14px;
+	height: 14px;
+	color: var(--muted-foreground);
+}
+
+.icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.chevron {
+	width: 14px;
+	height: 14px;
+	color: var(--muted-foreground);
+	opacity: 0.7;
+}
+
+.check {
+	color: var(--primary);
+	font-size: 0.8rem;
+	line-height: 1;
+}
+
+.shortcut {
+	display: none;
+	padding: 2px 4px;
+	border-radius: calc(var(--radius) - 2px);
+	background: var(--accent);
+	color: var(--muted-foreground);
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	line-height: 1.2;
+}
+
+.enter {
+	display: none;
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.shortcut {
+		display: block;
+	}
+
+	.popup .item[data-highlighted] .enter,
+	.popup .item:focus-visible .enter {
+		display: block;
+	}
+
+	.popup .item[data-highlighted] .shortcut:has(+ .enter),
+	.popup .item:focus-visible .shortcut:has(+ .enter) {
+		display: none;
+	}
+}
+
+.popup .divider {
+	width: 100%;
+	height: 0;
+	margin: 8px 0;
+	border: 0;
+	border-top: 1px solid color-mix(in oklch, var(--foreground) 15%, transparent);
+}
+
+.popup .heading {
+	padding: 4px 16px 2px;
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
+}
+
+.empty {
+	padding: 4px 16px 0;
+	color: var(--muted-foreground);
+}
+
+/* Trigger: het merkchipje met pijltje, zoals Relume's logoknop */
+.trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 32px;
+	padding: 0 8px 0 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--popover);
+	color: var(--foreground);
+	cursor: pointer;
+	outline: none;
+}
+
+.trigger:hover,
+.trigger[data-popup-open] {
+	background: var(--accent);
+}
+
+.trigger:focus-visible {
+	border-color: var(--ring);
+	box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring) 35%, transparent);
+}
+
+.trigger .chevron {
+	transition: transform 150ms ease;
+}
+
+.trigger[data-popup-open] .chevron {
+	transform: rotate(180deg);
+	opacity: 1;
+}

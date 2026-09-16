@@ -132,6 +132,11 @@ export const goudsePoort: ClientPreview = {
 			line: "Vast bedrag per maand, elke maand verder. Volgende stap: een uur meelopen op de Tielweg.",
 		},
 	],
+	closing: {
+		title: "Zullen we een uur meelopen?",
+		line: "Op de Tielweg, bij Ericis. Wij kijken hoe meldingen, diensten en leden nu lopen. Binnen een week daarna staat het plan hier op dit bord: planning, eerste stappen en maandbedrag.",
+		subject: "Goudse Poort: een uur meelopen",
+	},
 	current: {
 		label: "Nu",
 		summary:

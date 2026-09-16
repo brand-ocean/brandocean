@@ -1,0 +1,122 @@
+/* De extra's op het bord: zoeken, spotlight, oplichten. Kleuren en radius
+   uit theme.css; menu-onderdelen uit Menu.module.css. */
+
+/* Zoeken (⌘K): midden op het scherm, breed, groter dan een gewoon menu.
+   Selectors twee klassen diep, zodat ze winnen van Menu.module.css. */
+.palette {
+	position: absolute;
+	top: 26vh;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 30;
+	width: min(680px, calc(100vw - 24px));
+	animation: drop 120ms ease-out;
+}
+
+.palette .paletteBox {
+	width: 100%;
+	padding: 10px 0;
+	box-shadow: var(--shadow-2xl);
+}
+
+.palette .search {
+	padding: 0 10px 10px;
+}
+
+.palette .input {
+	height: 46px;
+	padding: 0 14px;
+	font-size: 1.05rem;
+}
+
+.palette .item {
+	height: 38px;
+	margin: 0 10px;
+	padding: 0 10px;
+	font-size: 0.95rem;
+}
+
+.palette .empty {
+	padding: 4px 20px 2px;
+	font-size: 0.9rem;
+}
+
+@keyframes drop {
+	from {
+		opacity: 0;
+		transform: translate(-50%, -6px);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+
+.kind {
+	width: 14px;
+	text-align: center;
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+}
+
+.sub {
+	color: var(--muted-foreground);
+}
+
+/* Spotlight: een gat met een enorme schaduw eromheen. Het kleed is het
+   papier, iets donkerder, op 65%: de rest blijft leesbaar, het gat springt eruit. */
+.spot,
+.spotAll {
+	--veil: color-mix(
+		in oklch,
+		color-mix(in oklch, black 14%, var(--background)) 65%,
+		transparent
+	);
+	position: absolute;
+	z-index: 4;
+	pointer-events: none;
+	border-radius: var(--radius);
+	box-shadow: 0 0 0 9999px var(--veil);
+	transition:
+		left 160ms ease-out,
+		top 160ms ease-out,
+		width 160ms ease-out,
+		height 160ms ease-out;
+}
+
+.spot[data-pinned] {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+}
+
+.spotRound {
+	border-radius: 50%;
+	transition: none;
+}
+
+.spotAll {
+	inset: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: var(--veil);
+}
+
+/* Oplichten van een kaart, na zoeken of een deellink */
+.flash {
+	position: absolute;
+	z-index: 4;
+	pointer-events: none;
+	border: 2px solid var(--primary);
+	border-radius: var(--radius);
+	box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 25%, transparent);
+	animation: pulse 1.2s ease-out 2;
+}
+
+@keyframes pulse {
+	0% {
+		box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 45%, transparent);
+	}
+	100% {
+		box-shadow: 0 0 0 18px color-mix(in oklch, var(--primary) 0%, transparent);
+	}
+}

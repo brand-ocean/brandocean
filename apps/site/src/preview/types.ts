@@ -67,6 +67,17 @@ export type Station = {
 	line: string;
 };
 
+/**
+ * Slot van de deelversie: wat we de klant vragen als hij de route uit heeft.
+ * De knoppen (mail, WhatsApp) staan vast in PreviewBoard; dit is de tekst.
+ */
+export type Closing = {
+	title: string;
+	line: string;
+	/** Onderwerp van de mail / eerste regel van het appje. */
+	subject?: string;
+};
+
 /** Eén ding dat we automatiseren: kop, wat het doet, in welke fase. */
 export type Automation = {
 	name: string;
@@ -101,4 +112,6 @@ export type ClientPreview = {
 	automations?: Automations;
 	/** De volgorde waarin je het bord doorloopt tijdens het gesprek. */
 	walkthrough?: Station[];
+	/** Afsluiter in de deelversie (?deel=1): de vraag na de laatste stap. */
+	closing?: Closing;
 };

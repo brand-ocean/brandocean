@@ -25,22 +25,18 @@
 	color: var(--muted-foreground);
 }
 
+/* Balk bovenin: drie kolommen, links wie, midden de tabs, rechts de knoppen.
+   Geen eigen achtergrond; elk onderdeel is een chip op het papier. */
 .chrome {
 	position: absolute;
 	top: 12px;
-	left: 50%;
-	transform: translateX(-50%);
+	left: 12px;
+	right: 12px;
 	z-index: 5;
-	display: flex;
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
 	align-items: center;
-	gap: 14px;
-	padding: 6px 8px 6px 16px;
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	background: color-mix(in oklch, var(--card) 88%, transparent);
-	box-shadow: var(--shadow-lg);
-	backdrop-filter: blur(8px);
-	white-space: nowrap;
+	gap: 12px;
 	opacity: 0;
 	transition: opacity 200ms ease;
 }
@@ -49,32 +45,103 @@
 	opacity: 1;
 }
 
-.brand {
+.left,
+.right {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: 8px;
-	padding-right: 10px;
-	border-right: 1px solid var(--border);
+	min-width: 0;
 }
 
-.wordmark {
-	font-family: var(--font-sans);
-	font-weight: 700;
-	font-size: 0.95rem;
+.left {
+	justify-self: start;
+}
+
+.right {
+	justify-self: end;
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 32px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--popover);
+	color: var(--popover-foreground);
+	white-space: nowrap;
+}
+
+.chip {
+	font-size: 0.85rem;
+	font-weight: 500;
+}
+
+.route {
+	gap: 2px;
+	padding: 0 4px;
+}
+
+.routeLabel {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	color: var(--foreground);
+	font: inherit;
+	font-size: 0.8rem;
+	font-variant-numeric: tabular-nums;
+	padding: 4px 8px;
+	border-radius: var(--radius);
+	cursor: pointer;
+	white-space: pre;
+}
+
+.routeLabel:hover {
+	background: var(--accent);
+}
+
+/* Tabwisselaar, zoals Relume: een iets donkerder vak met de actieve tab als
+   wit kaartje erin. */
+.tabs {
+	display: flex;
+	gap: 2px;
+	padding: 4px;
+	border-radius: var(--radius);
+	background: color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+
+.tab {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	color: var(--muted-foreground);
+	font: inherit;
+	font-size: 0.8rem;
+	font-weight: 500;
 	line-height: 1;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
+	padding: 8px 14px;
+	border-radius: calc(var(--radius) - 2px);
+	cursor: pointer;
+	transition:
+		background 120ms ease,
+		color 120ms ease;
+}
+
+.tab:hover {
 	color: var(--foreground);
 }
 
-.client {
-	font-size: 0.8rem;
-	color: var(--muted-foreground);
+.tab[aria-selected="true"] {
+	background: var(--popover);
+	color: var(--foreground);
+	box-shadow: var(--shadow-sm);
 }
 
-.actions {
-	display: flex;
-	gap: 4px;
+.tab:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
 }
 
 .route {
@@ -94,7 +161,7 @@
 	font-size: 0.8rem;
 	font-variant-numeric: tabular-nums;
 	padding: 4px 8px;
-	border-radius: calc(var(--radius) - 8px);
+	border-radius: var(--radius);
 	cursor: pointer;
 	white-space: pre;
 }
@@ -116,67 +183,244 @@
 	color: var(--muted-foreground);
 }
 
-/* Contextmenu (rechtermuisknop) */
-.menu {
+/* Contextmenu (rechtermuisknop): stijl uit Menu.module.css, hier alleen de plek */
+.ctx {
 	position: fixed;
 	z-index: 20;
-	min-width: 190px;
-	padding: 6px;
-	border: 1px solid var(--border);
-	border-radius: calc(var(--radius) - 4px);
-	background: var(--popover);
-	color: var(--popover-foreground);
-	box-shadow: var(--shadow-xl);
-	font-size: 0.82rem;
 }
 
-.menuLabel {
-	padding: 6px 10px 2px;
+.hintLink {
+	appearance: none;
+	border: 0;
+	padding: 0;
+	background: transparent;
+	color: var(--primary);
+	font: inherit;
+	cursor: pointer;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* Deelversie: gids onderin, één stap per keer */
+.guide {
+	position: absolute;
+	left: 50%;
+	bottom: 18px;
+	transform: translateX(-50%);
+	z-index: 6;
+	width: min(560px, calc(100vw - 32px));
+	padding: 16px 18px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: color-mix(in oklch, var(--card) 92%, transparent);
+	color: var(--card-foreground);
+	box-shadow: var(--shadow-xl);
+	backdrop-filter: blur(10px);
+	animation: rise 260ms ease;
+}
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translate(-50%, 8px);
+	}
+	to {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+
+.guideHead {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+}
+
+.guideNum {
 	font-family: var(--font-mono);
-	font-size: 0.62rem;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--primary);
+	font-variant-numeric: tabular-nums;
+}
+
+.guideOf {
+	font-size: 0.7rem;
+	font-weight: 400;
 	color: var(--muted-foreground);
 }
 
-.menuSep {
-	height: 1px;
-	margin: 6px 4px;
-	background: var(--border);
+.guideTitle {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 600;
+	line-height: 1.2;
 }
 
-.menuItem {
+.guideLine {
+	margin: 8px 0 0;
+	font-size: 0.92rem;
+	line-height: 1.5;
+	color: var(--foreground);
+}
+
+.guideNav {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: 8px;
-	width: 100%;
-	padding: 6px 10px;
+	margin-top: 14px;
+}
+
+.dots {
+	display: flex;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dot {
+	display: block;
+	width: 8px;
+	height: 8px;
+	padding: 0;
 	border: 0;
-	border-radius: calc(var(--radius) - 8px);
-	background: transparent;
-	color: inherit;
-	font: inherit;
-	text-align: left;
+	border-radius: 50%;
+	background: color-mix(in oklch, var(--foreground) 18%, transparent);
 	cursor: pointer;
 }
 
-.menuItem:hover,
-.menuItem:focus-visible {
-	background: var(--accent);
-	color: var(--accent-foreground);
-	outline: none;
+.dot[data-on] {
+	background: var(--primary);
 }
 
-.menuCheck {
-	display: inline-block;
-	width: 10px;
-	font-size: 0.55rem;
+.dot[aria-current] {
+	transform: scale(1.35);
+}
+
+/* Deelversie: welkomstkaart en afsluiter over het bord */
+.veil {
+	position: absolute;
+	inset: 0;
+	z-index: 8;
+	display: grid;
+	place-items: center;
+	padding: 16px;
+	background: color-mix(in oklch, var(--background) 55%, transparent);
+	backdrop-filter: blur(6px);
+	animation: fade 240ms ease;
+}
+
+@keyframes fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.card {
+	width: min(520px, 100%);
+	padding: 28px 28px 22px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	color: var(--card-foreground);
+	box-shadow: var(--shadow-2xl);
+}
+
+.eyebrow {
+	margin: 0 0 10px;
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 	color: var(--primary);
 }
 
+.cardTitle {
+	margin: 0;
+	font-size: clamp(1.4rem, 3.5vw, 1.9rem);
+	font-weight: 600;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+}
+
+.cardText {
+	margin: 14px 0 0;
+	font-size: 0.95rem;
+	line-height: 1.55;
+}
+
+.cardMeta {
+	margin: 12px 0 0;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.cardMeta a {
+	color: var(--foreground);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.cardActions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 20px;
+}
+
+.cardDate {
+	margin: 18px 0 0;
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	color: var(--muted-foreground);
+}
+
+.cardFoot {
+	display: flex;
+	gap: 16px;
+	margin-top: 18px;
+	font-size: 0.8rem;
+}
+
+/* Smaller schermen: de routechip rechts is het eerste dat weg mag; de route
+   zit ook in het merkmenu en onder de pijltjestoetsen. */
+@media (max-width: 1180px) {
+	.route {
+		display: none;
+	}
+}
+
 @media (max-width: 720px) {
-	.client,
 	.hint {
 		display: none;
+	}
+
+	.chrome {
+		grid-template-columns: 1fr auto;
+		gap: 8px;
+	}
+
+	.tabs {
+		grid-column: 1 / -1;
+		justify-self: center;
+	}
+
+	.guide {
+		bottom: 12px;
+		padding: 14px 14px 12px;
+	}
+
+	.guideTitle {
+		font-size: 1.05rem;
+	}
+
+	.card {
+		padding: 22px 20px 18px;
 	}
 }

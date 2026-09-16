@@ -1,10 +1,43 @@
 /* Thema van de preview-pagina's, 1:1 de tweakcn/shadcn-tokens die Arin
-   aanleverde (warm zand, terracotta primary, Outfit + Geist Mono, radius
-   1rem). Gescoped op .pv-theme zodat de rest van de site zijn eigen palet
+   aanleverde (warm zand, terracotta primary, radius 6px), met Relative
+   (gekocht, Book + Medium, in public/fonts/relative) als sans en Geist Mono
+   als mono. Gescoped op .pv-theme zodat de rest van de site zijn eigen palet
    houdt; het ui-package mapt --color-* al naar deze variabelen, dus de
    shadcn-knoppen volgen vanzelf. */
 
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300..700&family=Geist+Mono:wght@300..600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300..600&display=swap");
+
+@font-face {
+	font-family: Relative;
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+	src: url("/fonts/relative/Relative-Book.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Relative;
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+	src: url("/fonts/relative/Relative-BookItalic.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Relative;
+	font-weight: 500 700;
+	font-style: normal;
+	font-display: swap;
+	src: url("/fonts/relative/Relative-Medium.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Relative;
+	font-weight: 500 700;
+	font-style: italic;
+	font-display: swap;
+	src: url("/fonts/relative/Relative-MediumItalic.woff2") format("woff2");
+}
 
 .pv-theme {
 	--background: #f0efeb;
@@ -39,10 +72,18 @@
 	--sidebar-accent-foreground: oklch(0.325 0 0);
 	--sidebar-border: oklch(0.9401 0 0);
 	--sidebar-ring: oklch(0.7731 0 0);
-	--font-sans: Outfit, sans-serif;
+	--font-sans: Relative, -apple-system, BlinkMacSystemFont, sans-serif;
 	--font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 	--font-mono: "Geist Mono", ui-monospace, monospace;
-	--radius: 1rem;
+	/* 6px overal: knoppen, chips, tabs, kaarten. De --radius-* hieronder
+	   overschrijven de Tailwind-tokens uit het ui-package, die anders op de
+	   :root-waarde blijven rekenen. */
+	--radius: 6px;
+	--radius-sm: 6px;
+	--radius-md: 6px;
+	--radius-lg: 6px;
+	--radius-xl: 6px;
+	--radius-2xl: 6px;
 	--shadow-x: 0;
 	--shadow-y: 1px;
 	--shadow-blur: 3px;
