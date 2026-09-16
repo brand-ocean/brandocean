@@ -60,6 +60,7 @@ type Leaf = {
 		| "/habits"
 		| "/feedback"
 		| "/portfolio"
+		| "/borden"
 		| "/settings";
 };
 
@@ -99,6 +100,7 @@ const NAV: readonly NavEntry[] = [
 		items: [
 			{ title: "Tasks", to: "/tasks" },
 			{ title: "Feedback", to: "/feedback" },
+			{ title: "Borden", to: "/borden" },
 			{ title: "Portfolio", to: "/portfolio" },
 		],
 	},

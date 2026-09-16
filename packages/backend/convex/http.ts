@@ -987,4 +987,89 @@ http.route({
 	}),
 });
 
+// --- Preview-bord: gebruik van de kijkversie --------------------------------
+//
+// De kijkversie (brandocean.nl/preview/<slug>) stuurt hier gebundelde events
+// heen, ook via sendBeacon bij het sluiten van het tabblad. Anoniem en
+// zonder token: het bord is toch openbaar en de data is niet gevoelig; de
+// mutation kapt alles af op lengte en aantal. Zie previewTrack.ts.
+
+const PT_MAX_BODY_BYTES = 32 * 1024;
+
+http.route({ path: "/preview/track", method: "OPTIONS", handler: fbPreflight });
+http.route({
+	path: "/preview/track",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const origin = request.headers.get("Origin");
+		const text = await request.text();
+		if (text.length > PT_MAX_BODY_BYTES)
+			return fbJson({ error: "too_large" }, 413, origin);
+		let body: JsonObject;
+		try {
+			const parsed: Json = JSON.parse(text);
+			if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+				return fbJson({ error: "bad_json" }, 400, origin);
+			body = parsed;
+		} catch {
+			return fbJson({ error: "bad_json" }, 400, origin);
+		}
+		const raw = body.events;
+		const events = (Array.isArray(raw) ? raw : [])
+			.filter(
+				(e): e is JsonObject =>
+					!!e && typeof e === "object" && !Array.isArray(e),
+			)
+			.slice(0, 50)
+			.map((e) => {
+				const d = fbObj(e, "data");
+				return {
+					kind: fbStr(e, "kind") as
+						| "open"
+						| "step"
+						| "view"
+						| "search"
+						| "fly"
+						| "closing"
+						| "cta"
+						| "leave",
+					at: fbNum(e, "at"),
+					data: {
+						client: fbStr(d, "client") || undefined,
+						title: fbStr(d, "title") || undefined,
+						device: fbStr(d, "device") || undefined,
+						referrer: fbStr(d, "referrer") || undefined,
+						returning: d.returning === true ? true : undefined,
+						step: fbNum(d, "step") || undefined,
+						card: fbStr(d, "card") || undefined,
+						label: fbStr(d, "label") || undefined,
+						ms: fbNum(d, "ms") || undefined,
+						q: fbStr(d, "q") || undefined,
+						cta: fbStr(d, "cta") || undefined,
+					},
+				};
+			})
+			.filter((e) =>
+				[
+					"open",
+					"step",
+					"view",
+					"search",
+					"fly",
+					"closing",
+					"cta",
+					"leave",
+				].includes(e.kind),
+			);
+		if (!events.length) return fbJson({ ok: true }, 200, origin);
+		await ctx.runMutation(internal.previewTrack.record, {
+			slug: fbStr(body, "slug"),
+			visitor: fbStr(body, "visitor"),
+			session: fbStr(body, "session"),
+			events,
+		});
+		return fbJson({ ok: true }, 200, origin);
+	}),
+});
+
 export default http;

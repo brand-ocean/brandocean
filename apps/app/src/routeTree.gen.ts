@@ -33,6 +33,7 @@ import { Route as AuthedAppHabitsIndexRouteImport } from './routes/_authed/_app/
 import { Route as AuthedAppFeedbackIndexRouteImport } from './routes/_authed/_app/feedback/index'
 import { Route as AuthedAppDashboardIndexRouteImport } from './routes/_authed/_app/dashboard/index'
 import { Route as AuthedAppClientsIndexRouteImport } from './routes/_authed/_app/clients/index'
+import { Route as AuthedAppBordenIndexRouteImport } from './routes/_authed/_app/borden/index'
 import { Route as AuthedAppBillingIndexRouteImport } from './routes/_authed/_app/billing/index'
 import { Route as AuthedAppSpecsSpecIdRouteImport } from './routes/_authed/_app/specs/$specId'
 import { Route as AuthedAppPortfolioItemIdRouteImport } from './routes/_authed/_app/portfolio/$itemId'
@@ -42,6 +43,7 @@ import { Route as AuthedAppInvoicesInvoiceIdRouteImport } from './routes/_authed
 import { Route as AuthedAppIntakesIntakeIdRouteImport } from './routes/_authed/_app/intakes/$intakeId'
 import { Route as AuthedAppFeedbackProjectIdRouteImport } from './routes/_authed/_app/feedback/$projectId'
 import { Route as AuthedAppClientsClientIdRouteImport } from './routes/_authed/_app/clients/$clientId'
+import { Route as AuthedAppBordenSlugRouteImport } from './routes/_authed/_app/borden/$slug'
 import { Route as AuthedAppBillingBillingClientIdRouteImport } from './routes/_authed/_app/billing/$billingClientId'
 import { Route as AuthedAppFeedbackProjectIdIndexRouteImport } from './routes/_authed/_app/feedback/$projectId.index'
 import { Route as AuthedAppBoekhoudingRapportenIndexRouteImport } from './routes/_authed/_app/boekhouding/rapporten/index'
@@ -168,6 +170,11 @@ const AuthedAppClientsIndexRoute = AuthedAppClientsIndexRouteImport.update({
   path: '/clients/',
   getParentRoute: () => AuthedAppRoute,
 } as any)
+const AuthedAppBordenIndexRoute = AuthedAppBordenIndexRouteImport.update({
+  id: '/borden/',
+  path: '/borden/',
+  getParentRoute: () => AuthedAppRoute,
+} as any)
 const AuthedAppBillingIndexRoute = AuthedAppBillingIndexRouteImport.update({
   id: '/billing/',
   path: '/billing/',
@@ -219,6 +226,11 @@ const AuthedAppClientsClientIdRoute =
     path: '/clients/$clientId',
     getParentRoute: () => AuthedAppRoute,
   } as any)
+const AuthedAppBordenSlugRoute = AuthedAppBordenSlugRouteImport.update({
+  id: '/borden/$slug',
+  path: '/borden/$slug',
+  getParentRoute: () => AuthedAppRoute,
+} as any)
 const AuthedAppBillingBillingClientIdRoute =
   AuthedAppBillingBillingClientIdRouteImport.update({
     id: '/billing/$billingClientId',
@@ -274,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/v/$slug': typeof VSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
+  '/borden/$slug': typeof AuthedAppBordenSlugRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/intakes/$intakeId': typeof AuthedAppIntakesIntakeIdRoute
@@ -283,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/portfolio/$itemId': typeof AuthedAppPortfolioItemIdRoute
   '/specs/$specId': typeof AuthedAppSpecsSpecIdRoute
   '/billing/': typeof AuthedAppBillingIndexRoute
+  '/borden/': typeof AuthedAppBordenIndexRoute
   '/clients/': typeof AuthedAppClientsIndexRoute
   '/dashboard/': typeof AuthedAppDashboardIndexRoute
   '/feedback/': typeof AuthedAppFeedbackIndexRoute
@@ -314,6 +328,7 @@ export interface FileRoutesByTo {
   '/v/$slug': typeof VSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
+  '/borden/$slug': typeof AuthedAppBordenSlugRoute
   '/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/intakes/$intakeId': typeof AuthedAppIntakesIntakeIdRoute
   '/invoices/$invoiceId': typeof AuthedAppInvoicesInvoiceIdRoute
@@ -322,6 +337,7 @@ export interface FileRoutesByTo {
   '/portfolio/$itemId': typeof AuthedAppPortfolioItemIdRoute
   '/specs/$specId': typeof AuthedAppSpecsSpecIdRoute
   '/billing': typeof AuthedAppBillingIndexRoute
+  '/borden': typeof AuthedAppBordenIndexRoute
   '/clients': typeof AuthedAppClientsIndexRoute
   '/dashboard': typeof AuthedAppDashboardIndexRoute
   '/feedback': typeof AuthedAppFeedbackIndexRoute
@@ -356,6 +372,7 @@ export interface FileRoutesById {
   '/v/$slug': typeof VSlugRoute
   '/og/o/$slug': typeof OgOSlugRoute
   '/_authed/_app/billing/$billingClientId': typeof AuthedAppBillingBillingClientIdRoute
+  '/_authed/_app/borden/$slug': typeof AuthedAppBordenSlugRoute
   '/_authed/_app/clients/$clientId': typeof AuthedAppClientsClientIdRoute
   '/_authed/_app/feedback/$projectId': typeof AuthedAppFeedbackProjectIdRouteWithChildren
   '/_authed/_app/intakes/$intakeId': typeof AuthedAppIntakesIntakeIdRoute
@@ -365,6 +382,7 @@ export interface FileRoutesById {
   '/_authed/_app/portfolio/$itemId': typeof AuthedAppPortfolioItemIdRoute
   '/_authed/_app/specs/$specId': typeof AuthedAppSpecsSpecIdRoute
   '/_authed/_app/billing/': typeof AuthedAppBillingIndexRoute
+  '/_authed/_app/borden/': typeof AuthedAppBordenIndexRoute
   '/_authed/_app/clients/': typeof AuthedAppClientsIndexRoute
   '/_authed/_app/dashboard/': typeof AuthedAppDashboardIndexRoute
   '/_authed/_app/feedback/': typeof AuthedAppFeedbackIndexRoute
@@ -398,6 +416,7 @@ export interface FileRouteTypes {
     | '/v/$slug'
     | '/og/o/$slug'
     | '/billing/$billingClientId'
+    | '/borden/$slug'
     | '/clients/$clientId'
     | '/feedback/$projectId'
     | '/intakes/$intakeId'
@@ -407,6 +426,7 @@ export interface FileRouteTypes {
     | '/portfolio/$itemId'
     | '/specs/$specId'
     | '/billing/'
+    | '/borden/'
     | '/clients/'
     | '/dashboard/'
     | '/feedback/'
@@ -438,6 +458,7 @@ export interface FileRouteTypes {
     | '/v/$slug'
     | '/og/o/$slug'
     | '/billing/$billingClientId'
+    | '/borden/$slug'
     | '/clients/$clientId'
     | '/intakes/$intakeId'
     | '/invoices/$invoiceId'
@@ -446,6 +467,7 @@ export interface FileRouteTypes {
     | '/portfolio/$itemId'
     | '/specs/$specId'
     | '/billing'
+    | '/borden'
     | '/clients'
     | '/dashboard'
     | '/feedback'
@@ -479,6 +501,7 @@ export interface FileRouteTypes {
     | '/v/$slug'
     | '/og/o/$slug'
     | '/_authed/_app/billing/$billingClientId'
+    | '/_authed/_app/borden/$slug'
     | '/_authed/_app/clients/$clientId'
     | '/_authed/_app/feedback/$projectId'
     | '/_authed/_app/intakes/$intakeId'
@@ -488,6 +511,7 @@ export interface FileRouteTypes {
     | '/_authed/_app/portfolio/$itemId'
     | '/_authed/_app/specs/$specId'
     | '/_authed/_app/billing/'
+    | '/_authed/_app/borden/'
     | '/_authed/_app/clients/'
     | '/_authed/_app/dashboard/'
     | '/_authed/_app/feedback/'
@@ -691,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppClientsIndexRouteImport
       parentRoute: typeof AuthedAppRoute
     }
+    '/_authed/_app/borden/': {
+      id: '/_authed/_app/borden/'
+      path: '/borden'
+      fullPath: '/borden/'
+      preLoaderRoute: typeof AuthedAppBordenIndexRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
     '/_authed/_app/billing/': {
       id: '/_authed/_app/billing/'
       path: '/billing'
@@ -752,6 +783,13 @@ declare module '@tanstack/react-router' {
       path: '/clients/$clientId'
       fullPath: '/clients/$clientId'
       preLoaderRoute: typeof AuthedAppClientsClientIdRouteImport
+      parentRoute: typeof AuthedAppRoute
+    }
+    '/_authed/_app/borden/$slug': {
+      id: '/_authed/_app/borden/$slug'
+      path: '/borden/$slug'
+      fullPath: '/borden/$slug'
+      preLoaderRoute: typeof AuthedAppBordenSlugRouteImport
       parentRoute: typeof AuthedAppRoute
     }
     '/_authed/_app/billing/$billingClientId': {
@@ -828,6 +866,7 @@ const AuthedAppFeedbackProjectIdRouteWithChildren =
 
 interface AuthedAppRouteChildren {
   AuthedAppBillingBillingClientIdRoute: typeof AuthedAppBillingBillingClientIdRoute
+  AuthedAppBordenSlugRoute: typeof AuthedAppBordenSlugRoute
   AuthedAppClientsClientIdRoute: typeof AuthedAppClientsClientIdRoute
   AuthedAppFeedbackProjectIdRoute: typeof AuthedAppFeedbackProjectIdRouteWithChildren
   AuthedAppIntakesIntakeIdRoute: typeof AuthedAppIntakesIntakeIdRoute
@@ -837,6 +876,7 @@ interface AuthedAppRouteChildren {
   AuthedAppPortfolioItemIdRoute: typeof AuthedAppPortfolioItemIdRoute
   AuthedAppSpecsSpecIdRoute: typeof AuthedAppSpecsSpecIdRoute
   AuthedAppBillingIndexRoute: typeof AuthedAppBillingIndexRoute
+  AuthedAppBordenIndexRoute: typeof AuthedAppBordenIndexRoute
   AuthedAppClientsIndexRoute: typeof AuthedAppClientsIndexRoute
   AuthedAppDashboardIndexRoute: typeof AuthedAppDashboardIndexRoute
   AuthedAppFeedbackIndexRoute: typeof AuthedAppFeedbackIndexRoute
@@ -856,6 +896,7 @@ interface AuthedAppRouteChildren {
 
 const AuthedAppRouteChildren: AuthedAppRouteChildren = {
   AuthedAppBillingBillingClientIdRoute: AuthedAppBillingBillingClientIdRoute,
+  AuthedAppBordenSlugRoute: AuthedAppBordenSlugRoute,
   AuthedAppClientsClientIdRoute: AuthedAppClientsClientIdRoute,
   AuthedAppFeedbackProjectIdRoute: AuthedAppFeedbackProjectIdRouteWithChildren,
   AuthedAppIntakesIntakeIdRoute: AuthedAppIntakesIntakeIdRoute,
@@ -865,6 +906,7 @@ const AuthedAppRouteChildren: AuthedAppRouteChildren = {
   AuthedAppPortfolioItemIdRoute: AuthedAppPortfolioItemIdRoute,
   AuthedAppSpecsSpecIdRoute: AuthedAppSpecsSpecIdRoute,
   AuthedAppBillingIndexRoute: AuthedAppBillingIndexRoute,
+  AuthedAppBordenIndexRoute: AuthedAppBordenIndexRoute,
   AuthedAppClientsIndexRoute: AuthedAppClientsIndexRoute,
   AuthedAppDashboardIndexRoute: AuthedAppDashboardIndexRoute,
   AuthedAppFeedbackIndexRoute: AuthedAppFeedbackIndexRoute,

@@ -20,6 +20,7 @@ import menuStyles from "./Menu.module.css";
 import styles from "./PreviewBoard.module.css";
 import "./theme.css";
 import type { ClientPreview, Level } from "./types";
+import { useTracker } from "./useTracker";
 
 type Theme = "dark" | "light";
 type Grid = "none" | "lines" | "dots";
@@ -104,6 +105,11 @@ export default function PreviewBoard({
 	const unfilteredRef = useRef<Snapshot | null>(null);
 	const [search, setSearch] = useState(false);
 	const [flash, setFlash] = useState<CardRef | null>(null);
+	// kijkversie: anoniem meten wat de kijker doet, voor het dashboard "Borden"
+	const tracker = useTracker(preview.slug, share, {
+		client: preview.client,
+		title: preview.title,
+	});
 	const storageKey = `bo-preview-board:${preview.slug}:${hash(JSON.stringify(preview))}`;
 
 	useEffect(() => {
@@ -214,6 +220,7 @@ export default function PreviewBoard({
 		setView("route");
 		if (share) setPhase("tour");
 		showBounds(ed, st.bounds, { animate: 400 });
+		tracker.track("step", { step: i + 1, label: st.title });
 	};
 	const stepCount = stationsRef.current.length;
 	const lastStep = step >= stepCount - 1;
@@ -332,7 +339,56 @@ export default function PreviewBoard({
 		setFlash(card);
 		if (share) setPhase("free");
 		setSearch(false);
+		tracker.track("fly", { card: card.id, label: card.label });
 	};
+
+	// afsluiter gezien, en klikken op mail / WhatsApp / bellen
+	useEffect(() => {
+		if (share && phase === "closing") tracker.track("closing");
+	}, [share, phase, tracker]);
+	const cta = (kind: "mail" | "whatsapp" | "tel") => {
+		tracker.track("cta", { cta: kind });
+		tracker.flush();
+	};
+
+	// welke kaart staat in het midden van het scherm, en hoe lang al: dat is
+	// "kijken naar". Alleen op leesbare zoom; secties tellen als hun pagina.
+	const dwellRef = useRef<{ card: CardRef; since: number } | null>(null);
+	useEffect(() => {
+		if (!share || !ready) return;
+		const tick = () => {
+			const ed = editorRef.current;
+			if (!ed) return;
+			const { w, h } = ed.viewSize();
+			const p = ed.screenToPage(w / 2, h / 2);
+			let card: CardRef | null = null;
+			if (ed.camera.z >= 0.3) {
+				for (const c of cardsRef.current) {
+					if (c.kind === "section") continue;
+					const b = c.box;
+					if (p.x < b.x || p.y < b.y || p.x > b.x + b.w || p.y > b.y + b.h)
+						continue;
+					if (!card || b.w * b.h < card.box.w * card.box.h) card = c;
+				}
+			}
+			const cur = dwellRef.current;
+			const now = Date.now();
+			if (cur && (card?.id !== cur.card.id || now - cur.since > 20000)) {
+				const ms = now - cur.since;
+				if (ms >= 1500)
+					tracker.track("view", {
+						card: cur.card.id,
+						label: cur.card.label,
+						ms,
+					});
+				dwellRef.current = card ? { card, since: now } : null;
+			} else if (!cur && card) {
+				dwellRef.current = { card, since: now };
+			}
+		};
+		const timer = window.setInterval(tick, 1000);
+		return () => window.clearInterval(timer);
+	}, [share, ready, tracker]);
 
 	useEffect(() => {
 		if (!flash) return;
@@ -754,7 +810,10 @@ export default function PreviewBoard({
 			{search ? (
 				<SearchPalette
 					cards={cardsRef.current}
-					onPick={flyTo}
+					onPick={(card, q) => {
+						tracker.track("search", { q, card: card.id, label: card.label });
+						flyTo(card);
+					}}
 					onClose={() => setSearch(false)}
 				/>
 			) : null}
@@ -839,7 +898,7 @@ export default function PreviewBoard({
 
 			{/* Kijkversie: zoomknoppen rechtsonder, want er is geen werkbalk */}
 			{share && ready && phase !== "welcome" ? (
-				<div className={styles.zoom} aria-label="Zoom">
+				<div className={styles.zoom}>
 					<button
 						type="button"
 						className={styles.zoomBtn}
@@ -975,14 +1034,23 @@ export default function PreviewBoard({
 								size="lg"
 								variant="default"
 								nativeButton={false}
-								render={<a href={mailHref}>Mail ons</a>}
+								render={
+									<a href={mailHref} onClick={() => cta("mail")}>
+										Mail ons
+									</a>
+								}
 							/>
 							<Button
 								size="lg"
 								variant="secondary"
 								nativeButton={false}
 								render={
-									<a href={waHref} target="_blank" rel="noreferrer">
+									<a
+										href={waHref}
+										target="_blank"
+										rel="noreferrer"
+										onClick={() => cta("whatsapp")}
+									>
 										WhatsApp
 									</a>
 								}
@@ -990,7 +1058,10 @@ export default function PreviewBoard({
 						</div>
 						<p className={styles.cardMeta}>
 							Of bel Arin:{" "}
-							<a href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}>
+							<a
+								href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}
+								onClick={() => cta("tel")}
+							>
 								{CONTACT.phone}
 							</a>
 						</p>

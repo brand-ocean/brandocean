@@ -949,4 +949,49 @@ export default defineSchema({
 		.index("by_task", ["taskId"])
 		.index("by_token", ["token"])
 		.index("by_conversation", ["conversationId"]),
+
+	// --- Preview-bord (/preview/<slug>): wat kijkers doen ---
+	// Anoniem gebruik van de kijkversie, voor het dashboard "Borden": wie
+	// opende het bord, welke stap van de route, welke kaart lang in beeld,
+	// zoekopdrachten, de afsluiter en klikken op mail/WhatsApp. `visitor` is
+	// een willekeurige sleutel per browser, `session` per keer openen. Geen
+	// persoonsgegevens. `at` is de klok van de kijker (ms).
+	previewEvents: defineTable({
+		slug: v.string(),
+		visitor: v.string(),
+		session: v.string(),
+		kind: v.union(
+			v.literal("open"),
+			v.literal("step"),
+			v.literal("view"),
+			v.literal("search"),
+			v.literal("fly"),
+			v.literal("closing"),
+			v.literal("cta"),
+			v.literal("leave"),
+		),
+		at: v.number(),
+		data: v.optional(
+			v.object({
+				// open
+				client: v.optional(v.string()),
+				title: v.optional(v.string()),
+				device: v.optional(v.string()),
+				referrer: v.optional(v.string()),
+				returning: v.optional(v.boolean()),
+				// step
+				step: v.optional(v.number()),
+				// view / fly: kaart-id en label, ms in beeld
+				card: v.optional(v.string()),
+				label: v.optional(v.string()),
+				ms: v.optional(v.number()),
+				// search
+				q: v.optional(v.string()),
+				// cta: mail | whatsapp | tel
+				cta: v.optional(v.string()),
+			}),
+		),
+	})
+		.index("by_slug", ["slug"])
+		.index("by_slug_at", ["slug", "at"]),
 });

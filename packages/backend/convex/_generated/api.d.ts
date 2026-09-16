@@ -46,6 +46,7 @@ import type * as ndaTemplates from "../ndaTemplates.js";
 import type * as ndas from "../ndas.js";
 import type * as offertes from "../offertes.js";
 import type * as portfolio from "../portfolio.js";
+import type * as previewTrack from "../previewTrack.js";
 import type * as sections from "../sections.js";
 import type * as signedNdas from "../signedNdas.js";
 import type * as snapshots from "../snapshots.js";
@@ -104,6 +105,7 @@ declare const fullApi: ApiFromModules<{
   ndas: typeof ndas;
   offertes: typeof offertes;
   portfolio: typeof portfolio;
+  previewTrack: typeof previewTrack;
   sections: typeof sections;
   signedNdas: typeof signedNdas;
   snapshots: typeof snapshots;

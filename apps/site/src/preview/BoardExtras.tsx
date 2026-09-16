@@ -24,7 +24,7 @@ export function SearchPalette({
 	onClose,
 }: {
 	cards: CardRef[];
-	onPick: (card: CardRef) => void;
+	onPick: (card: CardRef, query: string) => void;
 	onClose: () => void;
 }) {
 	const [q, setQ] = useState("");
@@ -67,7 +67,7 @@ export function SearchPalette({
 								e.preventDefault();
 								setCursor((c) => Math.max(0, c - 1));
 							} else if (e.key === "Enter" && hits[cursor]) {
-								onPick(hits[cursor]);
+								onPick(hits[cursor], needle);
 							}
 							e.stopPropagation();
 						}}
@@ -83,7 +83,7 @@ export function SearchPalette({
 									className={`${menuStyles.item} ${menuStyles.hasIcon} ${styles.item}`}
 									data-highlighted={i === cursor || undefined}
 									onMouseEnter={() => setCursor(i)}
-									onClick={() => onPick(c)}
+									onClick={() => onPick(c, needle)}
 								>
 									<span className={styles.kind} aria-hidden="true">
 										{KIND_ICON[c.kind]}
