@@ -10,7 +10,7 @@ export function Toolbar({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="frame-toolbar"
 			className={cn(
-				"flex flex-wrap items-center gap-2 px-4 pt-1 pb-2",
+				"flex flex-wrap items-center gap-2 px-3 pt-1 pb-2",
 				className,
 			)}
 			{...props}
@@ -79,7 +79,10 @@ export function CountTabs({
 }) {
 	return (
 		<div
-			className={cn("flex items-center gap-1 overflow-x-auto px-4", className)}
+			className={cn(
+				"flex items-center gap-1 overflow-x-auto overflow-y-hidden px-3",
+				className,
+			)}
 		>
 			{tabs.map((tab) => {
 				const active = tab.id === value;

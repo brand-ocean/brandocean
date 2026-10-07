@@ -4,16 +4,16 @@ import { cn } from "@/lib/utils";
 
 /**
  * Frame is the surface every page section sits on: a muted tray with a
- * border, holding one or more white panels. Headers and footers live on the
- * tray itself; the panel bleeds 1px on each side so its border lands exactly
- * on the tray's border instead of doubling up.
+ * border, holding one or more card panels. Headers and footers live on the
+ * tray itself. Styled 1:1 as FORZ's ReUI Frame at spacing "sm": the tray has
+ * a 3px inset and the panels sit inside it with their own border and radius.
  */
 function Frame({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="frame"
 			className={cn(
-				"relative flex min-w-0 flex-col rounded-xl border bg-muted/50 bg-clip-padding",
+				"relative flex min-w-0 flex-col gap-0.75 rounded-xl border bg-muted/50 bg-clip-padding p-0.75",
 				className,
 			)}
 			{...props}
@@ -26,7 +26,7 @@ function FrameHeader({ className, ...props }: React.ComponentProps<"header">) {
 		<header
 			data-slot="frame-header"
 			className={cn(
-				"flex flex-col gap-3 px-4 py-2 lg:flex-row lg:items-center lg:justify-between",
+				"flex flex-col gap-3 px-3 py-1.5 lg:flex-row lg:items-center lg:justify-between",
 				className,
 			)}
 			{...props}
@@ -87,9 +87,8 @@ function FramePanel({
 		<div
 			data-slot="frame-panel"
 			className={cn(
-				"relative -mx-px overflow-hidden rounded-xl border bg-card shadow-xs",
-				"first:-mt-px last:-mb-px",
-				flush ? "p-0" : "p-4",
+				"relative overflow-hidden rounded-[calc(var(--radius-xl)-4px)] border bg-card bg-clip-padding shadow-xs",
+				flush ? "p-0" : "px-3 py-3.5",
 				className,
 			)}
 			{...props}
@@ -102,7 +101,7 @@ function FrameFooter({ className, ...props }: React.ComponentProps<"footer">) {
 		<footer
 			data-slot="frame-footer"
 			className={cn(
-				"flex flex-col gap-1 px-4 py-1.5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between",
+				"flex flex-col gap-1 px-3 py-1.5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between",
 				className,
 			)}
 			{...props}

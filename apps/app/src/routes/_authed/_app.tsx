@@ -15,7 +15,17 @@ import {
 	usePageTitleValue,
 } from "@/components/app/page-title";
 import { AppSidebar } from "@/components/app-sidebar";
+import { Brandmark } from "@/components/brand";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -25,43 +35,6 @@ import {
 export const Route = createFileRoute("/_authed/_app")({
 	component: AppLayout,
 });
-
-/**
- * Sidebar colours are pinned to zinc regardless of the app theme — the rail
- * stays dark in light mode, which is what gives the shell its contrast.
- */
-const SHELL_VARS = {
-	"--sidebar-width": "250px",
-	"--sidebar-width-icon": "3rem",
-	"--header-height": "50px",
-	"--sidebar": "var(--color-zinc-900)",
-	"--sidebar-foreground": "var(--color-zinc-100)",
-	"--sidebar-border":
-		"color-mix(in oklab, var(--color-zinc-700) 60%, transparent)",
-	"--sidebar-accent": "var(--color-zinc-800)",
-	"--sidebar-accent-foreground": "var(--color-zinc-100)",
-	"--sidebar-primary": "var(--color-zinc-100)",
-	"--sidebar-primary-foreground": "var(--color-zinc-900)",
-	"--sidebar-ring": "var(--color-zinc-500)",
-} as React.CSSProperties;
-
-const SHELL_NAV_CLASSES = [
-	"[&_[data-slot=sidebar-menu-button][data-active]]:bg-zinc-800!",
-	"[&_[data-slot=sidebar-menu-button][data-active]]:text-zinc-50",
-	"[&_[data-slot=sidebar-menu-button][data-active]>svg]:text-white",
-	"**:data-[slot=sidebar-menu-button]:text-zinc-400",
-	"**:data-[slot=sidebar-menu-button]:hover:bg-zinc-800!",
-	"**:data-[slot=sidebar-menu-button]:hover:text-zinc-100",
-	"[&_[data-slot=sidebar-menu-button]>svg]:opacity-50",
-	"[&_[data-slot=sidebar-menu-button]:hover>svg]:opacity-100",
-	"[&_[data-slot=sidebar-menu-button][data-active]>svg]:opacity-100",
-	"[&_[data-slot=sidebar-menu-sub-button][data-active]]:bg-zinc-800!",
-	"[&_[data-slot=sidebar-menu-sub-button][data-active]]:text-zinc-50",
-	"**:data-[slot=sidebar-menu-sub-button]:text-zinc-400",
-	"**:data-[slot=sidebar-menu-sub-button]:hover:bg-zinc-800!",
-	"**:data-[slot=sidebar-menu-sub-button]:hover:text-zinc-100",
-	"[&_[data-slot=sidebar-group-label]]:text-zinc-500",
-].join(" ");
 
 /** Path segment → what the header calls it. */
 const SEGMENT_LABELS: Record<string, { section: string; page: string }> = {
@@ -97,14 +70,11 @@ function AppLayout() {
 			</Unauthenticated>
 			<Authenticated>
 				<PageTitleProvider>
-					<SidebarProvider
-						style={SHELL_VARS}
-						className={`h-svh ${SHELL_NAV_CLASSES}`}
-					>
-						<AppSidebar onOpenSearch={() => setOpen(true)} />
-						<SidebarInset className="min-w-0 overflow-y-auto bg-background">
+					<SidebarProvider className="h-svh [--header-height:--spacing(12)]">
+						<AppSidebar />
+						<SidebarInset className="flex min-w-0 flex-1 flex-col overflow-y-auto">
 							<AppHeader onOpenSearch={() => setOpen(true)} />
-							<div className="isolate flex flex-1 flex-col gap-4.5 overflow-x-hidden px-4.5 pb-4.5">
+							<div className="@container isolate flex flex-1 flex-col gap-4 overflow-x-hidden px-4.5 pt-0 pb-4.5">
 								<Outlet />
 							</div>
 						</SidebarInset>
@@ -124,37 +94,76 @@ function AppHeader({ onOpenSearch }: { onOpenSearch: () => void }) {
 	const crumb = SEGMENT_LABELS[first] ?? { section: "Platform", page: first };
 
 	return (
-		<header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-2 bg-background px-4.5">
-			<SidebarTrigger className="-ml-1.5 md:hidden" />
-			<nav
-				aria-label="Breadcrumb"
-				className="flex min-w-0 items-center gap-1.5 text-sm"
-			>
-				<span className="shrink-0 text-muted-foreground">{crumb.section}</span>
-				<span aria-hidden className="text-muted-foreground/60">
-					—
-				</span>
-				<span className="shrink-0 font-medium">{crumb.page}</span>
-				{detailTitle ? (
-					<>
-						<span aria-hidden className="text-muted-foreground/60">
-							/
-						</span>
-						<span className="truncate text-muted-foreground">
-							{detailTitle}
-						</span>
-					</>
-				) : null}
-			</nav>
-			<div className="ml-auto flex items-center gap-1">
+		<header className="sticky top-0 z-40 flex h-(--header-height) shrink-0 items-center gap-2 bg-background px-4.5">
+			<div className="flex min-w-0 items-center gap-2">
+				<SidebarTrigger aria-label="Open menu" className="-ml-1 md:hidden" />
+				<Link
+					to="/dashboard"
+					aria-label="Dashboard"
+					className="shrink-0 text-foreground md:hidden"
+				>
+					<Brandmark size={20} />
+				</Link>
+				<Breadcrumb className="min-w-0">
+					<BreadcrumbList className="flex-nowrap">
+						<BreadcrumbItem className="hidden md:inline-flex">
+							<span className="text-muted-foreground">{crumb.section}</span>
+						</BreadcrumbItem>
+						<BreadcrumbSeparator className="hidden md:flex" />
+						<BreadcrumbItem className="min-w-0">
+							{detailTitle ? (
+								<BreadcrumbLink
+									className="truncate"
+									// The first segment is always a list route (see SEGMENT_LABELS).
+									render={<Link to={`/${first}` as "/dashboard"} />}
+								>
+									{crumb.page}
+								</BreadcrumbLink>
+							) : (
+								<BreadcrumbPage className="truncate">
+									{crumb.page}
+								</BreadcrumbPage>
+							)}
+						</BreadcrumbItem>
+						{detailTitle ? (
+							<>
+								<BreadcrumbSeparator />
+								<BreadcrumbItem className="min-w-0">
+									<BreadcrumbPage className="truncate">
+										{detailTitle}
+									</BreadcrumbPage>
+								</BreadcrumbItem>
+							</>
+						) : null}
+					</BreadcrumbList>
+				</Breadcrumb>
+			</div>
+			<div className="flex-1" />
+			<div className="flex shrink-0 items-center gap-0.5">
+				<div className="relative mr-1 hidden sm:inline-flex">
+					<Button
+						type="button"
+						variant="outline"
+						className="h-8 justify-start gap-3 pr-1.5 pl-7 font-normal hover:bg-background"
+						onClick={onOpenSearch}
+					>
+						Search
+						<Kbd>⌘K</Kbd>
+					</Button>
+					<SearchIcon
+						aria-hidden="true"
+						className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none"
+					/>
+				</div>
 				<Button
 					type="button"
 					variant="ghost"
 					size="icon-sm"
+					className="sm:hidden"
 					aria-label="Search"
 					onClick={onOpenSearch}
 				>
-					<SearchIcon />
+					<SearchIcon className="size-4" aria-hidden />
 				</Button>
 			</div>
 		</header>

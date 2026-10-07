@@ -122,7 +122,7 @@ export function DataTable<T>({
 			{[0, 1, 2].map((i) => (
 				<TableRow key={i} className="hover:bg-transparent">
 					{columns.map((c) => (
-						<TableCell key={c.id} className="px-4 py-3">
+						<TableCell key={c.id} className="px-2 py-1.5">
 							<Skeleton className="h-4 w-full" />
 						</TableCell>
 					))}
@@ -148,7 +148,7 @@ export function DataTable<T>({
 					<TableCell
 						key={c.id}
 						className={cn(
-							"px-4 py-3 align-middle",
+							"px-2 py-1.5 align-middle",
 							c.align === "right" && "text-right",
 							c.className,
 						)}
@@ -189,7 +189,7 @@ export function DataTable<T>({
 												: undefined
 										}
 										className={cn(
-											"h-10 px-4 text-xs font-medium text-muted-foreground",
+											"h-8 px-2 text-[0.8125rem] font-normal text-secondary-foreground/80",
 											c.align === "right" && "text-right",
 											c.headClassName ?? c.className,
 										)}
@@ -199,19 +199,19 @@ export function DataTable<T>({
 												type="button"
 												onClick={() => toggleSort(c.id)}
 												className={cn(
-													"-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-foreground",
+													"-mx-2 inline-flex h-6 items-center gap-1.5 rounded-lg px-2 transition-colors hover:bg-secondary hover:text-foreground [&_svg]:opacity-60",
 													active && "text-foreground",
 												)}
 											>
 												{c.header}
 												{active ? (
 													sort.dir === "asc" ? (
-														<ChevronUpIcon className="size-3" />
+														<ChevronUpIcon className="size-3.25" />
 													) : (
-														<ChevronDownIcon className="size-3" />
+														<ChevronDownIcon className="size-3.25" />
 													)
 												) : (
-													<ChevronsUpDownIcon className="size-3 opacity-40" />
+													<ChevronsUpDownIcon className="mt-px size-3.25" />
 												)}
 											</button>
 										) : (
