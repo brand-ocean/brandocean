@@ -9,6 +9,7 @@ import {
 	LayoutDashboardIcon,
 	ListChecksIcon,
 	MessageSquareIcon,
+	MessagesSquareIcon,
 	MoonIcon,
 	ReceiptIcon,
 	SearchIcon,
@@ -61,6 +62,7 @@ type Leaf = {
 		| "/feedback"
 		| "/portfolio"
 		| "/borden"
+		| "/coach"
 		| "/settings";
 };
 
@@ -93,6 +95,12 @@ const NAV: readonly NavEntry[] = [
 		],
 	},
 	{ kind: "link", title: "Clients", to: "/clients", icon: UsersIcon },
+	{
+		kind: "link",
+		title: "Meeting coach",
+		to: "/coach",
+		icon: MessagesSquareIcon,
+	},
 	{
 		kind: "group",
 		title: "Delivery",

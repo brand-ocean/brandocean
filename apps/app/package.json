@@ -45,7 +45,7 @@
     "@tiptap/starter-kit": "^3.22.4",
     "@tiptap/static-renderer": "^3.23.2",
     "class-variance-authority": "^0.7.1",
-    "convex": "^1.39.1",
+    "convex": "^1.46.0",
     "date-fns": "^4.1.0",
     "lodash.throttle": "^4.1.1",
     "lucide-react": "^1.11.0",

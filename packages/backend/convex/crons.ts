@@ -32,4 +32,12 @@ crons.cron(
 	{},
 );
 
+// Meeting coach: gesprekken die nooit gestopt zijn netjes afsluiten.
+crons.interval(
+	"close stale coach sessions",
+	{ minutes: 10 },
+	internal.coach.sessions.closeStale,
+	{},
+);
+
 export default crons;

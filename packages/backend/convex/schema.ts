@@ -7,6 +7,14 @@ import {
 	vatCategoryV,
 } from "./boekhouding/validators";
 import { portfolioBlock, portfolioMedia } from "./lib/portfolioBlocks";
+import {
+	coachActionItemV,
+	coachAgendaItemV,
+	coachNudgePriorityV,
+	coachNudgeTypeV,
+	coachSourceV,
+	coachTalkV,
+} from "./coach/validators";
 
 // Rich context captured from the clicked element at comment time, so an AI can
 // map a comment back to the exact source element/component (text is the highest
@@ -994,4 +1002,158 @@ export default defineSchema({
 	})
 		.index("by_slug", ["slug"])
 		.index("by_slug_at", ["slug", "at"]),
+	// --- Meeting coach (/coach) ---
+	// Eén sessie per gesprek. Wat tijdens het gesprek vaak verandert (tellers,
+	// samenvatting, agenda-voortgang) staat in coachState, zodat de sessie zelf
+	// rustig blijft.
+	coachSessions: defineTable({
+		ownerId: v.id("users"),
+		title: v.string(),
+		clientId: v.optional(v.id("clients")),
+		clientName: v.optional(v.string()),
+		goal: v.optional(v.string()),
+		// Achtergrond voor de coach: tarieven, wat je wil verkopen, gevoeligheden.
+		context: v.optional(v.string()),
+		myName: v.string(),
+		// Hooguit 20 punten; minuten optioneel.
+		agenda: v.array(
+			v.object({ title: v.string(), minutes: v.optional(v.number()) }),
+		),
+		plannedMinutes: v.optional(v.number()),
+		status: v.union(
+			v.literal("live"),
+			v.literal("finishing"),
+			v.literal("done"),
+			v.literal("error"),
+		),
+		provider: v.optional(
+			v.union(v.literal("speechmatics"), v.literal("gateway")),
+		),
+		// "S1" → "Mark". Klein: alleen sprekers die je zelf een naam gaf.
+		speakerNames: v.optional(
+			v.array(v.object({ label: v.string(), name: v.string() })),
+		),
+		startedAt: v.number(),
+		endedAt: v.optional(v.number()),
+		durationMs: v.optional(v.number()),
+		reportPreview: v.optional(v.string()),
+	})
+		.index("by_owner_and_startedAt", ["ownerId", "startedAt"])
+		.index("by_client", ["clientId"])
+		.index("by_status", ["status"]),
+
+	coachState: defineTable({
+		sessionId: v.id("coachSessions"),
+		ownerId: v.id("users"),
+		// Engine-boekhouding
+		lastChunkAt: v.number(),
+		speechMsSinceFast: v.number(),
+		speechMsSinceDeep: v.number(),
+		fastRunningSince: v.optional(v.number()),
+		deepRunningSince: v.optional(v.number()),
+		pendingReason: v.optional(v.string()),
+		lastFastAt: v.number(),
+		lastDeepAt: v.number(),
+		deepCursorAt: v.number(),
+		lastNudgeAt: v.number(),
+		lastHighNudgeAt: v.number(),
+		silenceFiredAt: v.number(),
+		monologueFiredAt: v.number(),
+		ratioNudgeAt: v.number(),
+		tempoWarned: v.array(v.number()),
+		wrapUpFired: v.boolean(),
+		fastCalls: v.number(),
+		deepCalls: v.number(),
+		costUsd: v.number(),
+		// Laatste signalen van de browser (stilte, monoloog)
+		silenceMs: v.number(),
+		myStreakMs: v.number(),
+		signalsAt: v.number(),
+		// Wat de coach bijhoudt
+		summary: v.array(v.string()),
+		decisions: v.array(v.string()),
+		actionItems: v.array(coachActionItemV),
+		openQuestions: v.array(v.string()),
+		nextQuestion: v.optional(v.string()),
+		agenda: v.array(coachAgendaItemV),
+		currentItem: v.optional(v.number()),
+		currentSince: v.optional(v.number()),
+		talk: v.array(coachTalkV),
+	}).index("by_session", ["sessionId"]),
+
+	coachChunks: defineTable({
+		sessionId: v.id("coachSessions"),
+		at: v.number(),
+		source: coachSourceV,
+		// Speechmatics: "S1"; gateway: "Spreker 1"; mic: null.
+		speaker: v.union(v.string(), v.null()),
+		text: v.string(),
+		isMine: v.boolean(),
+		durationMs: v.number(),
+	}).index("by_session_and_at", ["sessionId", "at"]),
+
+	coachNudges: defineTable({
+		sessionId: v.id("coachSessions"),
+		at: v.number(),
+		type: coachNudgeTypeV,
+		priority: coachNudgePriorityV,
+		text: v.string(),
+		detail: v.optional(v.string()),
+		origin: v.union(v.literal("fast"), v.literal("deep"), v.literal("rule")),
+		reason: v.optional(v.string()),
+		expiresAt: v.number(),
+		dismissedAt: v.optional(v.number()),
+	}).index("by_session_and_at", ["sessionId", "at"]),
+
+	coachShots: defineTable({
+		sessionId: v.id("coachSessions"),
+		at: v.number(),
+		storageId: v.id("_storage"),
+		auto: v.boolean(),
+		status: v.union(v.literal("pending"), v.literal("done"), v.literal("error")),
+		description: v.optional(v.string()),
+	}).index("by_session_and_at", ["sessionId", "at"]),
+
+	coachReports: defineTable({
+		sessionId: v.id("coachSessions"),
+		ownerId: v.id("users"),
+		clientId: v.optional(v.id("clients")),
+		createdAt: v.number(),
+		model: v.string(),
+		summary: v.array(v.string()),
+		decisions: v.array(v.string()),
+		actionItems: v.array(coachActionItemV),
+		openQuestions: v.array(v.string()),
+		emailSubject: v.string(),
+		emailBody: v.string(),
+		tips: v.array(v.object({ title: v.string(), text: v.string() })),
+		stats: v.object({
+			durationMs: v.number(),
+			myShare: v.number(),
+			myTalkMs: v.number(),
+			othersTalkMs: v.number(),
+			questionsAsked: v.number(),
+			nudges: v.number(),
+			plannedMinutes: v.optional(v.number()),
+			costUsd: v.number(),
+		}),
+	})
+		.index("by_session", ["sessionId"])
+		.index("by_owner_and_createdAt", ["ownerId", "createdAt"])
+		.index("by_client", ["clientId"]),
+
+	// Elke modelaanroep via de Convex AI Gateway, voor kosteninzicht.
+	aiUsage: defineTable({
+		ownerId: v.id("users"),
+		feature: v.string(), // "coach"
+		kind: v.string(), // "fast" | "deep" | "report" | "vision" | "transcribe"
+		coachSessionId: v.optional(v.id("coachSessions")),
+		model: v.string(),
+		inputTokens: v.number(),
+		outputTokens: v.number(),
+		costUsd: v.optional(v.number()),
+		at: v.number(),
+	})
+		.index("by_owner_and_at", ["ownerId", "at"])
+		.index("by_session_and_at", ["coachSessionId", "at"]),
 });

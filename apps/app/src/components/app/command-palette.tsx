@@ -9,6 +9,7 @@ import {
 	LayoutDashboardIcon,
 	ListChecksIcon,
 	MessageSquareIcon,
+	MessagesSquareIcon,
 	MoonIcon,
 	ReceiptIcon,
 	SettingsIcon,
@@ -38,6 +39,7 @@ type Destination =
 	| "/ndas"
 	| "/clients"
 	| "/invoices"
+	| "/coach"
 	| "/billing"
 	| "/boekhouding/grootboek"
 	| "/boekhouding/rapporten"
@@ -55,6 +57,7 @@ const PAGES: readonly {
 	{ to: "/offertes", label: "Offertes", icon: FileTextIcon },
 	{ to: "/ndas", label: "NDAs", icon: ShieldCheckIcon },
 	{ to: "/clients", label: "Clients", icon: UsersIcon },
+	{ to: "/coach", label: "Meeting coach", icon: MessagesSquareIcon },
 	{ to: "/invoices", label: "Invoices", icon: ReceiptIcon },
 	{ to: "/billing", label: "Usage billing", icon: GaugeIcon },
 	{ to: "/boekhouding/grootboek", label: "Grootboek", icon: LandmarkIcon },
