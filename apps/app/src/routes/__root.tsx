@@ -1,3 +1,4 @@
+import interLatinWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import {
 	createRootRoute,
@@ -9,7 +10,6 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-
 import appCss from "@/styles.css?url";
 
 export const Route = createRootRoute({
@@ -24,6 +24,15 @@ export const Route = createRootRoute({
 		],
 		links: [
 			{ rel: "stylesheet", href: appCss },
+			// Inter (latin) straight away instead of after the CSS arrives, as in
+			// FORZ. Same hashed URL as the CSS uses, so no second download.
+			{
+				rel: "preload",
+				as: "font",
+				type: "font/woff2",
+				href: interLatinWoff2,
+				crossOrigin: "anonymous" as const,
+			},
 			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 			{
 				rel: "icon",

@@ -1,5 +1,3 @@
-"use client";
-
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
@@ -42,13 +40,15 @@ function DialogContent({
 	className,
 	children,
 	showCloseButton = true,
+	overlayClassName,
 	...props
 }: DialogPrimitive.Popup.Props & {
 	showCloseButton?: boolean;
+	overlayClassName?: string;
 }) {
 	return (
 		<DialogPortal>
-			<DialogOverlay />
+			<DialogOverlay className={overlayClassName} />
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
@@ -119,10 +119,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
 	return (
 		<DialogPrimitive.Title
 			data-slot="dialog-title"
-			className={cn(
-				"font-heading text-base leading-none font-medium",
-				className,
-			)}
+			className={cn("text-base leading-none font-medium", className)}
 			{...props}
 		/>
 	);

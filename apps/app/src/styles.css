@@ -1,0 +1,271 @@
+/* Dashboard stylesheet (apps/app only).
+
+   Imports the shared @brandocean/ui stylesheet and then lays the FORZ house
+   style over it, 1:1 with the FORZ app (forz/src/styles/{base,app}.css) on its
+   default settings: the BRANDOCEAN theme preset, the brons-marine accent ramp
+   and the "Klein" corner radius (0.375rem).
+
+   This file lives in apps/app on purpose: the public site (apps/site) imports
+   the shared stylesheet too and must keep its own look, so none of these
+   overrides may land in packages/ui. Everything here comes after the shared
+   file, so it wins at equal specificity. */
+@import "../../../packages/ui/src/styles.css";
+
+/* ── Fonts ────────────────────────────────────────────────────────────────────
+   FORZ runs the whole app on Inter Variable (headings included, weight 500 for
+   titles) and leaves mono on Tailwind's default stack. Not `inline`, as in
+   FORZ: utilities write out var(--font-sans). */
+@theme {
+	--font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-heading: var(--font-sans);
+	--font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+		"Courier New", monospace;
+}
+
+@theme inline {
+	--tracking-heading: -0.02em;
+	/* FORZ radius ladder: every rung is a ratio of --radius. */
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.6);
+	--radius-3xl: calc(var(--radius) * 2.4);
+	--radius-4xl: calc(var(--radius) * 3.2);
+
+	/* Brand accent ramp + support colour + ReUI focus badge, as in FORZ. */
+	--color-accent-50: var(--accent-50);
+	--color-accent-100: var(--accent-100);
+	--color-accent-200: var(--accent-200);
+	--color-accent-300: var(--accent-300);
+	--color-accent-400: var(--accent-400);
+	--color-accent-500: var(--accent-500);
+	--color-accent-600: var(--accent-600);
+	--color-accent-700: var(--accent-700);
+	--color-accent-800: var(--accent-800);
+	--color-accent-900: var(--accent-900);
+	--color-accent-950: var(--accent-950);
+	--color-support: var(--support);
+	--color-support-foreground: var(--support-foreground);
+	--color-support-soft: var(--support-soft);
+	--color-focus: var(--focus);
+	--color-focus-foreground: var(--focus-foreground);
+}
+
+/* FORZ flattens Tailwind's blue-leaning gray palette to near-neutral. */
+@theme {
+	--color-gray-300: oklch(0.872 0.004 258.338);
+	--color-gray-400: oklch(0.704 0.004 256.788);
+	--color-gray-500: oklch(0.551 0.004 264.364);
+	--color-gray-600: oklch(0.446 0.004 256.802);
+	--color-gray-700: oklch(0.373 0.004 259.733);
+	--color-gray-800: oklch(0.3 0.004 256.848);
+	--color-gray-900: oklch(0.245 0.004 264.665);
+	--color-gray-925: oklch(0.16 0.004 264);
+	--color-gray-950: oklch(0.21 0.004 264);
+}
+
+/* ── Light ────────────────────────────────────────────────────────────────────
+   FORZ :root[data-theme-preset="brandocean"] + .theme-brons-marine. */
+:root {
+	--fw-heading: 500;
+	--fw-body: 400;
+	--radius: 0.375rem;
+	--header-height: 3rem;
+
+	/* Accent ramp: Brons & Marine (FORZ's default brand class). */
+	--accent-50: hsl(28 60% 96%);
+	--accent-100: hsl(28 60% 91%);
+	--accent-200: hsl(28 60% 82%);
+	--accent-300: hsl(28 60% 71%);
+	--accent-400: hsl(28 60% 60%);
+	--accent-500: hsl(28 60% 50%);
+	--accent-600: hsl(28 62% 43%);
+	--accent-700: hsl(28 64% 36%);
+	--accent-800: hsl(28 64% 30%);
+	--accent-900: hsl(28 62% 25%);
+	--accent-950: hsl(28 60% 16%);
+	--support: hsl(215 40% 30%);
+	--support-foreground: oklch(0.985 0 0);
+	--support-soft: color-mix(in oklab, var(--support) 12%, var(--card));
+
+	--accent-ink: oklch(0.52 0.1217 248.9572);
+	--background: oklch(0.9581 0 0);
+	--foreground: oklch(0.3134 0.0234 253.627);
+	--card: oklch(0.9774 0.0042 236.4961);
+	--card-foreground: oklch(0.2022 0.011 151.1628);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.2505 0.0149 235.6259);
+	--primary: oklch(0.6112 0.1217 248.9572);
+	--primary-foreground: oklch(1 0 0);
+	--secondary: oklch(0.9122 0.0111 243.6627);
+	--secondary-foreground: oklch(0.4186 0.0133 235.133);
+	--muted: oklch(0.9209 0.0128 244.2626);
+	--muted-foreground: oklch(0.6027 0.0062 211.0375);
+	--accent: oklch(0.9122 0.0111 243.6627);
+	--accent-foreground: oklch(0.2505 0.0149 235.6259);
+	--destructive: oklch(0.5771 0.2152 27.325);
+	--destructive-foreground: var(--color-red-800);
+	--success: var(--color-emerald-500);
+	--success-foreground: var(--color-emerald-900);
+	--info: var(--accent-600);
+	--info-foreground: var(--accent-700);
+	--warning: var(--color-yellow-500);
+	--warning-foreground: var(--color-yellow-900);
+	--focus: var(--color-violet-500);
+	--focus-foreground: var(--color-violet-900);
+	--invert: var(--color-zinc-900);
+	--invert-foreground: var(--color-zinc-50);
+	--border: oklch(0.884 0.0067 208.7806);
+	--input: oklch(0.745 0.0121 252.1201);
+	--ring: oklch(0.6112 0.1217 248.9572);
+	--chart-1: oklch(0.5098 0.132 257.5458);
+	--chart-2: oklch(0.736 0.1191 266.5038);
+	--chart-3: oklch(0.8467 0.0177 248.0373);
+	--chart-4: oklch(0.8977 0.0274 260.3158);
+	--chart-5: oklch(0.4893 0.1504 261.9302);
+	--sidebar: oklch(0.959 0.0059 239.8204);
+	--sidebar-foreground: oklch(0.3571 0.0041 196.9738);
+	--sidebar-primary: oklch(0.6112 0.1217 248.9572);
+	--sidebar-primary-foreground: oklch(0.9881 0 0);
+	--sidebar-accent: oklch(0.9122 0.0111 243.6627);
+	--sidebar-accent-foreground: oklch(0.325 0 0);
+	--sidebar-border: oklch(0.9401 0 0);
+	--sidebar-ring: oklch(0.7731 0 0);
+}
+
+/* ── Dark ─────────────────────────────────────────────────────────────────────
+   FORZ :root[data-theme-preset="brandocean"].dark + .dark.theme-brons-marine.
+   The shared stylesheet sets dark tokens on `:root[data-theme="dark"]` (0,2,0)
+   as well as `.dark`; ThemeContext sets both, so match that specificity. */
+:root.dark,
+:root[data-theme="dark"] {
+	--support: hsl(214 58% 62%);
+	--support-foreground: oklch(0.21 0 0);
+	--support-soft: color-mix(in oklab, var(--support) 20%, var(--card));
+	--color-gray-950: var(--background);
+	--color-gray-925: color-mix(in oklab, var(--accent-500) 8%, oklch(0.19 0 0));
+	--color-gray-900: var(--card);
+
+	--accent-ink: oklch(0.6576 0.1208 252.0832);
+	--background: oklch(0.1776 0 0);
+	--foreground: oklch(0.7905 0.0126 259.8241);
+	--card: oklch(0.2638 0.0024 247.9155);
+	--card-foreground: oklch(0.9755 0.0045 258.3245);
+	--popover: oklch(0.3046 0.0023 247.9001);
+	--popover-foreground: oklch(0.9176 0.0026 228.7865);
+	--primary: oklch(0.6576 0.1208 252.0832);
+	--primary-foreground: oklch(1 0 0);
+	--secondary: oklch(0.3046 0.0023 247.9001);
+	--secondary-foreground: oklch(0.9176 0.0026 228.7865);
+	--muted: oklch(0.2171 0.0025 247.9411);
+	--muted-foreground: oklch(0.7559 0.0125 239.9659);
+	--accent: oklch(0.2038 0.0067 258.3676);
+	--accent-foreground: oklch(0.959 0.0059 239.8204);
+	--destructive: oklch(0.6368 0.2078 25.3313);
+	--destructive-foreground: var(--color-red-600);
+	--success: var(--color-emerald-500);
+	--success-foreground: var(--color-emerald-600);
+	--info: var(--accent-500);
+	--info-foreground: var(--accent-400);
+	--warning: var(--color-yellow-500);
+	--warning-foreground: var(--color-yellow-600);
+	--focus: var(--color-violet-500);
+	--focus-foreground: var(--color-violet-600);
+	--invert: var(--color-zinc-700);
+	--invert-foreground: var(--color-zinc-50);
+	--border: oklch(0.3506 0.0066 248.0169);
+	--input: oklch(0.4217 0.0084 248.028);
+	--ring: oklch(0.6576 0.1208 252.0832);
+	--chart-1: oklch(0.5098 0.132 257.5458);
+	--chart-2: oklch(0.736 0.1191 266.5038);
+	--chart-3: oklch(0.2038 0.0067 258.3676);
+	--chart-4: oklch(0.3361 0.0333 253.9085);
+	--chart-5: oklch(0.4893 0.1504 261.9302);
+	--sidebar: oklch(0.2344 0.0024 247.9303);
+	--sidebar-foreground: oklch(0.7905 0.0126 259.8241);
+	--sidebar-primary: oklch(0.6576 0.1208 252.0832);
+	--sidebar-primary-foreground: oklch(0.9881 0 0);
+	--sidebar-accent: oklch(0.1673 0.0016 196.9991);
+	--sidebar-accent-foreground: oklch(0.7905 0.0126 259.8241);
+	--sidebar-border: oklch(0.3506 0.0066 248.0169);
+	--sidebar-ring: oklch(0.6576 0.1208 252.0832);
+}
+
+/* Public share pages (/o, /i, /c, ...) stay light whatever the visitor's
+   theme; they now pin the FORZ light tokens instead of stock neutral. */
+.force-theme-light,
+.force-theme-light * {
+	--background: oklch(0.9581 0 0);
+	--foreground: oklch(0.3134 0.0234 253.627);
+	--card: oklch(0.9774 0.0042 236.4961);
+	--card-foreground: oklch(0.2022 0.011 151.1628);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.2505 0.0149 235.6259);
+	--primary: oklch(0.6112 0.1217 248.9572);
+	--primary-foreground: oklch(1 0 0);
+	--secondary: oklch(0.9122 0.0111 243.6627);
+	--secondary-foreground: oklch(0.4186 0.0133 235.133);
+	--muted: oklch(0.9209 0.0128 244.2626);
+	--muted-foreground: oklch(0.6027 0.0062 211.0375);
+	--accent: oklch(0.9122 0.0111 243.6627);
+	--accent-foreground: oklch(0.2505 0.0149 235.6259);
+	--border: oklch(0.884 0.0067 208.7806);
+	--input: oklch(0.745 0.0121 252.1201);
+	--ring: oklch(0.6112 0.1217 248.9572);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-border: var(--border);
+}
+
+/* The shared stylesheet puts body on Host Grotesk; FORZ is Inter throughout. */
+body {
+	font-family: var(--font-sans);
+}
+
+@utility fw-display {
+	font-weight: var(--fw-heading);
+}
+
+@utility no-scrollbar {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
+@layer base {
+	button:not(:disabled),
+	[role="button"]:not(:disabled) {
+		cursor: pointer;
+	}
+}
+
+/* Button hover states from FORZ's registry button. The shared Button in
+   packages/ui is also used by the public site, which must not change, so the
+   difference is applied here. Default lives in the components layer, so a
+   hover colour passed as className still wins. Secondary has to beat the
+   registry's own `hover:bg-secondary/80` utility, so it sits in the utilities
+   layer with a more specific selector. */
+@layer components {
+	[data-slot="button"][data-variant="default"]:hover {
+		background-color: color-mix(in oklab, var(--primary) 80%, transparent);
+	}
+}
+@layer utilities {
+	[data-slot="button"][data-variant="secondary"]:hover {
+		background-color: color-mix(
+			in oklch,
+			var(--secondary),
+			var(--foreground) 5%
+		);
+	}
+}
