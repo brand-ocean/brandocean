@@ -542,10 +542,25 @@ export function isMeLabel(
 	label: string | null | undefined,
 	meLabel: string | undefined,
 	myName: string,
+	/** Mag het label met je naam (herkende stem) als jij tellen? */
+	byName = true,
 ): boolean {
 	if (!label) return false;
 	if (meLabel && label === meLabel) return true;
-	return label.trim().toLowerCase() === myName.trim().toLowerCase();
+	return byName && label.trim().toLowerCase() === myName.trim().toLowerCase();
+}
+
+/** Algemeen label van Speechmatics of de gateway (S1, Spreker 2), geen naam. */
+export function isGenericLabel(label: string): boolean {
+	return /^(S\d+|Spreker \d+)$/i.test(label.trim());
+}
+
+/** Eerstvolgend vrij label "Spreker N" voor een handmatig toegewezen regel. */
+export function nextSpeakerLabel(existing: readonly string[]): string {
+	let n = 1;
+	const taken = new Set(existing.map((l) => l.trim().toLowerCase()));
+	while (taken.has(`spreker ${n}`) || taken.has(`s${n}`)) n++;
+	return `Spreker ${n}`;
 }
 
 /** Speechmatics weigert labels in zijn eigen vorm (S1, S2, …). */

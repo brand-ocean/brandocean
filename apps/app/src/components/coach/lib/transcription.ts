@@ -198,7 +198,11 @@ class SpeechmaticsStream {
 						...(this.diarize
 							? {
 									speaker_diarization_config: {
-										speaker_sensitivity: 0.6,
+										// Hoger = sneller een nieuwe stem i.p.v. een bekende. Met een
+										// opgeslagen stem extra voorzichtig, zodat niet iedereen
+										// "Arin" wordt.
+										speaker_sensitivity: known.length ? 0.75 : 0.6,
+										prefer_current_speaker: false,
 										get_speakers: true,
 										...(known.length ? { speakers: known } : {}),
 									},

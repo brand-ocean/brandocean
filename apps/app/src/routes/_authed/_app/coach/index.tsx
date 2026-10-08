@@ -26,14 +26,25 @@ import {
 } from "@/components/app/frame";
 import { type Tone, TonePill } from "@/components/app/tone";
 import {
+	type AudioInput,
 	type CoachModelId,
+	GainSlider,
+	listMics,
+	MicSelect,
 	MODEL_HINT,
 	ModelSelect,
 	rememberModel,
 	storedModel,
 } from "@/components/coach/extras";
 import { clock, formatDate, parseAgenda } from "@/components/coach/format";
-import { type CoachMode, recorder } from "@/components/coach/lib/recorder";
+import {
+	type CoachMode,
+	recorder,
+	rememberMicDevice,
+	rememberMicGain,
+	storedMicDevice,
+	storedMicGain,
+} from "@/components/coach/lib/recorder";
 import { useRecorder } from "@/components/coach/parts";
 import { openCoachWindow, pipSupported } from "@/components/coach/pip";
 import { Button } from "@/components/ui/button";
@@ -248,6 +259,19 @@ function StartCard() {
 		remember(MODE_KEY, next);
 	};
 	const [model, setModelState] = useState<CoachModelId>(() => storedModel());
+	const [mics, setMics] = useState<AudioInput[]>([]);
+	const [micDevice, setMicDevice] = useState(() =>
+		typeof window === "undefined" ? "" : storedMicDevice(),
+	);
+	const [micGainByMode, setMicGainByMode] = useState<Record<CoachMode, number>>(
+		() =>
+			typeof window === "undefined"
+				? { online: 1, live: 2.5 }
+				: { online: storedMicGain("online"), live: storedMicGain("live") },
+	);
+	const micGain = micGainByMode[mode];
+	const setMicGain = (v: number) =>
+		setMicGainByMode((prev) => ({ ...prev, [mode]: v }));
 	const voices = useQuery(api.coach.sessions.myVoice);
 	const forgetVoice = useMutation(api.coach.sessions.forgetVoice);
 	const myVoice = voices?.find(
@@ -440,6 +464,27 @@ function StartCard() {
 							</div>
 						) : null}
 					</div>
+
+					{mode === "live" || useMic ? (
+						<div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
+							<MicSelect
+								value={micDevice}
+								devices={mics}
+								onOpen={() => void listMics().then(setMics)}
+								onChange={(id) => {
+									setMicDevice(id);
+									rememberMicDevice(id);
+								}}
+							/>
+							<GainSlider
+								value={micGain}
+								onChange={(v) => {
+									setMicGain(v);
+									rememberMicGain(mode, v);
+								}}
+							/>
+						</div>
+					) : null}
 
 					<div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center lg:col-span-2">
 						{mode === "online" ? (

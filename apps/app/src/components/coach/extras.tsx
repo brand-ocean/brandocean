@@ -351,3 +351,78 @@ export function AskFeed({
 		</div>
 	);
 }
+
+// ---- Microfoon: versterking en keuze -------------------------------------------------------
+
+export type AudioInput = { deviceId: string; label: string };
+
+/** Microfoons van deze computer (namen pas zichtbaar na toestemming). */
+export async function listMics(): Promise<AudioInput[]> {
+	try {
+		const devices = await navigator.mediaDevices.enumerateDevices();
+		return devices
+			.filter((d) => d.kind === "audioinput" && d.deviceId !== "default")
+			.map((d, i) => ({
+				deviceId: d.deviceId,
+				label: d.label || `Microfoon ${i + 1}`,
+			}));
+	} catch {
+		return [];
+	}
+}
+
+export function GainSlider({
+	value,
+	onChange,
+}: {
+	value: number;
+	onChange: (value: number) => void;
+}) {
+	return (
+		<label className="flex items-center gap-2 text-xs">
+			<span className="text-muted-foreground shrink-0">Versterken</span>
+			<input
+				type="range"
+				min={1}
+				max={6}
+				step={0.5}
+				value={value}
+				onChange={(e) => onChange(Number(e.target.value))}
+				className="accent-primary w-full"
+			/>
+			<span className="w-9 shrink-0 text-right font-medium tabular-nums">
+				{value.toFixed(1)}×
+			</span>
+		</label>
+	);
+}
+
+export function MicSelect({
+	value,
+	devices,
+	onChange,
+	onOpen,
+}: {
+	value: string;
+	devices: readonly AudioInput[];
+	onChange: (deviceId: string) => void;
+	onOpen?: () => void;
+}) {
+	return (
+		<select
+			value={value}
+			aria-label="Microfoon"
+			onFocus={onOpen}
+			onPointerDown={onOpen}
+			onChange={(e) => onChange(e.target.value)}
+			className="bg-background h-7 w-full min-w-0 rounded-md border px-2 text-xs outline-none focus:ring-2 focus:ring-ring/40 dark:bg-input/30"
+		>
+			<option value="">Standaard microfoon</option>
+			{devices.map((d) => (
+				<option key={d.deviceId} value={d.deviceId}>
+					{d.label}
+				</option>
+			))}
+		</select>
+	);
+}

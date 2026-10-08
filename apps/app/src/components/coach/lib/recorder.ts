@@ -65,6 +65,13 @@ export type RecorderSnapshot = {
 	silenceMs: number;
 	now: number;
 	pipOpen: boolean;
+	/** Microfoonversterking 1–6×, en het niveau ná versterking. */
+	micGain: number;
+	micDevice: string;
+	micPeak: number;
+	micClip: boolean;
+	/** Fysiek: al een halve minuut weinig geluid binnen. */
+	lowLevel: boolean;
 };
 
 const INITIAL: RecorderSnapshot = {
@@ -88,6 +95,11 @@ const INITIAL: RecorderSnapshot = {
 	silenceMs: 0,
 	now: 0,
 	pipOpen: false,
+	micGain: 1,
+	micDevice: "",
+	micPeak: 0,
+	micClip: false,
+	lowLevel: false,
 };
 
 /** Boven dit RMS-niveau telt een blokje van 100 ms als spraak. */
@@ -113,6 +125,43 @@ const BASE_VOCAB = [
 ];
 
 type ProviderInfo = { kind: Kind; hint: string | null };
+
+const GAIN_KEY = "coach.micGain";
+const DEVICE_KEY = "coach.micDevice";
+
+function readSetting(key: string): string | null {
+	try {
+		return localStorage.getItem(key);
+	} catch {
+		return null;
+	}
+}
+
+function writeSetting(key: string, value: string) {
+	try {
+		localStorage.setItem(key, value);
+	} catch {
+		// privé-venster
+	}
+}
+
+/** Bewaarde versterking; anders 2,5× voor een fysiek gesprek, 1× online. */
+export function storedMicGain(mode: CoachMode): number {
+	const v = Number(readSetting(`${GAIN_KEY}.${mode}`));
+	return Number.isFinite(v) && v >= 1 && v <= 6 ? v : mode === "live" ? 2.5 : 1;
+}
+
+export function rememberMicGain(mode: CoachMode, value: number) {
+	writeSetting(`${GAIN_KEY}.${mode}`, String(value));
+}
+
+export function rememberMicDevice(deviceId: string) {
+	writeSetting(DEVICE_KEY, deviceId);
+}
+
+export function storedMicDevice(): string {
+	return readSetting(DEVICE_KEY) ?? "";
+}
 
 class CoachRecorder {
 	private snap: RecorderSnapshot = INITIAL;
@@ -184,14 +233,21 @@ class CoachRecorder {
 			throw new CaptureError("Er loopt al een gesprek. Stop dat eerst.");
 		}
 		const mode: CoachMode = setup.mode ?? "online";
-		this.set({ ...INITIAL, mode, phase: "starting", now: Date.now() });
+		this.set({
+			...INITIAL,
+			mode,
+			phase: "starting",
+			now: Date.now(),
+			micGain: storedMicGain(mode),
+			micDevice: storedMicDevice(),
+		});
 		const pipeline = new AudioPipeline();
 		this.pipeline = pipeline;
 		const warnings: string[] = [];
 		try {
 			if (mode === "live") {
 				// Fysiek gesprek: geen tabblad, alleen de microfoon voor iedereen.
-				await pipeline.setMic(true);
+				await pipeline.setMic(true, this.micOptions());
 			}
 			const { hasAudio } =
 				mode === "live" ? { hasAudio: true } : await pipeline.shareTab();
@@ -204,7 +260,7 @@ class CoachRecorder {
 				// microfoon staat al aan
 			} else if (useMic) {
 				try {
-					await pipeline.setMic(true);
+					await pipeline.setMic(true, this.micOptions());
 				} catch (error) {
 					warnings.push(
 						error instanceof Error
@@ -392,6 +448,10 @@ class CoachRecorder {
 				? 0.01
 				: VOICE_RMS[frame.source];
 		const voice = frame.rms >= threshold;
+		if (frame.source === "mic" && this.snap.mode === "live") {
+			this.quietFrames.push(frame.rms);
+			if (this.quietFrames.length > 300) this.quietFrames.shift();
+		}
 		if (voice) {
 			if (frame.source === "mic") {
 				if (!this.streakStart || now - this.lastVoice.mic > STREAK_GAP_MS) {
@@ -437,17 +497,83 @@ class CoachRecorder {
 		return { silenceMs, myStreakMs };
 	}
 
+	private micOptions() {
+		return {
+			room: this.snap.mode === "live",
+			gain: this.snap.micGain,
+			deviceId: this.snap.micDevice || undefined,
+		};
+	}
+
+	/** Versterking tijdens het gesprek; Speechmatics blijft gewoon verbonden. */
+	setMicGain = (value: number) => {
+		const gain = Math.min(6, Math.max(1, Math.round(value * 10) / 10));
+		writeSetting(`${GAIN_KEY}.${this.snap.mode}`, String(gain));
+		this.set({ micGain: gain });
+		this.pipeline?.setMicGain(gain);
+	};
+
+	/** Andere microfoon (bv. een conferentiemicrofoon). */
+	setMicDevice = async (deviceId: string) => {
+		writeSetting(DEVICE_KEY, deviceId);
+		this.set({ micDevice: deviceId });
+		const pipeline = this.pipeline;
+		if (!pipeline || !pipeline.has("mic")) return;
+		try {
+			await pipeline.switchMic(this.micOptions());
+		} catch (error) {
+			this.set({
+				warning:
+					error instanceof Error
+						? error.message
+						: "Microfoon wisselen mislukt.",
+			});
+		}
+	};
+
+	/** "Arin is niet iedereen": stem vergeten en opnieuw verbinden zonder. */
+	resetVoice = async () => {
+		const sessionId = this.snap.sessionId;
+		if (!sessionId) return;
+		await getConvexClient().mutation(api.coach.sessions.resetVoice, {
+			sessionId,
+		});
+		const kind = this.transcriber?.kind;
+		if (kind === "speechmatics") {
+			const old = this.transcriber;
+			this.transcriber = null;
+			await old?.stop();
+			this.startTranscriber(kind);
+		}
+	};
+
+	private quietFrames: number[] = [];
+	private lastClipAt = 0;
+
 	private emitLive(now: number) {
 		const levels = this.pipeline?.levels() ?? { mic: 0, tab: 0 };
+		const meter = this.pipeline?.micMeter() ?? { rms: 0, peak: 0 };
+		if (meter.peak >= 0.97) this.lastClipAt = now;
 		this.set({
 			now,
 			levels,
+			micPeak: meter.peak,
+			micClip: now - this.lastClipAt < 1200,
+			lowLevel: this.isLowLevel(),
 			speaking: {
 				mic: now - this.lastVoice.mic < 400,
 				tab: now - this.lastVoice.tab < 400,
 			},
 			...this.measures(now),
 		});
+	}
+
+	/** Al 30 s nauwelijks geluid (90% van de blokjes zachter dan spraak)? */
+	private isLowLevel(): boolean {
+		const q = this.quietFrames;
+		if (this.snap.mode !== "live" || q.length < 300) return false;
+		const sorted = [...q].sort((a, b) => a - b);
+		return (sorted[Math.floor(sorted.length * 0.9)] ?? 0) < 0.015;
 	}
 
 	private pulse() {
@@ -533,7 +659,7 @@ class CoachRecorder {
 		if (!pipeline || this.snap.phase !== "live") return;
 		const next = !pipeline.has("mic");
 		try {
-			await pipeline.setMic(next);
+			await pipeline.setMic(next, this.micOptions());
 		} catch (error) {
 			this.set({
 				warning: error instanceof Error ? error.message : "Microfoon mislukt.",
@@ -666,6 +792,7 @@ class CoachRecorder {
 		this.lastVoice = { mic: 0, tab: 0 };
 		this.streakStart = 0;
 		this.lastPulseAt = 0;
+		this.quietFrames = [];
 	}
 }
 

@@ -89,7 +89,33 @@ type Branch = {
 	source: MediaStreamAudioSourceNode;
 	node: AudioWorkletNode;
 	analyser: AnalyserNode;
+	/** Microfoon: versterking + compressor + zachte begrenzer. */
+	chain: AudioNode[];
+	gain: GainNode | null;
 };
+
+export type MicOptions = {
+	/** Fysiek gesprek: geen echo-/ruisonderdrukking (die snijdt verre stemmen weg). */
+	room: boolean;
+	/** Versterking 1–6×. */
+	gain: number;
+	deviceId?: string;
+};
+
+export const MIC_GAIN_MIN = 1;
+export const MIC_GAIN_MAX = 6;
+
+/** Zachte begrenzer (tanh): hard clippen klinkt kapot en verstoort de herkenning. */
+function softClipCurve(): Float32Array<ArrayBuffer> {
+	const n = 2048;
+	const curve = new Float32Array(n);
+	const k = Math.tanh(1.6);
+	for (let i = 0; i < n; i++) {
+		const x = (i / (n - 1)) * 2 - 1;
+		curve[i] = Math.tanh(1.6 * x) / k;
+	}
+	return curve;
+}
 
 /**
  * Eén audiograaf per gesprek. `shareTab` moet vanuit een klik komen
@@ -126,7 +152,11 @@ export class AudioPipeline {
 		return ctx;
 	}
 
-	private async attach(source: Source, stream: MediaStream): Promise<void> {
+	private async attach(
+		source: Source,
+		stream: MediaStream,
+		boost?: number,
+	): Promise<void> {
 		const ctx = await this.context();
 		this.detach(source);
 		const input = ctx.createMediaStreamSource(stream);
@@ -151,17 +181,50 @@ export class AudioPipeline {
 		analyser.fftSize = 512;
 		const mute = ctx.createGain();
 		mute.gain.value = 0;
-		input.connect(node);
-		input.connect(analyser);
+		const chain: AudioNode[] = [];
+		let gain: GainNode | null = null;
+		let out: AudioNode = input;
+		if (boost !== undefined) {
+			// Hoogdoorlaat tegen tafelgerommel → versterking → compressor (zachte
+			// stemmen omhoog, jouw stem dichtbij niet kapot) → zachte begrenzer.
+			const highpass = ctx.createBiquadFilter();
+			highpass.type = "highpass";
+			highpass.frequency.value = 100;
+			gain = ctx.createGain();
+			gain.gain.value = clampGain(boost);
+			const comp = ctx.createDynamicsCompressor();
+			comp.threshold.value = -30;
+			comp.knee.value = 20;
+			comp.ratio.value = 6;
+			comp.attack.value = 0.003;
+			comp.release.value = 0.25;
+			const clip = ctx.createWaveShaper();
+			clip.curve = softClipCurve();
+			clip.oversample = "2x";
+			input.connect(highpass).connect(gain).connect(comp).connect(clip);
+			chain.push(highpass, gain, comp, clip);
+			out = clip;
+		}
+		// Dezelfde bewerkte stroom gaat naar de meter én naar de transcriptie.
+		out.connect(node);
+		out.connect(analyser);
 		// Stil naar de uitgang, zodat de graaf blijft lopen. Nooit hoorbaar.
 		node.connect(mute).connect(ctx.destination);
-		this.branches[source] = { stream, source: input, node, analyser };
+		this.branches[source] = {
+			stream,
+			source: input,
+			node,
+			analyser,
+			chain,
+			gain,
+		};
 	}
 
 	private detach(source: Source): void {
 		const b = this.branches[source];
 		if (!b) return;
 		b.source.disconnect();
+		for (const n of b.chain) n.disconnect();
 		b.node.port.onmessage = null;
 		b.node.disconnect();
 		b.analyser.disconnect();
@@ -243,8 +306,8 @@ export class AudioPipeline {
 		this.tabStream = null;
 	}
 
-	/** Eigen microfoon aan of uit. */
-	async setMic(on: boolean): Promise<void> {
+	/** Eigen microfoon aan of uit (met versterking). */
+	async setMic(on: boolean, options?: MicOptions): Promise<void> {
 		if (!on) {
 			const b = this.branches.mic;
 			this.detach("mic");
@@ -252,14 +315,22 @@ export class AudioPipeline {
 			return;
 		}
 		if (this.branches.mic) return;
+		const room = options?.room ?? false;
 		let stream: MediaStream;
 		try {
 			stream = await navigator.mediaDevices.getUserMedia({
 				audio: {
-					// Echo-onderdrukking helpt als je toch zonder koptelefoon zit.
-					echoCancellation: true,
-					noiseSuppression: true,
-					autoGainControl: true,
+					...(options?.deviceId
+						? { deviceId: { exact: options.deviceId } }
+						: {}),
+					channelCount: 1,
+					sampleRate: { ideal: 48_000 },
+					// Online: echo-onderdrukking tegen de luidsprekers. Fysiek is er
+					// geen andere kant, en ruisonderdrukking haalt verre stemmen weg;
+					// de versterking en compressor hieronder doen het werk.
+					echoCancellation: !room,
+					noiseSuppression: !room,
+					autoGainControl: !room,
 				},
 			});
 		} catch (error) {
@@ -268,9 +339,52 @@ export class AudioPipeline {
 					"Geen toegang tot de microfoon. Sta hem toe via het slotje in de adresbalk.",
 				);
 			}
+			if (
+				error instanceof DOMException &&
+				error.name === "OverconstrainedError"
+			) {
+				throw new CaptureError(
+					"Die microfoon is niet gevonden. Kies een andere bij 'Microfoon'.",
+				);
+			}
 			throw new CaptureError("Microfoon starten mislukt.");
 		}
-		await this.attach("mic", stream);
+		await this.attachMic(stream, options?.gain ?? 1);
+	}
+
+	/** Een microfoonstroom aansluiten (ook voor tests met een synthetische toon). */
+	async attachMic(stream: MediaStream, gain: number): Promise<void> {
+		await this.attach("mic", stream, gain);
+	}
+
+	/** Versterking aanpassen tijdens het gesprek; de verbinding blijft staan. */
+	setMicGain(value: number): void {
+		const g = this.branches.mic?.gain;
+		const ctx = this.ctx;
+		if (!g || !ctx) return;
+		g.gain.setTargetAtTime(clampGain(value), ctx.currentTime, 0.05);
+	}
+
+	/** Andere microfoon kiezen: alleen de microfoontak wordt opnieuw opgebouwd. */
+	async switchMic(options: MicOptions): Promise<void> {
+		await this.setMic(false);
+		await this.setMic(true, options);
+	}
+
+	/** Niveau ná versterking (rms) en piek (0–1) van de microfoon. */
+	micMeter(): { rms: number; peak: number } {
+		const b = this.branches.mic;
+		if (!b) return { rms: 0, peak: 0 };
+		const data = new Float32Array(b.analyser.fftSize);
+		b.analyser.getFloatTimeDomainData(data);
+		let sum = 0;
+		let peak = 0;
+		for (const v of data) {
+			sum += v * v;
+			const a = Math.abs(v);
+			if (a > peak) peak = a;
+		}
+		return { rms: Math.sqrt(sum / data.length), peak };
 	}
 
 	has(source: Source): boolean {
@@ -313,6 +427,11 @@ export class AudioPipeline {
 		this.ctx = null;
 		if (ctx && ctx.state !== "closed") await ctx.close();
 	}
+}
+
+export function clampGain(value: number): number {
+	if (!Number.isFinite(value)) return 1;
+	return Math.min(MIC_GAIN_MAX, Math.max(MIC_GAIN_MIN, value));
 }
 
 /** Plakt PCM-blokjes aan elkaar met een WAV-header ervoor. */

@@ -6,8 +6,10 @@ import {
 	fastDue,
 	HALFWAY_MARK,
 	isEcho,
+	isGenericLabel,
 	isMeLabel,
 	isQuestionForMe,
+	nextSpeakerLabel,
 	renameIn,
 	runRules,
 	runStreakMs,
@@ -311,5 +313,21 @@ describe("sprekers hernoemen", () => {
 		expect(renameIn(names, "S1", " ")).toEqual([
 			{ label: "Spreker 2", name: "Lisa" },
 		]);
+	});
+});
+
+describe("sprekers corrigeren", () => {
+	test("label met je naam telt niet meer na 'niet iedereen'", () => {
+		expect(isMeLabel("Arin", undefined, "Arin", true)).toBe(true);
+		expect(isMeLabel("Arin", undefined, "Arin", false)).toBe(false);
+		expect(isMeLabel("S2", "S2", "Arin", false)).toBe(true);
+	});
+
+	test("algemene labels en een vrij nieuw label", () => {
+		expect(isGenericLabel("S3")).toBe(true);
+		expect(isGenericLabel("Spreker 2")).toBe(true);
+		expect(isGenericLabel("Arin")).toBe(false);
+		expect(nextSpeakerLabel(["S1", "Spreker 2", "Arin"])).toBe("Spreker 3");
+		expect(nextSpeakerLabel([])).toBe("Spreker 1");
 	});
 });

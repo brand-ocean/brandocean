@@ -1038,6 +1038,9 @@ export default defineSchema({
 		// Live: welk sprekerlabel jij bent ("S2", of je naam als Speechmatics
 		// je stem herkende).
 		meLabel: v.optional(v.string()),
+		// "Arin is niet iedereen": geen opgeslagen stem meer gebruiken en het
+		// label met je naam niet meer als jij tellen.
+		voiceOff: v.optional(v.boolean()),
 		// Stemkenmerken per label uit Speechmatics (hooguit 20 labels).
 		speakerIds: v.optional(
 			v.array(
@@ -1107,6 +1110,9 @@ export default defineSchema({
 		name: v.string(),
 		identifiers: v.array(v.string()),
 		updatedAt: v.number(),
+		// 2 = vervangen i.p.v. samengevoegd. Oudere stemmen (samengevoegd,
+		// soms met andermans stem erin) worden niet meer meegestuurd.
+		version: v.optional(v.number()),
 	}).index("by_owner_and_name", ["ownerId", "name"]),
 
 	coachChunks: defineTable({

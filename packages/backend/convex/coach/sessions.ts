@@ -20,10 +20,12 @@ import {
 	type FastReason,
 	fastDue,
 	isEcho,
+	isGenericLabel,
 	isMeLabel,
 	isQuestionForMe,
 	isUrgent,
 	MAX_ACTIVE_NUDGES,
+	nextSpeakerLabel,
 	renameIn,
 	runRules,
 	runStreakMs,
@@ -194,12 +196,17 @@ async function ingest(
 		const rawSpeaker = chunk.speaker ? clean(chunk.speaker, 40) : null;
 		// Live: één microfoon voor iedereen, dus "jij" volgt uit het label.
 		// Herkende Speechmatics je stem, dan is het label je naam.
-		if (live && !meLabel && isMeLabel(rawSpeaker, undefined, session.myName)) {
+		const byName = !session.voiceOff;
+		if (
+			live &&
+			!meLabel &&
+			isMeLabel(rawSpeaker, undefined, session.myName, byName)
+		) {
 			meLabel = rawSpeaker ?? undefined;
 			await ctx.db.patch(session._id, { meLabel });
 		}
 		const isMine = live
-			? isMeLabel(rawSpeaker, meLabel, session.myName)
+			? isMeLabel(rawSpeaker, meLabel, session.myName, byName)
 			: chunk.source === "mic";
 		const near = live
 			? []
@@ -856,7 +863,12 @@ export const renameSpeaker = mutation({
 		// Live: stem van deze persoon onthouden, dan herkent Speechmatics hem
 		// de volgende keer met zijn naam.
 		const ids = session.speakerIds?.find((s) => s.label === label)?.identifiers;
-		if (session.mode === "live" && name && ids?.length) {
+		if (
+			session.mode === "live" &&
+			name &&
+			ids?.length &&
+			isGenericLabel(label)
+		) {
 			await rememberVoice(ctx, session.ownerId, name, ids);
 		}
 		return null;
@@ -969,6 +981,8 @@ const MAX_IDS_PER_VOICE = 4;
 /** Speechmatics accepteert max. 50 kenmerken over alle sprekers samen. */
 const MAX_IDS_SENT = 50;
 
+const VOICE_VERSION = 2;
+
 async function rememberVoice(
 	ctx: MutationCtx,
 	ownerId: Id<"users">,
@@ -982,14 +996,15 @@ async function rememberVoice(
 			q.eq("ownerId", ownerId).eq("name", name),
 		)
 		.unique();
-	const merged = [
-		...identifiers,
-		...(existing?.identifiers ?? []).filter((id) => !identifiers.includes(id)),
-	].slice(0, MAX_IDS_PER_VOICE);
+	// Vervangen, niet samenvoegen: een stem die je net aanwees is de waarheid.
+	// Samenvoegen mengde eerder andere stemmen in "Arin" (na "wijzig"), en dan
+	// labelde Speechmatics iedereen als Arin.
+	const merged = identifiers.slice(0, MAX_IDS_PER_VOICE);
 	if (existing) {
 		await ctx.db.patch(existing._id, {
 			identifiers: merged,
 			updatedAt: Date.now(),
+			version: VOICE_VERSION,
 		});
 	} else {
 		await ctx.db.insert("coachVoices", {
@@ -997,6 +1012,7 @@ async function rememberVoice(
 			name,
 			identifiers: merged,
 			updatedAt: Date.now(),
+			version: VOICE_VERSION,
 		});
 	}
 }
@@ -1005,6 +1021,52 @@ async function rememberVoice(
  * "Dit ben ik": dit sprekerlabel ben jij. Herberekent wie wat zei en de
  * spreektijd, en onthoudt je stem als Speechmatics kenmerken leverde.
  */
+/** Na een wijziging in wie wie is: isMine, spreektijd en je beurt opnieuw. */
+async function recompute(
+	ctx: MutationCtx,
+	session: Doc<"coachSessions">,
+): Promise<void> {
+	const chunks = await ctx.db
+		.query("coachChunks")
+		.withIndex("by_session_and_at", (q) => q.eq("sessionId", session._id))
+		.take(MAX_CHUNKS);
+	let talk: Doc<"coachState">["talk"] = [];
+	let run: { start: number; end: number } | undefined;
+	for (const c of chunks) {
+		// Online volgt "jij" uit de bron (microfoon), fysiek uit de spreker.
+		const isMine =
+			session.mode === "live"
+				? isMeLabel(
+						c.speaker,
+						session.meLabel,
+						session.myName,
+						!session.voiceOff,
+					)
+				: c.source === "mic";
+		if (isMine !== c.isMine) await ctx.db.patch(c._id, { isMine });
+		talk = addTalk(
+			talk,
+			isMine ? "me" : (c.speaker ?? "?"),
+			isMine,
+			c.durationMs,
+			wordCount(c.text),
+			c.text.match(/\?/g)?.length ?? 0,
+		);
+		run = extendRun(run, {
+			isMine,
+			at: c.at,
+			durationMs: c.durationMs,
+			text: c.text,
+		});
+	}
+	const state = await stateOf(ctx, session._id);
+	await ctx.db.patch(state._id, {
+		talk,
+		myRunStart: run?.start,
+		myRunEnd: run?.end,
+	});
+}
+
 export const setMe = mutation({
 	args: {
 		sessionId: v.id("coachSessions"),
@@ -1015,42 +1077,64 @@ export const setMe = mutation({
 		if (session.mode !== "live") return null;
 		const meLabel = args.label ? clean(args.label, 40) || undefined : undefined;
 		await ctx.db.patch(session._id, { meLabel });
-		const chunks = await ctx.db
-			.query("coachChunks")
-			.withIndex("by_session_and_at", (q) => q.eq("sessionId", session._id))
-			.take(MAX_CHUNKS);
-		let talk: Doc<"coachState">["talk"] = [];
-		let run: { start: number; end: number } | undefined;
-		for (const c of chunks) {
-			const isMine = isMeLabel(c.speaker, meLabel, session.myName);
-			if (isMine !== c.isMine) await ctx.db.patch(c._id, { isMine });
-			talk = addTalk(
-				talk,
-				isMine ? "me" : (c.speaker ?? "?"),
-				isMine,
-				c.durationMs,
-				wordCount(c.text),
-				c.text.match(/\?/g)?.length ?? 0,
-			);
-			run = extendRun(run, {
-				isMine,
-				at: c.at,
-				durationMs: c.durationMs,
-				text: c.text,
-			});
-		}
-		const state = await stateOf(ctx, session._id);
-		await ctx.db.patch(state._id, {
-			talk,
-			myRunStart: run?.start,
-			myRunEnd: run?.end,
-		});
-		const ids = meLabel
-			? session.speakerIds?.find((s) => s.label === meLabel)?.identifiers
-			: undefined;
-		if (ids?.length)
+		await recompute(ctx, { ...session, meLabel });
+		// Alleen een algemeen label (S2) dat je zelf aanwees wordt je stem;
+		// het label met je naam komt al van de opgeslagen stem.
+		const ids =
+			meLabel && isGenericLabel(meLabel)
+				? session.speakerIds?.find((s) => s.label === meLabel)?.identifiers
+				: undefined;
+		if (ids?.length) {
 			await rememberVoice(ctx, session.ownerId, session.myName, ids);
+		}
 		return null;
+	},
+});
+
+/**
+ * "Arin is niet iedereen": vergeet je opgeslagen stem, tel het label met je
+ * naam niet meer als jij, en laat de browser opnieuw verbinden zonder stem.
+ */
+export const resetVoice = mutation({
+	args: { sessionId: v.id("coachSessions") },
+	handler: async (ctx, args) => {
+		const session = await ownedSession(ctx, args.sessionId);
+		const voice = await ctx.db
+			.query("coachVoices")
+			.withIndex("by_owner_and_name", (q) =>
+				q.eq("ownerId", session.ownerId).eq("name", session.myName),
+			)
+			.unique();
+		if (voice) await ctx.db.delete(voice._id);
+		const patch = { voiceOff: true, meLabel: undefined };
+		await ctx.db.patch(session._id, patch);
+		await recompute(ctx, { ...session, ...patch });
+		return null;
+	},
+});
+
+/** Eén regel aan een andere (of nieuwe) spreker toewijzen. */
+export const reassignChunk = mutation({
+	args: {
+		chunkId: v.id("coachChunks"),
+		/** Bestaand label, of null voor een nieuwe spreker. */
+		label: v.union(v.string(), v.null()),
+	},
+	handler: async (ctx, args): Promise<string | null> => {
+		const chunk = await ctx.db.get(args.chunkId);
+		if (!chunk) return null;
+		const session = await ownedSession(ctx, chunk.sessionId);
+		const state = await stateOf(ctx, session._id);
+		const label =
+			args.label?.trim().slice(0, 40) ||
+			nextSpeakerLabel([
+				...state.talk.map((t) => t.key),
+				...(session.speakerNames ?? []).map((s) => s.label),
+				...(session.meLabel ? [session.meLabel] : []),
+			]);
+		await ctx.db.patch(chunk._id, { speaker: label });
+		await recompute(ctx, session);
+		return label;
 	},
 });
 
@@ -1079,7 +1163,13 @@ export const saveSpeakerIds = mutation({
 			speakerIds: [...byLabel.values()].slice(-20),
 		});
 		for (const s of incoming) {
-			if (isMeLabel(s.label, session.meLabel, session.myName)) {
+			// Nooit het label met je naam zelf bijwerken: dat versterkt een
+			// verkeerde herkenning (iedereen "Arin").
+			if (
+				session.meLabel &&
+				s.label === session.meLabel &&
+				isGenericLabel(s.label)
+			) {
 				await rememberVoice(
 					ctx,
 					session.ownerId,
@@ -1102,12 +1192,14 @@ export const myVoice = query({
 			.query("coachVoices")
 			.withIndex("by_owner_and_name", (q) => q.eq("ownerId", userId))
 			.take(20);
-		return rows.map((r) => ({
-			_id: r._id,
-			name: r.name,
-			samples: r.identifiers.length,
-			updatedAt: r.updatedAt,
-		}));
+		return rows
+			.filter((r) => (r.version ?? 1) >= VOICE_VERSION)
+			.map((r) => ({
+				_id: r._id,
+				name: r.name,
+				samples: r.identifiers.length,
+				updatedAt: r.updatedAt,
+			}));
 	},
 });
 
@@ -1123,8 +1215,10 @@ export const forgetVoice = mutation({
 
 /** Bekende stemmen voor StartRecognition: Speechmatics labelt ze met hun naam. */
 export const knownVoices = internalQuery({
-	args: { ownerId: v.id("users") },
+	args: { ownerId: v.id("users"), sessionId: v.id("coachSessions") },
 	handler: async (ctx, args) => {
+		const session = await ctx.db.get(args.sessionId);
+		if (!session || session.voiceOff) return [];
 		const rows = await ctx.db
 			.query("coachVoices")
 			.withIndex("by_owner_and_name", (q) => q.eq("ownerId", args.ownerId))
@@ -1133,7 +1227,7 @@ export const knownVoices = internalQuery({
 		const out: { label: string; speaker_identifiers: string[] }[] = [];
 		let total = 0;
 		for (const r of rows) {
-			if (!validVoiceName(r.name)) continue;
+			if (!validVoiceName(r.name) || (r.version ?? 1) < VOICE_VERSION) continue;
 			const ids = r.identifiers.slice(0, MAX_IDS_PER_VOICE);
 			if (ids.length === 0 || total + ids.length > MAX_IDS_SENT) continue;
 			out.push({ label: r.name, speaker_identifiers: ids });

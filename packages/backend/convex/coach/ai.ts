@@ -146,6 +146,7 @@ export const speechmaticsToken = action({
 		// Bekende stemmen (live): Speechmatics labelt ze meteen met de naam.
 		const speakers = await ctx.runQuery(internal.coach.sessions.knownVoices, {
 			ownerId: userId,
+			sessionId: args.sessionId,
 		});
 		return { token: body.key_value, speakers };
 	},

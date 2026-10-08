@@ -421,6 +421,7 @@ export function WhoIsWho({
 	compact?: boolean;
 }) {
 	const setMeMutation = useMutation(api.coach.sessions.setMe);
+	const resetMutation = useMutation(api.coach.sessions.resetVoice);
 	const mine = useRecorder(
 		(s) => s.sessionId === session._id && s.phase === "live",
 	);
@@ -429,23 +430,60 @@ export function WhoIsWho({
 		if (mine) void recorder.setMe(label);
 		else void setMeMutation({ sessionId: session._id, label });
 	};
+	const reset = () => {
+		if (mine) void recorder.resetVoice();
+		else void resetMutation({ sessionId: session._id });
+	};
 	if (session.meLabel) {
+		const { mine: myMs, others } = talkSplit(state.talk);
+		// Alles onder jouw naam na een minuut praten: de stemherkenning pakt
+		// iedereen. Dan meteen de uitweg tonen.
+		const suspicious = others === 0 && myMs > 45_000;
 		return (
-			<div className="flex items-center gap-2 text-xs">
-				<UserRoundCheckIcon className="size-3.5 shrink-0 text-emerald-500" />
-				<span className="text-muted-foreground">
-					Jij ={" "}
-					<span className="text-foreground font-medium">
-						{labelName(session, session.meLabel)}
+			<div
+				className={cn(
+					"flex flex-col gap-1.5 text-xs",
+					suspicious &&
+						"rounded-lg bg-amber-500/10 p-2 ring-1 ring-amber-500/25",
+				)}
+			>
+				{suspicious ? (
+					<p className="leading-snug">
+						Alles staat onder {session.myName}. Praten er meer mensen? Laat de
+						coach de stemmen opnieuw scheiden.
+					</p>
+				) : null}
+				<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+					<UserRoundCheckIcon className="size-3.5 shrink-0 text-emerald-500" />
+					<span className="text-muted-foreground">
+						Jij ={" "}
+						<span className="text-foreground font-medium">
+							{labelName(session, session.meLabel)}
+						</span>
 					</span>
-				</span>
-				<button
-					type="button"
-					onClick={() => setMe(null)}
-					className="text-muted-foreground hover:text-foreground ml-auto underline-offset-2 hover:underline"
-				>
-					wijzig
-				</button>
+					<span className="ml-auto flex items-center gap-2">
+						<button
+							type="button"
+							onClick={reset}
+							title="Vergeet je opgeslagen stem en scheid de stemmen opnieuw"
+							className={cn(
+								"underline-offset-2 hover:underline",
+								suspicious
+									? "font-medium text-amber-700 dark:text-amber-400"
+									: "text-muted-foreground hover:text-foreground",
+							)}
+						>
+							{session.myName} is niet iedereen
+						</button>
+						<button
+							type="button"
+							onClick={() => setMe(null)}
+							className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+						>
+							wijzig
+						</button>
+					</span>
+				</div>
 			</div>
 		);
 	}

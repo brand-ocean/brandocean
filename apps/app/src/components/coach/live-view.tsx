@@ -16,7 +16,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "~convex/_generated/api";
 import type { Doc } from "~convex/_generated/dataModel";
-import { AskBox, AskCard, SessionModelSelect, SpeakerName } from "./extras";
+import {
+	AskBox,
+	AskCard,
+	type AudioInput,
+	GainSlider,
+	labelName,
+	listMics,
+	MicSelect,
+	SessionModelSelect,
+	SpeakerName,
+} from "./extras";
 import { activeNudges, clock, NUDGE_META } from "./format";
 import { recorder } from "./lib/recorder";
 import {
@@ -243,6 +253,7 @@ function TopBar({ session, now, attached }: LiveData) {
 				<SessionModelSelect session={session} />
 				{attached ? (
 					<>
+						<MicControl />
 						<Button
 							size="icon-sm"
 							variant="ghost"
@@ -321,8 +332,74 @@ function TopBar({ session, now, attached }: LiveData) {
 	);
 }
 
+/** Microfoonniveau ná versterking; klik voor versterking en microfoonkeuze. */
+function MicControl() {
+	const peak = useRecorder((s) => s.micPeak);
+	const clip = useRecorder((s) => s.micClip);
+	const gain = useRecorder((s) => s.micGain);
+	const device = useRecorder((s) => s.micDevice);
+	const micOn = useRecorder((s) => s.micOn);
+	const [open, setOpen] = useState(false);
+	const [devices, setDevices] = useState<AudioInput[]>([]);
+	const refresh = () => void listMics().then(setDevices);
+	if (!micOn) return null;
+	return (
+		<div className="relative">
+			<button
+				type="button"
+				onClick={() => {
+					setOpen((v) => !v);
+					refresh();
+				}}
+				title="Microfoon versterken"
+				className="hover:bg-muted flex h-7 items-center gap-1.5 rounded-md px-2 text-xs transition-colors"
+			>
+				<span className="bg-muted relative h-1.5 w-12 overflow-hidden rounded-full">
+					<span
+						className={cn(
+							"absolute inset-y-0 left-0 rounded-full transition-[width] duration-150",
+							clip
+								? "bg-red-500"
+								: peak > 0.7
+									? "bg-amber-500"
+									: "bg-emerald-500",
+						)}
+						style={{ width: `${Math.min(100, peak * 100)}%` }}
+					/>
+				</span>
+				<span className="tabular-nums">{gain.toFixed(1)}×</span>
+			</button>
+			{open ? (
+				<div className="bg-popover absolute top-9 right-0 z-30 flex w-72 flex-col gap-3 rounded-xl p-3 shadow-lg ring-1 ring-foreground/10 animate-in fade-in slide-in-from-top-1 duration-150">
+					<p className="text-sm font-medium">Microfoon</p>
+					<GainSlider value={gain} onChange={recorder.setMicGain} />
+					<MicSelect
+						value={device}
+						devices={devices}
+						onOpen={refresh}
+						onChange={(id) => void recorder.setMicDevice(id)}
+					/>
+					<p className="text-muted-foreground text-xs leading-snug">
+						{clip
+							? "Dit oversturt: zet de versterking iets lager."
+							: "Hoger als de anderen aan tafel zacht binnenkomen. De compressor houdt je eigen stem netjes."}
+					</p>
+					<button
+						type="button"
+						onClick={() => setOpen(false)}
+						className="text-muted-foreground hover:text-foreground self-end text-xs"
+					>
+						Sluiten
+					</button>
+				</div>
+			) : null}
+		</div>
+	);
+}
+
 function Notices({ live }: { live: boolean }) {
 	const warning = useRecorder((s) => s.warning);
+	const lowLevel = useRecorder((s) => s.lowLevel);
 	const hint = useRecorder((s) => s.hint);
 	const error = useRecorder((s) => s.error);
 	const items: {
@@ -341,6 +418,13 @@ function Notices({ live }: { live: boolean }) {
 		});
 	}
 	if (hint && !live) items.push({ key: "h", tone: "info", text: hint });
+	if (lowLevel) {
+		items.push({
+			key: "l",
+			tone: "warn",
+			text: "Er komt weinig geluid binnen. Leg de laptop in het midden, zet 'versterken' hoger, of gebruik een conferentiemicrofoon.",
+		});
+	}
 	if (items.length === 0) return null;
 	return (
 		<div className="flex shrink-0 flex-col gap-1.5">
@@ -393,6 +477,20 @@ function dotFor(label: string): string {
 
 function TranscriptPanel({ session, chunks, attached }: LiveData) {
 	const interim = useRecorder((s) => s.interim);
+	const reassign = useMutation(api.coach.sessions.reassignChunk);
+	const [moving, setMoving] = useState<string | null>(null);
+	const isMeKey = (l: string) => !!session.meLabel && l === session.meLabel;
+	// Alle sprekers in dit gesprek (en jij), om een regel aan toe te wijzen.
+	const labels = [
+		...new Set([
+			...(session.meLabel ? [session.meLabel] : []),
+			...chunks.map((c) => c.speaker).filter((l): l is string => !!l),
+		]),
+	].slice(0, 12);
+	const move = (chunkId: Doc<"coachChunks">["_id"], label: string | null) => {
+		setMoving(null);
+		void reassign({ chunkId, label });
+	};
 	const [atBottom, setAtBottom] = useState(true);
 	const scroller = useRef<HTMLDivElement | null>(null);
 	// Zonder effect: na elke render naar beneden, zolang je onderaan stond.
@@ -430,22 +528,28 @@ function TranscriptPanel({ session, chunks, attached }: LiveData) {
 					) : null}
 					<ol className="flex max-w-[70ch] flex-col">
 						{chunks.map((c, i) => {
-							const prev = chunks[i - 1];
 							const key = c.isMine ? "me" : (c.speaker ?? "?");
-							const prevKey = prev
-								? prev.isMine
-									? "me"
-									: (prev.speaker ?? "?")
-								: null;
+							// Naam bij elke sprekerwissel, na een pauze en elke 5 regels:
+							// zo zie je meteen als alles onder één naam staat.
+							let streak = 0;
+							for (let j = i - 1; j >= 0 && j > i - 5; j--) {
+								const p = chunks[j];
+								const pk = p ? (p.isMine ? "me" : (p.speaker ?? "?")) : null;
+								if (pk !== key) break;
+								streak++;
+							}
+							const prev = chunks[i - 1];
 							const continued =
-								prevKey === key &&
+								streak > 0 &&
+								streak < 4 &&
 								prev !== undefined &&
 								c.at - prev.at < 90_000;
+							const canMove = session.mode === "live" || !c.isMine;
 							return (
 								<li
 									key={c._id}
 									className={cn(
-										"text-sm",
+										"group/line text-sm",
 										continued ? "pt-1" : "pt-3 first:pt-0",
 									)}
 								>
@@ -473,9 +577,51 @@ function TranscriptPanel({ session, chunks, attached }: LiveData) {
 											</span>
 										</div>
 									)}
-									<p className="text-foreground/90 pl-4 leading-relaxed">
-										{c.text}
-									</p>
+									<div className="flex items-start gap-1 pl-4">
+										<p className="text-foreground/90 flex-1 leading-relaxed">
+											{c.text}
+										</p>
+										{canMove ? (
+											<button
+												type="button"
+												title="Andere spreker"
+												onClick={() =>
+													setMoving(moving === c._id ? null : c._id)
+												}
+												className="text-muted-foreground hover:text-foreground hover:bg-muted mt-0.5 shrink-0 rounded px-1 text-[0.6875rem] opacity-0 transition-opacity group-hover/line:opacity-100 focus:opacity-100 max-md:opacity-60"
+											>
+												wie?
+											</button>
+										) : null}
+									</div>
+									{moving === c._id ? (
+										<div className="mt-1.5 ml-4 flex flex-wrap items-center gap-1.5 animate-in fade-in duration-150">
+											<span className="text-muted-foreground text-xs">
+												Dit zei:
+											</span>
+											{labels
+												.filter((l) => l !== c.speaker)
+												.map((l) => (
+													<button
+														key={l}
+														type="button"
+														onClick={() => move(c._id, l)}
+														className="bg-muted hover:bg-primary hover:text-primary-foreground rounded-full px-2 py-0.5 text-xs transition-colors"
+													>
+														{isMeKey(l)
+															? session.myName
+															: labelName(session, l)}
+													</button>
+												))}
+											<button
+												type="button"
+												onClick={() => move(c._id, null)}
+												className="rounded-full px-2 py-0.5 text-xs ring-1 ring-foreground/15 hover:bg-muted"
+											>
+												+ nieuwe spreker
+											</button>
+										</div>
+									) : null}
 								</li>
 							);
 						})}
