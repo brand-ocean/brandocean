@@ -96,8 +96,14 @@ export const transcriptionProvider = action({
  */
 export const speechmaticsToken = action({
 	args: { sessionId: v.id("coachSessions") },
-	handler: async (ctx, args): Promise<{ token: string }> => {
-		await requireSessionOwner(ctx, args.sessionId);
+	handler: async (
+		ctx,
+		args,
+	): Promise<{
+		token: string;
+		speakers: { label: string; speaker_identifiers: string[] }[];
+	}> => {
+		const userId = await requireSessionOwner(ctx, args.sessionId);
 		const key = process.env.SPEECHMATICS_API_KEY;
 		if (!key) {
 			throw new ConvexError(
@@ -124,7 +130,11 @@ export const speechmaticsToken = action({
 		if (!body.key_value) {
 			throw new ConvexError("Speechmatics gaf geen tijdelijke sleutel terug.");
 		}
-		return { token: body.key_value };
+		// Bekende stemmen (live): Speechmatics labelt ze meteen met de naam.
+		const speakers = await ctx.runQuery(internal.coach.sessions.knownVoices, {
+			ownerId: userId,
+		});
+		return { token: body.key_value, speakers };
 	},
 });
 
@@ -134,6 +144,8 @@ export function parseTranscribed(
 	startedAt: number,
 	durationMs: number,
 	has: { mic: boolean; tab: boolean },
+	/** Live: één microfoon voor iedereen, sprekerlabels blijven staan. */
+	live = false,
 ): CoachChunkInput[] {
 	const list = field(json, "lines");
 	if (!Array.isArray(list)) return [];
@@ -153,7 +165,11 @@ export function parseTranscribed(
 		out.push({
 			at: Math.round(startedAt + offset),
 			source: source === "mic" ? "mic" : "tab",
-			speaker: source === "mic" ? null : speaker || "Spreker 1",
+			speaker: live
+				? speaker || null
+				: source === "mic"
+					? null
+					: speaker || "Spreker 1",
 			text,
 		});
 	});
@@ -189,9 +205,11 @@ export const transcribeSegment = action({
 		const previous = recent.chunks.length
 			? recent.chunks
 					.map((c) =>
-						c.isMine
-							? `${session.myName} (mic): ${c.text}`
-							: `${c.speaker ?? "Spreker 1"} (tab): ${c.text}`,
+						session.mode === "live"
+							? `${c.speaker ?? "Spreker 1"}: ${c.text}`
+							: c.isMine
+								? `${session.myName} (mic): ${c.text}`
+								: `${c.speaker ?? "Spreker 1"} (tab): ${c.text}`,
 					)
 					.join("\n")
 			: "(nog niets: dit is het begin van het gesprek)";
@@ -223,7 +241,10 @@ export const transcribeSegment = action({
 		}
 		const result = await generateJson({
 			model: languageModel(MODEL_TRANSCRIBE),
-			instructions: transcribeInstructions(session.myName),
+			instructions: transcribeInstructions(
+				session.myName,
+				session.mode === "live",
+			),
 			messages: [{ role: "user", content }],
 			schema: TRANSCRIBE_SCHEMA,
 			name: "transcript",
@@ -238,6 +259,7 @@ export const transcribeSegment = action({
 			args.startedAt,
 			args.durationMs,
 			{ mic: !!mic, tab: !!tab },
+			session.mode === "live",
 		);
 		const lines: number = await ctx.runMutation(
 			internal.coach.sessions.insertTranscribed,

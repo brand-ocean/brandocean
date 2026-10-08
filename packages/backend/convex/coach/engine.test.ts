@@ -2,13 +2,17 @@ import { describe, expect, test } from "vitest";
 import {
 	admitNudges,
 	type EngineState,
+	extendRun,
 	fastDue,
 	HALFWAY_MARK,
 	isEcho,
+	isMeLabel,
 	isQuestionForMe,
 	runRules,
+	runStreakMs,
 	similarity,
 	switchAgenda,
+	validVoiceName,
 } from "./engine";
 
 const base: EngineState = {
@@ -226,5 +230,69 @@ describe("regels zonder model", () => {
 		const out = switchAgenda(agenda, 0, 0, 1, 60_000);
 		expect(out.agenda[0]?.spentMs).toBe(60_000);
 		expect(out.currentItem).toBe(1);
+	});
+});
+
+describe("live (alleen microfoon)", () => {
+	test("jouw beurt loopt door over korte pauzes en een kort 'ja'", () => {
+		let run = extendRun(undefined, {
+			isMine: true,
+			at: 0,
+			durationMs: 20_000,
+			text: "a",
+		});
+		run = extendRun(run, {
+			isMine: false,
+			at: 21_000,
+			durationMs: 500,
+			text: "ja",
+		});
+		run = extendRun(run, {
+			isMine: true,
+			at: 22_000,
+			durationMs: 70_000,
+			text: "b",
+		});
+		expect(runStreakMs(run, 95_000)).toBe(92_000);
+		const broken = extendRun(run, {
+			isMine: false,
+			at: 93_000,
+			durationMs: 4_000,
+			text: "Dat vind ik een goed idee eigenlijk",
+		});
+		expect(broken).toBeUndefined();
+	});
+
+	test("jij = gekozen label of je herkende naam", () => {
+		expect(isMeLabel("S2", "S2", "Arin")).toBe(true);
+		expect(isMeLabel("Arin", undefined, "Arin")).toBe(true);
+		expect(isMeLabel("S1", "S2", "Arin")).toBe(false);
+		expect(validVoiceName("S3")).toBe(false);
+		expect(validVoiceName("Arin")).toBe(true);
+	});
+
+	test("zolang onbekend wie jij bent: geen spreektijd-tips, wel tempo", () => {
+		const out = runRules({
+			now: 7 * 60_000,
+			startedAt: 0,
+			myName: "Arin",
+			identified: false,
+			agenda: [{ title: "Intro", minutes: 3, spentMs: 0, done: false }],
+			currentItem: 0,
+			currentSince: 0,
+			talk: [
+				{ key: "S1", isMine: true, ms: 300_000, words: 900, questions: 0 },
+			],
+			silenceMs: 0,
+			myStreakMs: 120_000,
+			lastChunkAt: 0,
+			silenceFiredAt: 0,
+			monologueFiredAt: 0,
+			ratioNudgeAt: 0,
+			tempoWarned: [],
+			wrapUpFired: false,
+		});
+		expect(out.nudges.some((n) => n.type === "ruimte")).toBe(false);
+		expect(out.nudges.some((n) => n.type === "tempo")).toBe(true);
 	});
 });

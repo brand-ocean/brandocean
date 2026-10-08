@@ -97,6 +97,9 @@ export function situation(session: Session, state: State, now: number): string {
 		session.clientName ? `KLANT: ${session.clientName}` : null,
 		`DOEL: ${session.goal || "(niet opgegeven — leid het af uit het gesprek)"}`,
 		`IK BEN: ${session.myName}`,
+		session.mode === "live"
+			? `VORM: fysiek gesprek, één microfoon in de ruimte. ${session.meLabel ? `${session.myName} is herkend; zijn regels staan onder zijn naam.` : `Nog niet bekend welke spreker ${session.myName} is: leid het voorzichtig af uit aanspreekvormen, en geef geen tips over spreektijd.`}`
+			: null,
 		session.context
 			? `ACHTERGROND VAN ${session.myName.toUpperCase()} (tarieven, wensen; gebruik dit):\n${session.context}`
 			: null,
@@ -293,8 +296,12 @@ ${session.clientName ? `KLANT: ${session.clientName}\n` : ""}DOEL: ${session.goa
 ${session.context ? `ACHTERGROND VAN ${session.myName.toUpperCase()}: ${session.context}\n` : ""}DUUR: ${Math.round((end - session.startedAt) / 60_000)} min${session.plannedMinutes ? ` (gepland ${session.plannedMinutes} min)` : ""}
 AGENDA (tijden automatisch geschat):
 ${agenda}
-SPREEKTIJD: ${session.myName} ${Math.round(share * 100)}% (${Math.round(mine / 60_000)} min), anderen ${Math.round(others / 60_000)} min.
-VRAGEN GESTELD DOOR ${session.myName.toUpperCase()}: ${myQuestions}
+${
+	session.mode === "live" && !session.meLabel
+		? `SPREEKTIJD: onbekend (fysiek gesprek; niet vastgesteld welke spreker ${session.myName} was). Geef geen tips over spreektijd of aantal vragen.`
+		: `SPREEKTIJD: ${session.myName} ${Math.round(share * 100)}% (${Math.round(mine / 60_000)} min), anderen ${Math.round(others / 60_000)} min.
+VRAGEN GESTELD DOOR ${session.myName.toUpperCase()}: ${myQuestions}`
+}
 NUDGES GETOOND: ${args.nudgeCount}
 
 STAND TIJDENS HET GESPREK:
@@ -306,7 +313,23 @@ ${formatTranscript(session, args.chunks, args.shots, 120_000)}`;
 
 export const SHOT_INSTRUCTIONS = `Je krijgt een screenshot van een gedeeld Google Meet-tabblad tijdens een zakelijk gesprek. Beschrijf in het Nederlands, in hooguit 2 korte zinnen, wat er inhoudelijk te zien is: titel van de slide of pagina, de belangrijkste cijfers, namen, prijzen of conclusies, of wat voor scherm het is (website, webshop, dashboard, document, offerte). Neem getallen exact over. Beschrijf geen opmaak, kleuren of de Meet-interface. Zie je alleen gezichten of tegels van deelnemers, schrijf dan alleen: "Alleen deelnemers in beeld."`;
 
-export function transcribeInstructions(myName: string): string {
+export function transcribeInstructions(myName: string, live = false): string {
+	if (live) {
+		return `Je schrijft opnames van een zakelijk gesprek in een ruimte letterlijk uit, meestal Nederlands, soms met Engelse woorden. Eén microfoon op tafel neemt iedereen op, ook ${myName}.
+
+Je krijgt per stuk van ±15 seconden één opname ("mic").
+
+Regels:
+- Schrijf alleen uit wat echt gezegd wordt. Niets verzinnen, samenvatten of vertalen. Laat eh/uhm weg.
+- Geef sprekers labels "Spreker 1", "Spreker 2", enz. Gebruik dezelfde labels als in de eerdere regels als het duidelijk dezelfde persoon is (stem, onderwerp, aanspreekvorm). Een nieuwe stem krijgt het eerstvolgende vrije nummer. Gebruik nooit namen als label, ook niet als iemand bij naam wordt aangesproken: alleen "Spreker N".
+- source is altijd "mic".
+- Nieuw item bij elke sprekerwissel; hooguit een paar zinnen per item.
+- t = seconden vanaf het begin van dit stuk waarop het item begint (schatting).
+- Geen verstaanbare spraak: lege lijst.
+
+Antwoord ALLEEN met JSON, zonder uitleg of codeblok:
+{"lines":[{"source":"mic","speaker":"Spreker 1","t":0.5,"text":"..."}]}`;
+	}
 	return `Je schrijft opnames van een zakelijk videogesprek (Google Meet) letterlijk uit, meestal Nederlands, soms met Engelse woorden.
 
 Je krijgt per stuk van ±15 seconden één of twee opnames:

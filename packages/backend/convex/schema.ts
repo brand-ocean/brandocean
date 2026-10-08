@@ -1029,6 +1029,18 @@ export default defineSchema({
 		provider: v.optional(
 			v.union(v.literal("speechmatics"), v.literal("gateway")),
 		),
+		// online = Meet-tabblad + microfoon; live = alleen een microfoon in de
+		// ruimte (fysiek gesprek). Ontbreekt bij oudere gesprekken: online.
+		mode: v.optional(v.union(v.literal("online"), v.literal("live"))),
+		// Live: welk sprekerlabel jij bent ("S2", of je naam als Speechmatics
+		// je stem herkende).
+		meLabel: v.optional(v.string()),
+		// Stemkenmerken per label uit Speechmatics (hooguit 20 labels).
+		speakerIds: v.optional(
+			v.array(
+				v.object({ label: v.string(), identifiers: v.array(v.string()) }),
+			),
+		),
 		// "S1" → "Mark". Klein: alleen sprekers die je zelf een naam gaf.
 		speakerNames: v.optional(
 			v.array(v.object({ label: v.string(), name: v.string() })),
@@ -1069,6 +1081,10 @@ export default defineSchema({
 		silenceMs: v.number(),
 		myStreakMs: v.number(),
 		signalsAt: v.number(),
+		// Live: jouw lopende beurt, uit de transcriptregels (de microfoon kan
+		// jou niet van de anderen onderscheiden).
+		myRunStart: v.optional(v.number()),
+		myRunEnd: v.optional(v.number()),
 		// Wat de coach bijhoudt
 		summary: v.array(v.string()),
 		decisions: v.array(v.string()),
@@ -1080,6 +1096,15 @@ export default defineSchema({
 		currentSince: v.optional(v.number()),
 		talk: v.array(coachTalkV),
 	}).index("by_session", ["sessionId"]),
+
+	// Jouw stem (Speechmatics speaker identification), zodat je in een live
+	// gesprek vanzelf herkend wordt. Een paar kenmerken per naam.
+	coachVoices: defineTable({
+		ownerId: v.id("users"),
+		name: v.string(),
+		identifiers: v.array(v.string()),
+		updatedAt: v.number(),
+	}).index("by_owner_and_name", ["ownerId", "name"]),
 
 	coachChunks: defineTable({
 		sessionId: v.id("coachSessions"),

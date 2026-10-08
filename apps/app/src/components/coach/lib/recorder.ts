@@ -28,7 +28,11 @@ import {
 export type Phase = "idle" | "starting" | "live" | "stopping";
 export type Kind = "speechmatics" | "gateway";
 
+export type CoachMode = "online" | "live";
+
 export type CoachSetup = {
+	/** online = Meet-tabblad + microfoon; live = alleen de microfoon. */
+	mode?: CoachMode;
 	title: string;
 	clientId?: Id<"clients">;
 	goal?: string;
@@ -41,6 +45,7 @@ export type CoachSetup = {
 export type RecorderSnapshot = {
 	sessionId: Id<"coachSessions"> | null;
 	phase: Phase;
+	mode: CoachMode;
 	kind: Kind | null;
 	hint: string | null;
 	status: Record<Source, StreamStatus | "off">;
@@ -63,6 +68,7 @@ export type RecorderSnapshot = {
 const INITIAL: RecorderSnapshot = {
 	sessionId: null,
 	phase: "idle",
+	mode: "online",
 	kind: null,
 	hint: null,
 	status: { mic: "off", tab: "off" },
@@ -175,18 +181,26 @@ class CoachRecorder {
 		if (this.snap.phase !== "idle") {
 			throw new CaptureError("Er loopt al een gesprek. Stop dat eerst.");
 		}
-		this.set({ ...INITIAL, phase: "starting", now: Date.now() });
+		const mode: CoachMode = setup.mode ?? "online";
+		this.set({ ...INITIAL, mode, phase: "starting", now: Date.now() });
 		const pipeline = new AudioPipeline();
 		this.pipeline = pipeline;
 		const warnings: string[] = [];
 		try {
-			const { hasAudio } = await pipeline.shareTab();
+			if (mode === "live") {
+				// Fysiek gesprek: geen tabblad, alleen de microfoon voor iedereen.
+				await pipeline.setMic(true);
+			}
+			const { hasAudio } =
+				mode === "live" ? { hasAudio: true } : await pipeline.shareTab();
 			if (!hasAudio) {
 				warnings.push(
 					"Er komt geen geluid mee van het tabblad, dus de coach hoort de anderen niet. Stop, start opnieuw, kies het Meet-tabblad en zet 'Tabblad-audio delen' aan.",
 				);
 			}
-			if (useMic) {
+			if (mode === "live") {
+				// microfoon staat al aan
+			} else if (useMic) {
 				try {
 					await pipeline.setMic(true);
 				} catch (error) {
@@ -263,12 +277,7 @@ class CoachRecorder {
 		const transcriber: Transcriber =
 			kind === "speechmatics"
 				? new SpeechmaticsTranscriber(
-						async () =>
-							(
-								await client.action(api.coach.ai.speechmaticsToken, {
-									sessionId,
-								})
-							).token,
+						() => client.action(api.coach.ai.speechmaticsToken, { sessionId }),
 						this.vocab,
 						(message) => {
 							// Realtime werkt niet (sleutel, tegoed): door met de gateway.
@@ -280,6 +289,7 @@ class CoachRecorder {
 							});
 							this.startTranscriber("gateway");
 						},
+						this.snap.mode === "live",
 					)
 				: new GatewayTranscriber(async (segment) => {
 						await client.action(api.coach.ai.transcribeSegment, {
@@ -325,8 +335,25 @@ class CoachRecorder {
 			},
 			onPending: (pending) => this.set({ pending }),
 			onWarning: (warning) => this.set({ warning }),
+			onSpeakers: (speakers) => {
+				void client
+					.mutation(api.coach.sessions.saveSpeakerIds, { sessionId, speakers })
+					.catch(() => {});
+			},
 		});
 	}
+
+	/** Live: "Dit ben ik". Daarna meteen stemkenmerken ophalen om te onthouden. */
+	setMe = async (label: string | null) => {
+		const sessionId = this.snap.sessionId;
+		if (!sessionId) return;
+		await getConvexClient().mutation(api.coach.sessions.setMe, {
+			sessionId,
+			label,
+		});
+		const t = this.transcriber;
+		if (t instanceof SpeechmaticsTranscriber) t.requestSpeakers();
+	};
 
 	private saveLine(line: FinalLine) {
 		const sessionId = this.snap.sessionId;
@@ -357,7 +384,12 @@ class CoachRecorder {
 
 	private onFrame(frame: PcmFrame) {
 		const now = frame.at;
-		const voice = frame.rms >= VOICE_RMS[frame.source];
+		// Live staat de microfoon verder weg (op tafel): lagere drempel.
+		const threshold =
+			this.snap.mode === "live" && frame.source === "mic"
+				? 0.01
+				: VOICE_RMS[frame.source];
+		const voice = frame.rms >= threshold;
 		if (voice) {
 			if (frame.source === "mic") {
 				if (!this.streakStart || now - this.lastVoice.mic > STREAK_GAP_MS) {
@@ -393,8 +425,11 @@ class CoachRecorder {
 		const hasMic = this.pipeline?.has("mic") ?? false;
 		const last = Math.max(this.lastVoice.mic, this.lastVoice.tab);
 		const silenceMs = hasMic && last > 0 ? Math.max(0, now - last) : 0;
+		// Live hoort één microfoon iedereen: de server meet je beurt uit de regels.
 		const myStreakMs =
-			this.streakStart && now - this.lastVoice.mic < STREAK_GAP_MS
+			this.snap.mode !== "live" &&
+			this.streakStart &&
+			now - this.lastVoice.mic < STREAK_GAP_MS
 				? this.lastVoice.mic - this.streakStart
 				: 0;
 		return { silenceMs, myStreakMs };

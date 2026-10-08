@@ -31,6 +31,7 @@ import {
 	NudgeStack,
 	TalkBar,
 	useRecorder,
+	WhoIsWho,
 } from "./parts";
 import { openCoachWindow, pipSupported } from "./pip";
 
@@ -72,11 +73,16 @@ export function LiveView({ session }: { session: Session }) {
 					</FrameHeading>
 					{mine ? <Controls session={session} /> : null}
 				</FrameHeader>
-				{mine ? <Notices /> : <Detached session={session} />}
+				{mine ? (
+					<Notices live={session.mode === "live"} />
+				) : (
+					<Detached session={session} />
+				)}
 			</Frame>
 
-			<div className="grid gap-4.5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-				<div className="flex min-w-0 flex-col gap-4.5">
+			{/* Telefoon/tablet: tips, dan agenda en spreektijd, dan het transcript. */}
+			<div className="grid items-start gap-4.5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+				<div className="flex min-w-0 flex-col gap-4.5 lg:col-start-1 lg:row-start-1">
 					<Frame>
 						<FramePanel className="p-4">
 							<NudgeStack
@@ -101,12 +107,16 @@ export function LiveView({ session }: { session: Session }) {
 									)
 								}
 							/>
+							{state ? (
+								<div className="mt-3 empty:hidden">
+									<WhoIsWho session={session} state={state} />
+								</div>
+							) : null}
 						</FramePanel>
 					</Frame>
-					<Transcript session={session} live={mine} />
 				</div>
 
-				<div className="flex flex-col gap-4.5">
+				<div className="flex min-w-0 flex-col gap-4.5 lg:col-start-2 lg:row-span-2 lg:row-start-1">
 					{state ? (
 						<>
 							<Frame>
@@ -127,6 +137,10 @@ export function LiveView({ session }: { session: Session }) {
 							<Shots session={session} />
 						</>
 					) : null}
+				</div>
+
+				<div className="min-w-0 lg:col-start-1 lg:row-start-2">
+					<Transcript session={session} live={mine} />
 				</div>
 			</div>
 
@@ -156,6 +170,7 @@ function Controls({ session }: { session: Session }) {
 			<ListenDots />
 			{kind ? (
 				<TonePill tone="muted" size="sm">
+					{session.mode === "live" ? "live · " : ""}
 					{kind === "speechmatics" ? "realtime" : "gateway"}
 				</TonePill>
 			) : null}
@@ -167,15 +182,17 @@ function Controls({ session }: { session: Session }) {
 			>
 				{micOn ? <MicIcon /> : <MicOffIcon />}
 			</Button>
-			<Button
-				size="icon-sm"
-				variant="ghost"
-				title="Screenshot (Alt+S)"
-				disabled={!sharing || shooting}
-				onClick={() => void recorder.takeShot()}
-			>
-				<CameraIcon />
-			</Button>
+			{sharing ? (
+				<Button
+					size="icon-sm"
+					variant="ghost"
+					title="Screenshot (Alt+S)"
+					disabled={shooting}
+					onClick={() => void recorder.takeShot()}
+				>
+					<CameraIcon />
+				</Button>
+			) : null}
 			{supported && !pipOpen ? (
 				<Button
 					size="sm"
@@ -205,7 +222,7 @@ function Controls({ session }: { session: Session }) {
 	);
 }
 
-function Notices() {
+function Notices({ live }: { live: boolean }) {
 	const warning = useRecorder((s) => s.warning);
 	const hint = useRecorder((s) => s.hint);
 	const error = useRecorder((s) => s.error);
@@ -229,9 +246,11 @@ function Notices() {
 		items.push({
 			key: "p",
 			tone: "info",
-			text: "Open het zwevende venster en ga dan naar Meet. Daar zie je de tips zonder van tabblad te wisselen.",
+			text: live
+				? "Open het zwevende venster: groot en rustig in beeld, ook als je iets anders open hebt."
+				: "Open het zwevende venster en ga dan naar Meet. Daar zie je de tips zonder van tabblad te wisselen.",
 		});
-	} else if (!pipSupported()) {
+	} else if (!pipSupported() && !live) {
 		items.push({
 			key: "p",
 			tone: "info",
@@ -288,7 +307,11 @@ function Detached({ session }: { session: Session }) {
 					disabled={busy || phase === "live"}
 					onClick={() =>
 						void recorder
-							.start({ title: session.title, agenda: [] }, true, session._id)
+							.start(
+								{ title: session.title, agenda: [], mode: session.mode },
+								true,
+								session._id,
+							)
 							.catch(() => {})
 					}
 				>

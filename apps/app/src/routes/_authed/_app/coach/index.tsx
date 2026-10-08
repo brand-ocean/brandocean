@@ -1,12 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
 	ArrowRightIcon,
 	ChevronDownIcon,
 	HeadphonesIcon,
 	MessagesSquareIcon,
+	MicIcon,
+	MonitorIcon,
 	PlayIcon,
 	RadioIcon,
+	UsersRoundIcon,
 } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
@@ -23,7 +26,7 @@ import {
 } from "@/components/app/frame";
 import { type Tone, TonePill } from "@/components/app/tone";
 import { clock, formatDate, parseAgenda } from "@/components/coach/format";
-import { recorder } from "@/components/coach/lib/recorder";
+import { type CoachMode, recorder } from "@/components/coach/lib/recorder";
 import { useRecorder } from "@/components/coach/parts";
 import { openCoachWindow, pipSupported } from "@/components/coach/pip";
 import { Button } from "@/components/ui/button";
@@ -49,6 +52,22 @@ export const Route = createFileRoute("/_authed/_app/coach/")({
 const NO_CLIENT = "__none__";
 const CONTEXT_KEY = "coach.context";
 const NAME_KEY = "coach.myName";
+const MODE_KEY = "coach.mode";
+
+const MODES = [
+	{
+		id: "online",
+		icon: MonitorIcon,
+		title: "Online meeting",
+		text: "Meet-tabblad + microfoon. Weet precies wie jij bent.",
+	},
+	{
+		id: "live",
+		icon: UsersRoundIcon,
+		title: "Live / fysiek",
+		text: "Alleen de microfoon, voor iedereen in de ruimte.",
+	},
+] as const;
 
 function stored(key: string, fallback: string): string {
 	if (typeof window === "undefined") return fallback;
@@ -214,6 +233,18 @@ function StartCard() {
 	const [context, setContext] = useState(() => stored(CONTEXT_KEY, ""));
 	const [myName, setMyName] = useState(() => stored(NAME_KEY, "Arin"));
 	const [useMic, setUseMic] = useState(true);
+	const [mode, setModeState] = useState<CoachMode>(() =>
+		stored(MODE_KEY, "online") === "live" ? "live" : "online",
+	);
+	const setMode = (next: CoachMode) => {
+		setModeState(next);
+		remember(MODE_KEY, next);
+	};
+	const voices = useQuery(api.coach.sessions.myVoice);
+	const forgetVoice = useMutation(api.coach.sessions.forgetVoice);
+	const myVoice = voices?.find(
+		(v) => v.name.toLowerCase() === (myName || "Arin").toLowerCase(),
+	);
 	const [more, setMore] = useState(false);
 	const micId = useId();
 	const phase = useRecorder((s) => s.phase);
@@ -243,8 +274,9 @@ function StartCard() {
 					context: context || undefined,
 					myName: myName || undefined,
 					agenda,
+					mode,
 				},
-				useMic,
+				mode === "live" || useMic,
 			);
 		} catch (err) {
 			toast.error("Starten lukte niet", {
@@ -265,8 +297,9 @@ function StartCard() {
 				<FrameHeading>
 					<FrameTitle>Meeting coach</FrameTitle>
 					<FrameDescription>
-						Luistert mee met je Google Meet en geeft rustig tips op het juiste
-						moment. Eén klik om te starten, één om te stoppen.
+						Luistert mee met je Google Meet of je gesprek aan tafel en geeft
+						rustig tips op het juiste moment. Eén klik om te starten, één om te
+						stoppen.
 					</FrameDescription>
 				</FrameHeading>
 			</FrameHeader>
@@ -279,6 +312,35 @@ function StartCard() {
 					}}
 					onFocus={() => void recorder.prefetch().catch(() => {})}
 				>
+					<div className="grid gap-2 sm:grid-cols-2 lg:col-span-2">
+						{MODES.map((m) => (
+							<button
+								key={m.id}
+								type="button"
+								aria-pressed={mode === m.id}
+								onClick={() => setMode(m.id)}
+								className={cn(
+									"flex items-start gap-3 rounded-xl border p-3 text-left transition-colors",
+									mode === m.id
+										? "border-primary bg-primary/5 ring-1 ring-primary/30"
+										: "hover:bg-muted/60",
+								)}
+							>
+								<m.icon
+									className={cn(
+										"mt-0.5 size-4 shrink-0",
+										mode === m.id ? "text-primary" : "text-muted-foreground",
+									)}
+								/>
+								<span className="flex flex-col gap-0.5">
+									<span className="text-sm font-medium">{m.title}</span>
+									<span className="text-muted-foreground text-xs">
+										{m.text}
+									</span>
+								</span>
+							</button>
+						))}
+					</div>
 					<div className="flex flex-col gap-4">
 						<Field label="Gesprek">
 							<Input
@@ -371,17 +433,46 @@ function StartCard() {
 					</div>
 
 					<div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center lg:col-span-2">
-						<div className="flex items-center gap-2 text-sm">
-							<Switch id={micId} checked={useMic} onCheckedChange={setUseMic} />
-							<label htmlFor={micId}>Mijn microfoon</label>
-							<span className="text-muted-foreground flex items-center gap-1 text-xs">
-								<HeadphonesIcon className="size-3.5" />
-								met koptelefoon het best
-							</span>
-						</div>
+						{mode === "online" ? (
+							<div className="flex items-center gap-2 text-sm">
+								<Switch
+									id={micId}
+									checked={useMic}
+									onCheckedChange={setUseMic}
+								/>
+								<label htmlFor={micId}>Mijn microfoon</label>
+								<span className="text-muted-foreground flex items-center gap-1 text-xs">
+									<HeadphonesIcon className="size-3.5" />
+									met koptelefoon het best
+								</span>
+							</div>
+						) : (
+							<p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+								<MicIcon className="size-3.5 shrink-0" />
+								{myVoice ? (
+									<span>
+										Je stem is bekend: de coach herkent je vanzelf.{" "}
+										<button
+											type="button"
+											onClick={() => void forgetVoice({ voiceId: myVoice._id })}
+											className="underline-offset-2 hover:underline"
+										>
+											Vergeten
+										</button>
+									</span>
+								) : (
+									<span>
+										Leg de laptop midden op tafel. Tik in het gesprek één keer
+										op "dit ben ik"; daarna onthoudt de coach je stem.
+									</span>
+								)}
+							</p>
+						)}
 						<div className="flex items-center gap-3 sm:ml-auto">
 							<span className="text-muted-foreground hidden text-xs md:inline">
-								Kies daarna het Meet-tabblad en zet tabblad-audio aan.
+								{mode === "online"
+									? "Kies daarna het Meet-tabblad en zet tabblad-audio aan."
+									: "Sta daarna de microfoon toe."}
 							</span>
 							<Button
 								type="submit"
@@ -394,7 +485,11 @@ function StartCard() {
 								) : (
 									<PlayIcon className="size-4" />
 								)}
-								{starting ? "Wacht op Meet-tabblad…" : "Start"}
+								{starting
+									? mode === "online"
+										? "Wacht op Meet-tabblad…"
+										: "Wacht op microfoon…"
+									: "Start"}
 							</Button>
 						</div>
 					</div>

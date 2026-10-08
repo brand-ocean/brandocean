@@ -34,6 +34,8 @@ export type TranscriptionHandlers = {
 	) => void;
 	onPending?: (count: number) => void;
 	onWarning?: (message: string) => void;
+	/** Stemkenmerken per sprekerlabel (Speechmatics, live). */
+	onSpeakers?: (speakers: { label: string; identifiers: string[] }[]) => void;
 };
 
 export interface Transcriber {
@@ -61,7 +63,14 @@ type SmMessage =
 	| { message: "AddTranscript" | "AddPartialTranscript"; results: SmResult[] }
 	| { message: "EndOfTranscript" }
 	| { message: "Error"; type: string; reason: string }
-	| { message: "Warning" | "Info"; type: string; reason: string };
+	| { message: "Warning" | "Info"; type: string; reason: string }
+	| {
+			message: "SpeakersResult";
+			speakers: { label: string; speaker_identifiers: string[] }[];
+	  };
+
+export type KnownSpeaker = { label: string; speaker_identifiers: string[] };
+export type SpeechmaticsSession = { token: string; speakers: KnownSpeaker[] };
 
 function joinTokens(results: readonly SmResult[]): string {
 	let text = "";
@@ -92,14 +101,34 @@ class SpeechmaticsStream {
 	private flushTimer: ReturnType<typeof setTimeout> | null = null;
 	private retries = 0;
 	private unsubscribe: (() => void) | null = null;
+	private framesSinceSpeakers = 0;
+	/** Bekende stemmen meesturen; uit na een weigering, dan gewoon zonder. */
+	private useKnown = true;
+	private sentKnown = false;
 
 	constructor(
 		private readonly source: Source,
-		private readonly getToken: () => Promise<string>,
+		private readonly getSession: () => Promise<SpeechmaticsSession>,
 		private readonly vocab: readonly string[],
 		private readonly handlers: TranscriptionHandlers,
 		private readonly onFatal: (message: string) => void,
+		/** Meerdere stemmen op deze bron (tabblad, of live de enige microfoon). */
+		private readonly diarize: boolean,
 	) {}
+
+	/** Vraag nu de stemkenmerken op (bijv. net na "Dit ben ik"). */
+	requestSpeakers() {
+		const ws = this.ws;
+		if (
+			this.diarize &&
+			ws &&
+			this.started &&
+			ws.readyState === WebSocket.OPEN
+		) {
+			ws.send(JSON.stringify({ message: "GetSpeakers" }));
+			this.framesSinceSpeakers = 0;
+		}
+	}
 
 	start(audio: AudioPipeline) {
 		this.unsubscribe = audio.subscribe((frame) => {
@@ -113,6 +142,8 @@ class SpeechmaticsStream {
 		if (ws && this.started && ws.readyState === WebSocket.OPEN) {
 			ws.send(frame.pcm);
 			this.seq++;
+			// Om de ±45 s de stemkenmerken ophalen, zodat je stem onthouden wordt.
+			if (++this.framesSinceSpeakers >= 450) this.requestSpeakers();
 			return;
 		}
 		// Tijdens (her)verbinden hooguit 10 s bewaren.
@@ -123,10 +154,14 @@ class SpeechmaticsStream {
 	private async connect(status: StreamStatus) {
 		this.handlers.onStatus(this.source, status);
 		let token: string;
+		let known: KnownSpeaker[] = [];
 		try {
 			// Vers per verbinding: de sleutel leeft 120 s, een open verbinding
 			// blijft daarna gewoon lopen.
-			token = await this.getToken();
+			const session = await this.getSession();
+			token = session.token;
+			known = this.useKnown ? session.speakers : [];
+			this.sentKnown = known.length > 0;
 		} catch (error) {
 			this.fatal = true;
 			this.onFatal(
@@ -156,10 +191,18 @@ class SpeechmaticsStream {
 					transcription_config: {
 						language: "nl",
 						model: "enhanced",
-						// Microfoon = altijd jij; alleen het tabblad heeft meerdere stemmen.
-						diarization: this.source === "tab" ? "speaker" : "none",
-						...(this.source === "tab"
-							? { speaker_diarization_config: { speaker_sensitivity: 0.6 } }
+						// Online: microfoon = altijd jij, het tabblad heeft meerdere
+						// stemmen. Live: één microfoon voor iedereen, en bekende stemmen
+						// (jij) krijgen meteen hun naam als label.
+						diarization: this.diarize ? "speaker" : "none",
+						...(this.diarize
+							? {
+									speaker_diarization_config: {
+										speaker_sensitivity: 0.6,
+										get_speakers: true,
+										...(known.length ? { speakers: known } : {}),
+									},
+								}
 							: {}),
 						enable_partials: true,
 						max_delay: 2,
@@ -215,7 +258,24 @@ class SpeechmaticsStream {
 			case "AddPartialTranscript":
 				this.emitInterim(m.results);
 				break;
+			case "SpeakersResult":
+				this.handlers.onSpeakers?.(
+					m.speakers.map((sp) => ({
+						label: sp.label,
+						identifiers: sp.speaker_identifiers,
+					})),
+				);
+				break;
 			case "Error": {
+				// Oude of ongeldige stemkenmerken: opnieuw verbinden zonder.
+				if (!this.started && this.sentKnown && m.type !== "not_authorised") {
+					this.useKnown = false;
+					this.handlers.onWarning?.(
+						"Je opgeslagen stem werd niet geaccepteerd. Tik opnieuw op 'dit ben ik'.",
+					);
+					this.ws?.close();
+					break;
+				}
 				const message =
 					m.type === "not_authorised"
 						? "Speechmatics weigert de sleutel. Controleer SPEECHMATICS_API_KEY."
@@ -289,7 +349,7 @@ class SpeechmaticsStream {
 		const last = line.results[line.results.length - 1];
 		this.handlers.onFinal({
 			source: this.source,
-			speaker: this.source === "mic" ? null : line.speaker,
+			speaker: this.diarize ? line.speaker : null,
 			text,
 			at: first
 				? Math.round(this.origin + first.start_time * 1000)
@@ -339,11 +399,17 @@ export class SpeechmaticsTranscriber implements Transcriber {
 	private streams: SpeechmaticsStream[] = [];
 
 	constructor(
-		private readonly getToken: () => Promise<string>,
+		private readonly getSession: () => Promise<SpeechmaticsSession>,
 		private readonly vocab: readonly string[],
 		/** Wordt één keer aangeroepen als realtime niet werkt (sleutel, tegoed). */
 		private readonly onFatal: (message: string) => void,
+		/** Live: alleen de microfoon, met sprekerherkenning. */
+		private readonly live = false,
 	) {}
+
+	requestSpeakers() {
+		for (const s of this.streams) s.requestSpeakers();
+	}
 
 	start(audio: AudioPipeline, handlers: TranscriptionHandlers) {
 		let failed = false;
@@ -356,10 +422,11 @@ export class SpeechmaticsTranscriber implements Transcriber {
 			if (!audio.has(source)) continue;
 			const stream = new SpeechmaticsStream(
 				source,
-				this.getToken,
+				this.getSession,
 				this.vocab,
 				handlers,
 				fatal,
+				source === "tab" || this.live,
 			);
 			this.streams.push(stream);
 			stream.start(audio);

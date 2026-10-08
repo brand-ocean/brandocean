@@ -12,6 +12,7 @@ import {
 	NudgeStack,
 	TalkBar,
 	useRecorder,
+	WhoIsWho,
 } from "./parts";
 
 // Het zwevende venster (Document Picture-in-Picture, Chrome 116+): een klein
@@ -112,6 +113,7 @@ function PipView({ sessionId }: { sessionId: Id<"coachSessions"> }) {
 	const now = useRecorder((s) => s.now) || Date.now();
 	const phase = useRecorder((s) => s.phase);
 	const shooting = useRecorder((s) => s.shooting);
+	const sharing = useRecorder((s) => s.sharing);
 	const kind = useRecorder((s) => s.kind);
 	const pending = useRecorder((s) => s.pending);
 
@@ -129,15 +131,17 @@ function PipView({ sessionId }: { sessionId: Id<"coachSessions"> }) {
 							schrijft uit…
 						</span>
 					) : null}
-					<button
-						type="button"
-						onClick={() => void recorder.takeShot()}
-						disabled={shooting}
-						title="Screenshot (Alt+S)"
-						className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-md p-1.5 transition-colors disabled:opacity-40"
-					>
-						<CameraIcon className="size-4" />
-					</button>
+					{sharing ? (
+						<button
+							type="button"
+							onClick={() => void recorder.takeShot()}
+							disabled={shooting}
+							title="Screenshot (Alt+S)"
+							className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-md p-1.5 transition-colors disabled:opacity-40"
+						>
+							<CameraIcon className="size-4" />
+						</button>
+					) : null}
 					{phase === "live" ? (
 						<button
 							type="button"
@@ -180,6 +184,7 @@ function PipView({ sessionId }: { sessionId: Id<"coachSessions"> }) {
 			</div>
 
 			<div className={cn("flex flex-col gap-3 border-t pt-3")}>
+				<WhoIsWho session={session} state={state} compact />
 				<AgendaTimer session={session} state={state} now={now} compact />
 				<TalkBar session={session} state={state} compact />
 			</div>

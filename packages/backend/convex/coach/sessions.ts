@@ -16,15 +16,19 @@ import {
 	admitNudges,
 	deepDue,
 	estimateSpeechMs,
+	extendRun,
 	type FastReason,
 	fastDue,
 	isEcho,
+	isMeLabel,
 	isQuestionForMe,
 	isUrgent,
 	MAX_ACTIVE_NUDGES,
 	runRules,
+	runStreakMs,
 	switchAgenda,
 	talkTotals,
+	validVoiceName,
 	wordCount,
 } from "./engine";
 import {
@@ -170,6 +174,12 @@ async function ingest(
 	let lastChunkAt = state.lastChunkAt;
 	let reason: FastReason = "cadence";
 	let inserted = 0;
+	const live = session.mode === "live";
+	let meLabel = session.meLabel;
+	let run =
+		state.myRunStart !== undefined && state.myRunEnd !== undefined
+			? { start: state.myRunStart, end: state.myRunEnd }
+			: undefined;
 
 	for (const chunk of chunks.slice(0, 50)) {
 		const text = clean(chunk.text, MAX_TEXT);
@@ -178,17 +188,30 @@ async function ingest(
 			chunk.at > session.startedAt - 60_000 && chunk.at < now + 10_000
 				? Math.round(chunk.at)
 				: now;
-		const isMine = chunk.source === "mic";
-		const near = await ctx.db
-			.query("coachChunks")
-			.withIndex("by_session_and_at", (q) =>
-				q
-					.eq("sessionId", session._id)
-					.gte("at", at - ECHO_WINDOW_MS)
-					.lte("at", at + ECHO_WINDOW_MS),
-			)
-			.take(20);
-		if (isMine) {
+		const rawSpeaker = chunk.speaker ? clean(chunk.speaker, 40) : null;
+		// Live: één microfoon voor iedereen, dus "jij" volgt uit het label.
+		// Herkende Speechmatics je stem, dan is het label je naam.
+		if (live && !meLabel && isMeLabel(rawSpeaker, undefined, session.myName)) {
+			meLabel = rawSpeaker ?? undefined;
+			await ctx.db.patch(session._id, { meLabel });
+		}
+		const isMine = live
+			? isMeLabel(rawSpeaker, meLabel, session.myName)
+			: chunk.source === "mic";
+		const near = live
+			? []
+			: await ctx.db
+					.query("coachChunks")
+					.withIndex("by_session_and_at", (q) =>
+						q
+							.eq("sessionId", session._id)
+							.gte("at", at - ECHO_WINDOW_MS)
+							.lte("at", at + ECHO_WINDOW_MS),
+					)
+					.take(20);
+		if (live) {
+			// geen echo mogelijk: er is maar één bron
+		} else if (isMine) {
 			// De microfoon ving de luidspreker op: dit zeiden de anderen.
 			if (near.some((c) => !c.isMine && isEcho(text, c.text))) continue;
 		} else {
@@ -210,11 +233,7 @@ async function ingest(
 			60_000,
 			Math.max(300, Math.round(chunk.durationMs ?? estimateSpeechMs(text))),
 		);
-		const speaker = isMine
-			? null
-			: chunk.speaker
-				? clean(chunk.speaker, 40)
-				: null;
+		const speaker = live ? rawSpeaker : isMine ? null : rawSpeaker;
 		await ctx.db.insert("coachChunks", {
 			sessionId: session._id,
 			at,
@@ -235,13 +254,24 @@ async function ingest(
 		);
 		speech += durationMs;
 		lastChunkAt = Math.max(lastChunkAt, at + durationMs);
-		if (!isMine && isQuestionForMe(text, session.myName)) reason = "question";
+		run = extendRun(run, { isMine, at, durationMs, text });
+		// Weten we (nog) niet wie jij bent, dan alleen als je naam valt.
+		const identified = !live || !!meLabel;
+		if (
+			!isMine &&
+			isQuestionForMe(text, session.myName) &&
+			(identified || text.toLowerCase().includes(session.myName.toLowerCase()))
+		) {
+			reason = "question";
+		}
 	}
 	if (inserted === 0) return 0;
 
 	await ctx.db.patch(state._id, {
 		talk,
 		lastChunkAt,
+		myRunStart: run?.start,
+		myRunEnd: run?.end,
 		speechMsSinceFast: state.speechMsSinceFast + speech,
 		speechMsSinceDeep: state.speechMsSinceDeep + speech,
 	});
@@ -390,6 +420,7 @@ export const create = mutation({
 		myName: v.optional(v.string()),
 		agenda: agendaInputV,
 		plannedMinutes: v.optional(v.number()),
+		mode: v.optional(v.union(v.literal("online"), v.literal("live"))),
 	},
 	handler: async (ctx, args): Promise<Id<"coachSessions">> => {
 		const userId = await requireOwner(ctx);
@@ -429,6 +460,7 @@ export const create = mutation({
 			myName: clean(args.myName ?? "", 40) || "Arin",
 			agenda,
 			plannedMinutes: planned,
+			mode: args.mode ?? "online",
 			status: "live",
 			startedAt: now,
 		});
@@ -679,8 +711,19 @@ export const pulse = mutation({
 		const named = others.length
 			? session.speakerNames?.find((s) => s.label === others[0]?.key)?.name
 			: undefined;
+		const live = session.mode === "live";
+		// Live meet de browser geen monoloog (één microfoon); dat doen de regels.
+		const myStreakMs = live
+			? runStreakMs(
+					state.myRunStart !== undefined && state.myRunEnd !== undefined
+						? { start: state.myRunStart, end: state.myRunEnd }
+						: undefined,
+					now,
+				)
+			: Math.max(0, args.myStreakMs);
 		const rules = runRules({
 			now,
+			identified: !live || !!session.meLabel,
 			startedAt: session.startedAt,
 			myName: session.myName,
 			plannedMinutes: session.plannedMinutes,
@@ -690,7 +733,7 @@ export const pulse = mutation({
 			talk: state.talk,
 			nextQuestion: state.nextQuestion,
 			silenceMs: Math.max(0, args.silenceMs),
-			myStreakMs: Math.max(0, args.myStreakMs),
+			myStreakMs,
 			lastChunkAt: state.lastChunkAt,
 			silenceFiredAt: state.silenceFiredAt,
 			monologueFiredAt: state.monologueFiredAt,
@@ -702,7 +745,7 @@ export const pulse = mutation({
 		const patch: Partial<Doc<"coachState">> = {
 			...rules.patch,
 			silenceMs: Math.round(args.silenceMs),
-			myStreakMs: Math.round(args.myStreakMs),
+			myStreakMs: Math.round(myStreakMs),
 			signalsAt: now,
 		};
 		if (rules.nudges.length > 0) {
@@ -802,6 +845,186 @@ export const renameSpeaker = mutation({
 			).slice(0, 20),
 		});
 		return null;
+	},
+});
+
+// ---- Live: wie ben jij, en je stem onthouden ----------------------------------------
+
+const MAX_IDS_PER_VOICE = 4;
+/** Speechmatics accepteert max. 50 kenmerken over alle sprekers samen. */
+const MAX_IDS_SENT = 50;
+
+async function rememberVoice(
+	ctx: MutationCtx,
+	ownerId: Id<"users">,
+	name: string,
+	identifiers: string[],
+): Promise<void> {
+	if (!validVoiceName(name) || identifiers.length === 0) return;
+	const existing = await ctx.db
+		.query("coachVoices")
+		.withIndex("by_owner_and_name", (q) =>
+			q.eq("ownerId", ownerId).eq("name", name),
+		)
+		.unique();
+	const merged = [
+		...identifiers,
+		...(existing?.identifiers ?? []).filter((id) => !identifiers.includes(id)),
+	].slice(0, MAX_IDS_PER_VOICE);
+	if (existing) {
+		await ctx.db.patch(existing._id, {
+			identifiers: merged,
+			updatedAt: Date.now(),
+		});
+	} else {
+		await ctx.db.insert("coachVoices", {
+			ownerId,
+			name,
+			identifiers: merged,
+			updatedAt: Date.now(),
+		});
+	}
+}
+
+/**
+ * "Dit ben ik": dit sprekerlabel ben jij. Herberekent wie wat zei en de
+ * spreektijd, en onthoudt je stem als Speechmatics kenmerken leverde.
+ */
+export const setMe = mutation({
+	args: {
+		sessionId: v.id("coachSessions"),
+		label: v.union(v.string(), v.null()),
+	},
+	handler: async (ctx, args) => {
+		const session = await ownedSession(ctx, args.sessionId);
+		if (session.mode !== "live") return null;
+		const meLabel = args.label ? clean(args.label, 40) || undefined : undefined;
+		await ctx.db.patch(session._id, { meLabel });
+		const chunks = await ctx.db
+			.query("coachChunks")
+			.withIndex("by_session_and_at", (q) => q.eq("sessionId", session._id))
+			.take(MAX_CHUNKS);
+		let talk: Doc<"coachState">["talk"] = [];
+		let run: { start: number; end: number } | undefined;
+		for (const c of chunks) {
+			const isMine = isMeLabel(c.speaker, meLabel, session.myName);
+			if (isMine !== c.isMine) await ctx.db.patch(c._id, { isMine });
+			talk = addTalk(
+				talk,
+				isMine ? "me" : (c.speaker ?? "?"),
+				isMine,
+				c.durationMs,
+				wordCount(c.text),
+				c.text.match(/\?/g)?.length ?? 0,
+			);
+			run = extendRun(run, {
+				isMine,
+				at: c.at,
+				durationMs: c.durationMs,
+				text: c.text,
+			});
+		}
+		const state = await stateOf(ctx, session._id);
+		await ctx.db.patch(state._id, {
+			talk,
+			myRunStart: run?.start,
+			myRunEnd: run?.end,
+		});
+		const ids = meLabel
+			? session.speakerIds?.find((s) => s.label === meLabel)?.identifiers
+			: undefined;
+		if (ids?.length)
+			await rememberVoice(ctx, session.ownerId, session.myName, ids);
+		return null;
+	},
+});
+
+/** Stemkenmerken uit Speechmatics' SpeakersResult (live, elke ±45 s). */
+export const saveSpeakerIds = mutation({
+	args: {
+		sessionId: v.id("coachSessions"),
+		speakers: v.array(
+			v.object({ label: v.string(), identifiers: v.array(v.string()) }),
+		),
+	},
+	handler: async (ctx, args) => {
+		const session = await ownedSession(ctx, args.sessionId);
+		const incoming = args.speakers
+			.slice(0, 20)
+			.map((s) => ({
+				label: clean(s.label, 40),
+				identifiers: s.identifiers.slice(0, MAX_IDS_PER_VOICE),
+			}))
+			.filter((s) => s.label && s.identifiers.length > 0);
+		const byLabel = new Map(
+			(session.speakerIds ?? []).map((s) => [s.label, s] as const),
+		);
+		for (const s of incoming) byLabel.set(s.label, s);
+		await ctx.db.patch(session._id, {
+			speakerIds: [...byLabel.values()].slice(-20),
+		});
+		for (const s of incoming) {
+			if (isMeLabel(s.label, session.meLabel, session.myName)) {
+				await rememberVoice(
+					ctx,
+					session.ownerId,
+					session.myName,
+					s.identifiers,
+				);
+			}
+		}
+		return null;
+	},
+});
+
+/** Is je stem al bekend? Voor de uitleg op het startscherm. */
+export const myVoice = query({
+	args: {},
+	handler: async (ctx) => {
+		const userId = await getAuthUserId(ctx);
+		if (!userId) return null;
+		const rows = await ctx.db
+			.query("coachVoices")
+			.withIndex("by_owner_and_name", (q) => q.eq("ownerId", userId))
+			.take(20);
+		return rows.map((r) => ({
+			_id: r._id,
+			name: r.name,
+			samples: r.identifiers.length,
+			updatedAt: r.updatedAt,
+		}));
+	},
+});
+
+export const forgetVoice = mutation({
+	args: { voiceId: v.id("coachVoices") },
+	handler: async (ctx, args) => {
+		const userId = await requireOwner(ctx);
+		const voice = await ctx.db.get(args.voiceId);
+		if (voice && voice.ownerId === userId) await ctx.db.delete(voice._id);
+		return null;
+	},
+});
+
+/** Bekende stemmen voor StartRecognition: Speechmatics labelt ze met hun naam. */
+export const knownVoices = internalQuery({
+	args: { ownerId: v.id("users") },
+	handler: async (ctx, args) => {
+		const rows = await ctx.db
+			.query("coachVoices")
+			.withIndex("by_owner_and_name", (q) => q.eq("ownerId", args.ownerId))
+			.take(20);
+		rows.sort((a, b) => b.updatedAt - a.updatedAt);
+		const out: { label: string; speaker_identifiers: string[] }[] = [];
+		let total = 0;
+		for (const r of rows) {
+			if (!validVoiceName(r.name)) continue;
+			const ids = r.identifiers.slice(0, MAX_IDS_PER_VOICE);
+			if (ids.length === 0 || total + ids.length > MAX_IDS_SENT) continue;
+			out.push({ label: r.name, speaker_identifiers: ids });
+			total += ids.length;
+		}
+		return out;
 	},
 });
 

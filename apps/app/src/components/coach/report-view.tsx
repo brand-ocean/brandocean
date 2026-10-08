@@ -314,6 +314,7 @@ function ReportBody({ session, report }: { session: Session; report: Report }) {
 		session.clientId ? {} : "skip",
 	)?.find((c) => c._id === session.clientId);
 	const s = report.stats;
+	const unknownMe = session.mode === "live" && !session.meLabel;
 	const email = report.emailBody
 		? `${report.emailSubject ? `Onderwerp: ${report.emailSubject}\n\n` : ""}${report.emailBody}`
 		: "";
@@ -337,9 +338,10 @@ function ReportBody({ session, report }: { session: Session; report: Report }) {
 								{
 									label: `${session.myName} aan het woord`,
 									icon: MessageSquareIcon,
-									value: `${Math.round(s.myShare * 100)}%`,
-									hint:
-										s.myShare > 0.6
+									value: unknownMe ? "—" : `${Math.round(s.myShare * 100)}%`,
+									hint: unknownMe
+										? "niet vastgesteld wie jij was"
+										: s.myShare > 0.6
 											? "veel, liefst onder 50%"
 											: "mooi in balans",
 								},

@@ -361,6 +361,8 @@ export type RuleInput = {
 	tempoWarned: readonly number[];
 	wrapUpFired: boolean;
 	otherName?: string;
+	/** Weten we welke spreker jij bent? Zo niet: geen spreektijd-tips. */
+	identified?: boolean;
 };
 
 export type RuleOutput = {
@@ -383,8 +385,10 @@ export function runRules(input: RuleInput): RuleOutput {
 	const elapsed = now - input.startedAt;
 	const ask = input.nextQuestion?.trim();
 
+	const identified = input.identified !== false;
 	// Monoloog: Arin praat al 90 s aan één stuk.
 	if (
+		identified &&
 		input.myStreakMs >= MONOLOGUE_MS &&
 		now - input.monologueFiredAt >= 120_000
 	) {
@@ -403,6 +407,7 @@ export function runRules(input: RuleInput): RuleOutput {
 	// Spreekverhouding over het hele gesprek.
 	const { mine, others, share } = talkTotals(input.talk);
 	if (
+		identified &&
 		elapsed >= 6 * 60_000 &&
 		mine + others >= 3 * 60_000 &&
 		share >= 0.65 &&
@@ -502,4 +507,48 @@ export function runRules(input: RuleInput): RuleOutput {
 	}
 
 	return out;
+}
+
+// ---- Live (alleen microfoon) ---------------------------------------------------------
+
+export type Run = { start: number; end: number };
+
+/**
+ * Jouw lopende beurt, bijgewerkt per transcriptregel. Een pauze tot 4 s of
+ * een kort "ja" van een ander breekt hem niet; een echte reactie wel.
+ */
+export function extendRun(
+	run: Run | undefined,
+	chunk: { isMine: boolean; at: number; durationMs: number; text: string },
+): Run | undefined {
+	if (!chunk.isMine) {
+		return run && wordCount(chunk.text) <= 2 ? run : undefined;
+	}
+	const end = chunk.at + chunk.durationMs;
+	if (run && chunk.at - run.end <= 4_000) {
+		return { start: run.start, end: Math.max(run.end, end) };
+	}
+	return { start: chunk.at, end };
+}
+
+/** Lengte van je beurt zolang die recent is (transcriptie loopt achter). */
+export function runStreakMs(run: Run | undefined, now: number): number {
+	if (!run || now - run.end > 35_000) return 0;
+	return run.end - run.start;
+}
+
+/** Is dit sprekerlabel jij? Op het gekozen label of op je herkende naam. */
+export function isMeLabel(
+	label: string | null | undefined,
+	meLabel: string | undefined,
+	myName: string,
+): boolean {
+	if (!label) return false;
+	if (meLabel && label === meLabel) return true;
+	return label.trim().toLowerCase() === myName.trim().toLowerCase();
+}
+
+/** Speechmatics weigert labels in zijn eigen vorm (S1, S2, …). */
+export function validVoiceName(name: string): boolean {
+	return name.trim().length > 0 && !/^S\d+$/i.test(name.trim());
 }

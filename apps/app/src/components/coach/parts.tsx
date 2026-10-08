@@ -1,6 +1,8 @@
-import { CheckIcon, XIcon } from "lucide-react";
+import { useMutation } from "convex/react";
+import { CheckIcon, UserRoundCheckIcon, XIcon } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
+import { api } from "~convex/_generated/api";
 import type { Doc, Id } from "~convex/_generated/dataModel";
 import { activeNudges, clock, NUDGE_META, talkSplit } from "./format";
 import { type RecorderSnapshot, recorder } from "./lib/recorder";
@@ -319,6 +321,13 @@ export function TalkBar({
 	const { share, total } = talkSplit(state.talk);
 	const pct = Math.round(share * 100);
 	const others = state.talk.filter((t) => !t.isMine && t.ms > 0);
+	if (session.mode === "live" && !session.meLabel) {
+		return (
+			<p className="text-muted-foreground text-xs leading-snug">
+				Spreektijd volgt zodra de coach weet wie jij bent.
+			</p>
+		);
+	}
 	const tone =
 		share > 0.65
 			? "bg-orange-500"
@@ -392,5 +401,93 @@ export function ListenDots() {
 			{dot(micOn, levels.mic, "jij")}
 			{dot(tabAudio, levels.tab, "Meet")}
 		</span>
+	);
+}
+
+export function labelName(
+	session: Pick<Session, "speakerNames">,
+	label: string,
+): string {
+	return (
+		session.speakerNames?.find((s) => s.label === label)?.name ??
+		label.replace(/^S(\d+)$/, "Spreker $1")
+	);
+}
+
+/**
+ * Live (alleen microfoon): welke stem ben jij? Eén tik op "Dit ben ik"; de
+ * coach onthoudt je stem en herkent je de volgende keer zelf.
+ */
+export function WhoIsWho({
+	session,
+	state,
+	compact = false,
+}: {
+	session: Session;
+	state: State;
+	compact?: boolean;
+}) {
+	const setMeMutation = useMutation(api.coach.sessions.setMe);
+	const mine = useRecorder(
+		(s) => s.sessionId === session._id && s.phase === "live",
+	);
+	if (session.mode !== "live") return null;
+	const setMe = (label: string | null) => {
+		if (mine) void recorder.setMe(label);
+		else void setMeMutation({ sessionId: session._id, label });
+	};
+	if (session.meLabel) {
+		return (
+			<div className="flex items-center gap-2 text-xs">
+				<UserRoundCheckIcon className="size-3.5 shrink-0 text-emerald-500" />
+				<span className="text-muted-foreground">
+					Jij ={" "}
+					<span className="text-foreground font-medium">
+						{labelName(session, session.meLabel)}
+					</span>
+				</span>
+				<button
+					type="button"
+					onClick={() => setMe(null)}
+					className="text-muted-foreground hover:text-foreground ml-auto underline-offset-2 hover:underline"
+				>
+					wijzig
+				</button>
+			</div>
+		);
+	}
+	const labels = state.talk
+		.filter((t) => !t.isMine && t.key !== "?" && t.ms > 0)
+		.sort((a, b) => b.ms - a.ms)
+		.map((t) => t.key)
+		.slice(0, 6);
+	return (
+		<div
+			className={cn(
+				"flex flex-col gap-2 rounded-lg border border-dashed p-2.5 animate-in fade-in duration-500",
+				compact ? "text-xs" : "text-sm",
+			)}
+		>
+			<p className="text-muted-foreground leading-snug">
+				{labels.length
+					? "Wie ben jij? Tik op je eigen stem."
+					: "Zodra er gepraat wordt, kies je hier welke stem jij bent."}
+			</p>
+			{labels.length ? (
+				<div className="flex flex-wrap gap-1.5">
+					{labels.map((label) => (
+						<button
+							key={label}
+							type="button"
+							onClick={() => setMe(label)}
+							className="bg-muted hover:bg-primary hover:text-primary-foreground flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium transition-colors"
+						>
+							{labelName(session, label)}
+							<span className="opacity-60">· dit ben ik</span>
+						</button>
+					))}
+				</div>
+			) : null}
+		</div>
 	);
 }
