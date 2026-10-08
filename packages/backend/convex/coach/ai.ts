@@ -14,6 +14,8 @@ import {
 	usageRow,
 } from "../lib/llm";
 import {
+	askInstructions,
+	askPrompt,
 	DEEP_SCHEMA,
 	deepInstructions,
 	deepPrompt,
@@ -30,7 +32,11 @@ import {
 	TRANSCRIBE_SCHEMA,
 	transcribeInstructions,
 } from "./prompts";
-import type { CoachChunkInput } from "./validators";
+import {
+	type CoachChunkInput,
+	type CoachModel,
+	DEFAULT_COACH_MODEL,
+} from "./validators";
 
 // De AI-kant van de meeting coach. Alles via de Convex AI Gateway:
 // - fastPass: Gemini 3.8 Flash, vaak (±20 s spraak of een directe trigger).
@@ -40,8 +46,15 @@ import type { CoachChunkInput } from "./validators";
 // - transcribeSegment: de fallback als Speechmatics niet is ingesteld.
 
 export const MODEL_FAST = "google/gemini-3.8-flash";
-export const MODEL_DEEP = "anthropic/claude-sonnet-5.5";
-export const MODEL_REPORT = "anthropic/claude-sonnet-5.5";
+/** Diepe ronde, vragen en verslag: het gekozen model (standaard Sonnet 5.5). */
+function modelFor(session: { model?: CoachModel }): CoachModel {
+	return session.model ?? DEFAULT_COACH_MODEL;
+}
+
+/** Redeneermodellen tellen hun denkwerk mee in het tokenbudget. */
+function budget(model: CoachModel, base: number): number {
+	return model === "google/gemini-3.8-flash" ? base : base * 3;
+}
 export const MODEL_VISION = "google/gemini-3.8-flash";
 export const MODEL_TRANSCRIBE = "google/gemini-3.8-flash";
 
@@ -353,14 +366,15 @@ export const deepPass = internalAction({
 			return null;
 		}
 		const cursorAt = data.chunks[data.chunks.length - 1]?.at ?? 0;
+		const deepModel = modelFor(data.session);
 		try {
 			const result = await generateJson({
-				model: languageModel(MODEL_DEEP),
+				model: languageModel(deepModel),
 				instructions: deepInstructions(data.session.myName),
 				prompt: deepPrompt({ ...data, now: Date.now() }),
 				schema: DEEP_SCHEMA,
 				name: "stand",
-				maxOutputTokens: 4000,
+				maxOutputTokens: budget(deepModel, 4000),
 				maxRetries: 1,
 				abortSignal: timeout(90_000),
 			});
@@ -378,7 +392,7 @@ export const deepPass = internalAction({
 						n.type === "letop" || n.type === "kans" || n.type === "samenvatten",
 				),
 				nextQuestion: str(field(json, "nextQuestion"), 220) || undefined,
-				usage: usageRow("deep", MODEL_DEEP, result),
+				usage: usageRow("deep", deepModel, result),
 			});
 		} catch (error) {
 			console.error("Coach: diepe ronde mislukt", error);
@@ -398,6 +412,7 @@ export const finalReport = internalAction({
 		});
 		if (!data) return null;
 		const { session, state } = data;
+		const reportModel = modelFor(session);
 		const questionsAsked = state.talk
 			.filter((t) => t.isMine)
 			.reduce((n, t) => n + t.questions, 0);
@@ -418,7 +433,7 @@ export const finalReport = internalAction({
 		}
 		try {
 			const result = await generateJson({
-				model: languageModel(MODEL_REPORT),
+				model: languageModel(reportModel),
 				instructions: reportInstructions(session.myName),
 				schema: REPORT_SCHEMA,
 				name: "verslag",
@@ -430,7 +445,7 @@ export const finalReport = internalAction({
 					nudgeCount: data.nudges.length,
 					now: Date.now(),
 				}),
-				maxOutputTokens: 10000,
+				maxOutputTokens: budget(reportModel, 10000),
 				maxRetries: 2,
 				abortSignal: timeout(180_000),
 			});
@@ -450,7 +465,7 @@ export const finalReport = internalAction({
 			const body = field(email ?? null, "body");
 			await ctx.runMutation(internal.coach.sessions.saveReport, {
 				sessionId: args.sessionId,
-				model: MODEL_REPORT,
+				model: reportModel,
 				summary: strList(field(json, "summary"), 8, 300),
 				decisions: strList(field(json, "decisions"), 20, 300),
 				actionItems: parseActions(field(json, "actionItems"), 30),
@@ -460,7 +475,7 @@ export const finalReport = internalAction({
 				emailBody: typeof body === "string" ? body.trim().slice(0, 6000) : "",
 				tips,
 				questionsAsked,
-				usage: usageRow("report", MODEL_REPORT, result),
+				usage: usageRow("report", reportModel, result),
 			});
 		} catch (error) {
 			console.error("Coach: verslag mislukt", error);
@@ -521,6 +536,41 @@ export const describeShot = internalAction({
 			console.error("Coach: screenshot beschrijven mislukt", error);
 			await ctx.runMutation(internal.coach.sessions.saveShot, {
 				shotId: args.shotId,
+			});
+		}
+		return null;
+	},
+});
+
+// ---- Vraag iets ----------------------------------------------------------------
+
+/** Antwoord op een vraag van Arin, met het hele gesprek als context. */
+export const answerAsk = internalAction({
+	args: { askId: v.id("coachAsks") },
+	handler: async (ctx, args) => {
+		const data = await ctx.runQuery(internal.coach.sessions.askContext, {
+			askId: args.askId,
+		});
+		if (!data) return null;
+		const model = modelFor(data.session);
+		try {
+			const result = await generateText({
+				model: languageModel(model),
+				instructions: askInstructions(data.session.myName),
+				prompt: askPrompt({ ...data, now: Date.now() }),
+				maxOutputTokens: budget(model, 900),
+				maxRetries: 1,
+				abortSignal: timeout(60_000),
+			});
+			await ctx.runMutation(internal.coach.sessions.saveAsk, {
+				askId: args.askId,
+				answer: result.text.trim() || undefined,
+				usage: usageRow("ask", model, result),
+			});
+		} catch (error) {
+			console.error("Coach: vraag beantwoorden mislukt", error);
+			await ctx.runMutation(internal.coach.sessions.saveAsk, {
+				askId: args.askId,
 			});
 		}
 		return null;

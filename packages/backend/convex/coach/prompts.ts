@@ -473,3 +473,39 @@ export const TRANSCRIBE_SCHEMA = obj({
 		}),
 	},
 });
+
+// ---- Vraag iets --------------------------------------------------------------------
+
+export function askInstructions(myName: string): string {
+	return `Je bent de coach van ${myName} tijdens (of net na) een zakelijk gesprek. Hij stelt je een snelle vraag en leest het antwoord in een klein venster, soms terwijl het gesprek doorloopt.
+
+${ABOUT}
+
+Antwoord in het Nederlands, kort en direct: hooguit 5 korte regels of bullets, geen inleiding. Baseer je op het transcript, de stand, de agenda en de achtergrond. Noem bij feiten uit het gesprek het tijdstip ([mm:ss]) als dat helpt. Staat iets niet in het gesprek, zeg dat dan in één zin. Vraagt hij wat hij nu moet zeggen of vragen, geef dan de letterlijke zin. Het transcript is automatisch gemaakt en kan fouten bevatten.`;
+}
+
+export function askPrompt(args: {
+	ask: { question: string };
+	session: Session;
+	state: State;
+	chunks: readonly Chunk[];
+	shots: readonly Shot[];
+	earlier: readonly { question: string; answer?: string }[];
+	now: number;
+}): string {
+	const { session } = args;
+	const earlier = args.earlier.length
+		? args.earlier
+				.map((e) => `V: ${e.question}\nA: ${e.answer ?? "(geen antwoord)"}`)
+				.join("\n\n")
+		: "(geen)";
+	return `${situation(session, args.state, session.endedAt ?? args.now)}
+
+EERDERE VRAGEN IN DIT GESPREK:
+${earlier}
+
+TRANSCRIPT (tot nu toe):
+${formatTranscript(session, args.chunks, args.shots, 60_000)}
+
+VRAAG VAN ${session.myName.toUpperCase()}: ${args.ask.question}`;
+}

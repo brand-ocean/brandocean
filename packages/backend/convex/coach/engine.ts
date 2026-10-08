@@ -552,3 +552,14 @@ export function isMeLabel(
 export function validVoiceName(name: string): boolean {
 	return name.trim().length > 0 && !/^S\d+$/i.test(name.trim());
 }
+
+/** Naam geven aan een sprekerlabel; leeg haalt de naam weg. Hooguit 20. */
+export function renameIn(
+	names: readonly { label: string; name: string }[],
+	label: string,
+	name: string,
+): { label: string; name: string }[] {
+	const rest = names.filter((s) => s.label !== label);
+	const trimmed = name.replace(/\s+/g, " ").trim().slice(0, 40);
+	return (trimmed ? [...rest, { label, name: trimmed }] : rest).slice(-20);
+}

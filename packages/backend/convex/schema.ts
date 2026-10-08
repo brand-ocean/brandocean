@@ -12,6 +12,7 @@ import {
 	coachAgendaItemV,
 	coachNudgePriorityV,
 	coachNudgeTypeV,
+	coachModelV,
 	coachSourceV,
 	coachTalkV,
 } from "./coach/validators";
@@ -1032,6 +1033,8 @@ export default defineSchema({
 		// online = Meet-tabblad + microfoon; live = alleen een microfoon in de
 		// ruimte (fysiek gesprek). Ontbreekt bij oudere gesprekken: online.
 		mode: v.optional(v.union(v.literal("online"), v.literal("live"))),
+		// Model voor de diepe ronde, vragen en het verslag. Standaard Sonnet 5.5.
+		model: v.optional(coachModelV),
 		// Live: welk sprekerlabel jij bent ("S2", of je naam als Speechmatics
 		// je stem herkende).
 		meLabel: v.optional(v.string()),
@@ -1128,6 +1131,16 @@ export default defineSchema({
 		reason: v.optional(v.string()),
 		expiresAt: v.number(),
 		dismissedAt: v.optional(v.number()),
+	}).index("by_session_and_at", ["sessionId", "at"]),
+
+	// Vragen die je tijdens of na het gesprek aan de coach stelt.
+	coachAsks: defineTable({
+		sessionId: v.id("coachSessions"),
+		at: v.number(),
+		question: v.string(),
+		answer: v.optional(v.string()),
+		status: v.union(v.literal("pending"), v.literal("done"), v.literal("error")),
+		model: v.string(),
 	}).index("by_session_and_at", ["sessionId", "at"]),
 
 	coachShots: defineTable({

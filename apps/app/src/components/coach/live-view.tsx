@@ -23,7 +23,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "~convex/_generated/api";
 import type { Doc } from "~convex/_generated/dataModel";
-import { clock, NUDGE_META, speakerLabel } from "./format";
+import { AskBox, AskFeed, SessionModelSelect, SpeakerName } from "./extras";
+import { clock, NUDGE_META } from "./format";
 import { recorder } from "./lib/recorder";
 import {
 	AgendaTimer,
@@ -112,6 +113,13 @@ export function LiveView({ session }: { session: Session }) {
 									<WhoIsWho session={session} state={state} />
 								</div>
 							) : null}
+							<div className="mt-3 flex flex-col gap-3">
+								<AskBox
+									session={session}
+									placeholder="Vraag iets… bv. wat hadden we over de prijs gezegd?"
+								/>
+								<AskFeed session={session} limit={6} />
+							</div>
 						</FramePanel>
 					</Frame>
 				</div>
@@ -174,6 +182,7 @@ function Controls({ session }: { session: Session }) {
 					{kind === "speechmatics" ? "realtime" : "gateway"}
 				</TonePill>
 			) : null}
+			<SessionModelSelect session={session} />
 			<Button
 				size="icon-sm"
 				variant="ghost"
@@ -338,18 +347,12 @@ function Transcript({ session, live }: { session: Session; live: boolean }) {
 		recent: 200,
 	});
 	const interim = useRecorder((s) => s.interim);
-	const rename = useMutation(api.coach.sessions.renameSpeaker);
 	// Zonder effect: elke render opnieuw aangeroepen, en alleen naar beneden
 	// als je al (bijna) onderaan stond.
 	const follow = (el: HTMLDivElement | null) => {
 		if (!el) return;
 		const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
 		if (nearBottom) el.scrollTop = el.scrollHeight;
-	};
-	const renameSpeaker = (label: string, current: string) => {
-		const name = window.prompt(`Naam voor ${current}`, current);
-		if (name === null) return;
-		void rename({ sessionId: session._id, label, name });
 	};
 	return (
 		<Frame>
@@ -372,7 +375,6 @@ function Transcript({ session, live }: { session: Session; live: boolean }) {
 						</p>
 					) : null}
 					{(chunks ?? []).map((c) => {
-						const name = speakerLabel(session, c);
 						return (
 							<div
 								key={c._id}
@@ -390,16 +392,12 @@ function Transcript({ session, live }: { session: Session; live: boolean }) {
 										c.isMine ? "bg-primary/8" : "bg-muted/60",
 									)}
 								>
-									{c.isMine ? null : (
-										<button
-											type="button"
-											onClick={() =>
-												c.speaker && renameSpeaker(c.speaker, name)
-											}
-											className="text-muted-foreground hover:text-foreground mb-0.5 block text-xs font-medium"
-										>
-											{name}
-										</button>
+									{c.isMine || !c.speaker ? null : (
+										<SpeakerName
+											session={session}
+											label={c.speaker}
+											className="text-muted-foreground mb-0.5"
+										/>
 									)}
 									<p className="leading-relaxed">{c.text}</p>
 								</div>

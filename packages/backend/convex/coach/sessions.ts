@@ -24,6 +24,7 @@ import {
 	isQuestionForMe,
 	isUrgent,
 	MAX_ACTIVE_NUDGES,
+	renameIn,
 	runRules,
 	runStreakMs,
 	switchAgenda,
@@ -36,7 +37,9 @@ import {
 	type CoachNudgeCandidate,
 	coachActionItemV,
 	coachChunkInputV,
+	coachModelV,
 	coachNudgeCandidateV,
+	DEFAULT_COACH_MODEL,
 	type UsageRow,
 	usageV,
 } from "./validators";
@@ -421,6 +424,7 @@ export const create = mutation({
 		agenda: agendaInputV,
 		plannedMinutes: v.optional(v.number()),
 		mode: v.optional(v.union(v.literal("online"), v.literal("live"))),
+		model: v.optional(coachModelV),
 	},
 	handler: async (ctx, args): Promise<Id<"coachSessions">> => {
 		const userId = await requireOwner(ctx);
@@ -461,6 +465,7 @@ export const create = mutation({
 			agenda,
 			plannedMinutes: planned,
 			mode: args.mode ?? "online",
+			model: args.model,
 			status: "live",
 			startedAt: now,
 		});
@@ -649,6 +654,11 @@ export const purge = internalMutation({
 			.withIndex("by_session_and_at", (q) => q.eq("sessionId", args.sessionId))
 			.take(batch);
 		for (const n of nudges) await ctx.db.delete(n._id);
+		const asks = await ctx.db
+			.query("coachAsks")
+			.withIndex("by_session_and_at", (q) => q.eq("sessionId", args.sessionId))
+			.take(batch);
+		for (const a of asks) await ctx.db.delete(a._id);
 		const shots = await ctx.db
 			.query("coachShots")
 			.withIndex("by_session_and_at", (q) => q.eq("sessionId", args.sessionId))
@@ -658,7 +668,10 @@ export const purge = internalMutation({
 			await ctx.db.delete(s._id);
 		}
 		const more =
-			chunks.length === batch || nudges.length === batch || shots.length === 50;
+			chunks.length === batch ||
+			nudges.length === batch ||
+			asks.length === batch ||
+			shots.length === 50;
 		if (more) {
 			await ctx.scheduler.runAfter(0, internal.coach.sessions.purge, args);
 			return null;
@@ -834,15 +847,117 @@ export const renameSpeaker = mutation({
 	},
 	handler: async (ctx, args) => {
 		const session = await ownedSession(ctx, args.sessionId);
+		const label = args.label.trim().slice(0, 40);
+		if (!label) return null;
 		const name = clean(args.name, 40);
-		const rest = (session.speakerNames ?? []).filter(
-			(s) => s.label !== args.label,
-		);
 		await ctx.db.patch(session._id, {
-			speakerNames: (name
-				? [...rest, { label: args.label, name }]
-				: rest
-			).slice(0, 20),
+			speakerNames: renameIn(session.speakerNames ?? [], label, name),
+		});
+		// Live: stem van deze persoon onthouden, dan herkent Speechmatics hem
+		// de volgende keer met zijn naam.
+		const ids = session.speakerIds?.find((s) => s.label === label)?.identifiers;
+		if (session.mode === "live" && name && ids?.length) {
+			await rememberVoice(ctx, session.ownerId, name, ids);
+		}
+		return null;
+	},
+});
+
+/** Model voor diepe ronde, vragen en verslag; ook tijdens het gesprek. */
+export const setModel = mutation({
+	args: { sessionId: v.id("coachSessions"), model: coachModelV },
+	handler: async (ctx, args) => {
+		const session = await ownedSession(ctx, args.sessionId);
+		await ctx.db.patch(session._id, { model: args.model });
+		return null;
+	},
+});
+
+// ---- Vragen aan de coach ----------------------------------------------------------
+
+const MAX_ASKS = 200;
+
+export const asks = query({
+	args: { sessionId: v.id("coachSessions") },
+	handler: async (ctx, args) => {
+		const session = await readableSession(ctx, args.sessionId);
+		if (!session) return [];
+		return await ctx.db
+			.query("coachAsks")
+			.withIndex("by_session_and_at", (q) => q.eq("sessionId", session._id))
+			.order("desc")
+			.take(50);
+	},
+});
+
+/** "Vraag iets…": tijdens of na het gesprek. Het antwoord komt vanzelf binnen. */
+export const ask = mutation({
+	args: { sessionId: v.id("coachSessions"), question: v.string() },
+	handler: async (ctx, args): Promise<Id<"coachAsks">> => {
+		const session = await ownedSession(ctx, args.sessionId);
+		const question = clean(args.question, 600);
+		if (!question) throw new ConvexError("Typ eerst een vraag.");
+		const existing = await ctx.db
+			.query("coachAsks")
+			.withIndex("by_session_and_at", (q) => q.eq("sessionId", session._id))
+			.take(MAX_ASKS);
+		if (existing.length >= MAX_ASKS) {
+			throw new ConvexError("Maximum aantal vragen voor dit gesprek bereikt.");
+		}
+		const askId = await ctx.db.insert("coachAsks", {
+			sessionId: session._id,
+			at: Date.now(),
+			question,
+			status: "pending",
+			model: session.model ?? DEFAULT_COACH_MODEL,
+		});
+		await ctx.scheduler.runAfter(0, internal.coach.ai.answerAsk, { askId });
+		return askId;
+	},
+});
+
+export const askContext = internalQuery({
+	args: { askId: v.id("coachAsks") },
+	handler: async (ctx, args) => {
+		const ask = await ctx.db.get(args.askId);
+		if (!ask) return null;
+		const session = await ctx.db.get(ask.sessionId);
+		if (!session) return null;
+		const state = await stateOf(ctx, session._id);
+		const chunks = await ctx.db
+			.query("coachChunks")
+			.withIndex("by_session_and_at", (q) => q.eq("sessionId", session._id))
+			.take(MAX_CHUNKS);
+		const earlier = await ctx.db
+			.query("coachAsks")
+			.withIndex("by_session_and_at", (q) =>
+				q.eq("sessionId", session._id).lt("at", ask.at),
+			)
+			.order("desc")
+			.take(4);
+		const shots = await shotNotes(ctx, session._id, 0, 40);
+		return { ask, session, state, chunks, shots, earlier: earlier.reverse() };
+	},
+});
+
+export const saveAsk = internalMutation({
+	args: {
+		askId: v.id("coachAsks"),
+		answer: v.optional(v.string()),
+		usage: v.optional(usageV),
+	},
+	handler: async (ctx, args) => {
+		const ask = await ctx.db.get(args.askId);
+		if (!ask) return null;
+		const session = await ctx.db.get(ask.sessionId);
+		if (session && args.usage) {
+			const cost = await logUsage(ctx, session, args.usage);
+			const state = await stateOf(ctx, session._id);
+			await ctx.db.patch(state._id, { costUsd: state.costUsd + cost });
+		}
+		await ctx.db.patch(ask._id, {
+			status: args.answer ? "done" : "error",
+			answer: args.answer?.slice(0, 4000),
 		});
 		return null;
 	},

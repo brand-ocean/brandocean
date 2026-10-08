@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "~convex/_generated/api";
 import type { Doc, Id } from "~convex/_generated/dataModel";
+import { AskBox, AskFeed, SessionModelSelect, SpeakerName } from "./extras";
 import {
 	clock,
 	copyText,
@@ -142,6 +143,16 @@ export function ReportView({
 			) : null}
 			{session.status === "error" ? <Failed session={session} /> : null}
 
+			<Frame>
+				<FramePanel className="flex flex-col gap-3 p-4">
+					<AskBox
+						session={session}
+						placeholder="Vraag iets over dit gesprek… bv. wat hebben we over de planning afgesproken?"
+					/>
+					<AskFeed session={session} limit={10} />
+				</FramePanel>
+			</Frame>
+
 			<div className="flex gap-1 rounded-lg border bg-muted/50 p-1 self-start">
 				{TABS.map((t) => (
 					<button
@@ -201,6 +212,7 @@ function Header({ session }: { session: Session }) {
 					</FrameDescription>
 				</FrameHeading>
 				<div className="flex items-center gap-2">
+					<SessionModelSelect session={session} />
 					<Select
 						items={items}
 						value={session.clientId ?? NO_CLIENT}
@@ -515,9 +527,17 @@ function FullTranscript({ session }: { session: Session }) {
 							<span className="text-muted-foreground mr-2 text-xs tabular-nums">
 								{clock(c.at - session.startedAt)}
 							</span>
-							<span className={cn("font-medium", c.isMine && "text-primary")}>
-								{speakerLabel(session, c)}:
-							</span>{" "}
+							{c.isMine || !c.speaker ? (
+								<span className={cn("font-medium", c.isMine && "text-primary")}>
+									{speakerLabel(session, c)}:
+								</span>
+							) : (
+								<SpeakerName
+									session={session}
+									label={c.speaker}
+									className="text-sm"
+								/>
+							)}{" "}
 							{c.text}
 						</p>
 					))}

@@ -8,6 +8,7 @@ import {
 	isEcho,
 	isMeLabel,
 	isQuestionForMe,
+	renameIn,
 	runRules,
 	runStreakMs,
 	similarity,
@@ -294,5 +295,21 @@ describe("live (alleen microfoon)", () => {
 		});
 		expect(out.nudges.some((n) => n.type === "ruimte")).toBe(false);
 		expect(out.nudges.some((n) => n.type === "tempo")).toBe(true);
+	});
+});
+
+describe("sprekers hernoemen", () => {
+	test("naam zetten, wijzigen en weghalen per label", () => {
+		let names = renameIn([], "S1", "  Mark  ");
+		expect(names).toEqual([{ label: "S1", name: "Mark" }]);
+		names = renameIn(names, "Spreker 2", "Lisa");
+		names = renameIn(names, "S1", "Mark de Vries");
+		expect(names).toEqual([
+			{ label: "Spreker 2", name: "Lisa" },
+			{ label: "S1", name: "Mark de Vries" },
+		]);
+		expect(renameIn(names, "S1", " ")).toEqual([
+			{ label: "Spreker 2", name: "Lisa" },
+		]);
 	});
 });

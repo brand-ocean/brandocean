@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import { api } from "~convex/_generated/api";
 import type { Doc, Id } from "~convex/_generated/dataModel";
+import { labelName, SpeakerName } from "./extras";
 import { activeNudges, clock, NUDGE_META, talkSplit } from "./format";
 import { type RecorderSnapshot, recorder } from "./lib/recorder";
 
@@ -353,16 +354,18 @@ export function TalkBar({
 					}}
 				/>
 			</div>
-			{!compact && others.length > 1 ? (
-				<div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
-					{others.map((t) => (
-						<span key={t.key}>
-							{session.speakerNames?.find((s) => s.label === t.key)?.name ??
-								t.key.replace(/^S(\d+)$/, "Spreker $1")}
-							{": "}
-							{Math.round((t.ms / Math.max(1, total)) * 100)}%
-						</span>
-					))}
+			{others.length > 0 ? (
+				<div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+					{others.slice(0, compact ? 3 : 12).map((t) =>
+						t.key === "?" ? null : (
+							<span key={t.key} className="inline-flex items-center gap-1">
+								<SpeakerName session={session} label={t.key} />
+								<span className="tabular-nums">
+									{Math.round((t.ms / Math.max(1, total)) * 100)}%
+								</span>
+							</span>
+						),
+					)}
 				</div>
 			) : null}
 		</div>
@@ -401,16 +404,6 @@ export function ListenDots() {
 			{dot(micOn, levels.mic, "jij")}
 			{dot(tabAudio, levels.tab, "Meet")}
 		</span>
-	);
-}
-
-export function labelName(
-	session: Pick<Session, "speakerNames">,
-	label: string,
-): string {
-	return (
-		session.speakerNames?.find((s) => s.label === label)?.name ??
-		label.replace(/^S(\d+)$/, "Spreker $1")
 	);
 }
 
@@ -470,21 +463,25 @@ export function WhoIsWho({
 		>
 			<p className="text-muted-foreground leading-snug">
 				{labels.length
-					? "Wie ben jij? Tik op je eigen stem."
+					? "Wie ben jij? Tik bij je eigen stem op 'dit ben ik'. Klik op een naam om hem te wijzigen."
 					: "Zodra er gepraat wordt, kies je hier welke stem jij bent."}
 			</p>
 			{labels.length ? (
 				<div className="flex flex-wrap gap-1.5">
 					{labels.map((label) => (
-						<button
+						<span
 							key={label}
-							type="button"
-							onClick={() => setMe(label)}
-							className="bg-muted hover:bg-primary hover:text-primary-foreground flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium transition-colors"
+							className="bg-muted flex items-center gap-1.5 rounded-full py-0.5 pr-0.5 pl-2.5"
 						>
-							{labelName(session, label)}
-							<span className="opacity-60">· dit ben ik</span>
-						</button>
+							<SpeakerName session={session} label={label} />
+							<button
+								type="button"
+								onClick={() => setMe(label)}
+								className="hover:bg-primary hover:text-primary-foreground rounded-full px-2 py-0.5 text-xs opacity-80 transition-colors hover:opacity-100"
+							>
+								dit ben ik
+							</button>
+						</span>
 					))}
 				</div>
 			) : null}

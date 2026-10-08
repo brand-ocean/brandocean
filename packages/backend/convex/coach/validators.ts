@@ -76,3 +76,13 @@ export const usageV = v.object({
 	costUsd: v.optional(v.number()),
 });
 export type UsageRow = Infer<typeof usageV>;
+
+/** Modellen die Arin kan kiezen (via de Convex AI Gateway). */
+export const coachModelV = v.union(
+	v.literal("anthropic/claude-sonnet-5.5"),
+	v.literal("anthropic/claude-opus-5.5"),
+	v.literal("google/gemini-3.8-flash"),
+	v.literal("openai/gpt-6.1-sol"),
+);
+export type CoachModel = Infer<typeof coachModelV>;
+export const DEFAULT_COACH_MODEL: CoachModel = "anthropic/claude-sonnet-5.5";

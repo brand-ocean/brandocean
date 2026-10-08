@@ -155,6 +155,27 @@ export async function generateJson(
 				providerMetadata: undefined,
 			};
 		}
-		throw error;
+		// Kan het model geen JSON-schema (API-fout)? Dan zonder, en de eerste
+		// JSON uit de tekst halen.
+		const plain =
+			"prompt" in rest
+				? await generateText({
+						...rest,
+						instructions: `${rest.instructions}\n\nAntwoord met één JSON-object, zonder uitleg.`,
+					})
+				: await generateText({
+						...rest,
+						instructions: `${rest.instructions}\n\nAntwoord met één JSON-object, zonder uitleg.`,
+					});
+		console.warn(
+			"generateJson: zonder schema opnieuw",
+			String(error).slice(0, 200),
+		);
+		return {
+			json: extractJson(plain.text, "{"),
+			text: plain.text,
+			usage: plain.usage,
+			providerMetadata: plain.providerMetadata,
+		};
 	}
 }

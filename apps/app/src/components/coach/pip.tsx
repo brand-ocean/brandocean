@@ -5,6 +5,7 @@ import { getConvexClient } from "@/lib/convex";
 import { cn } from "@/lib/utils";
 import { api } from "~convex/_generated/api";
 import type { Id } from "~convex/_generated/dataModel";
+import { AskBox, AskFeed } from "./extras";
 import { recorder } from "./lib/recorder";
 import {
 	AgendaTimer,
@@ -77,7 +78,7 @@ export async function openCoachWindow(
 		recorder.pip.focus();
 		return;
 	}
-	const win = await pip.requestWindow({ width: 380, height: 440 });
+	const win = await pip.requestWindow({ width: 380, height: 520 });
 	copyStyles(win.document);
 	win.document.title = "Coach";
 	win.document.body.className = "bg-background text-foreground antialiased";
@@ -155,7 +156,14 @@ function PipView({ sessionId }: { sessionId: Id<"coachSessions"> }) {
 				</div>
 			</div>
 
-			<div className="min-h-0 flex-1 overflow-y-auto">
+			<div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+				<AskFeed
+					session={session}
+					limit={1}
+					compact
+					recentMs={180_000}
+					now={now}
+				/>
 				<NudgeStack
 					nudges={nudges ?? []}
 					now={now}
@@ -187,6 +195,7 @@ function PipView({ sessionId }: { sessionId: Id<"coachSessions"> }) {
 				<WhoIsWho session={session} state={state} compact />
 				<AgendaTimer session={session} state={state} now={now} compact />
 				<TalkBar session={session} state={state} compact />
+				<AskBox session={session} compact />
 			</div>
 		</div>
 	);

@@ -25,6 +25,13 @@ import {
 	FrameTitle,
 } from "@/components/app/frame";
 import { type Tone, TonePill } from "@/components/app/tone";
+import {
+	type CoachModelId,
+	MODEL_HINT,
+	ModelSelect,
+	rememberModel,
+	storedModel,
+} from "@/components/coach/extras";
 import { clock, formatDate, parseAgenda } from "@/components/coach/format";
 import { type CoachMode, recorder } from "@/components/coach/lib/recorder";
 import { useRecorder } from "@/components/coach/parts";
@@ -240,6 +247,7 @@ function StartCard() {
 		setModeState(next);
 		remember(MODE_KEY, next);
 	};
+	const [model, setModelState] = useState<CoachModelId>(() => storedModel());
 	const voices = useQuery(api.coach.sessions.myVoice);
 	const forgetVoice = useMutation(api.coach.sessions.forgetVoice);
 	const myVoice = voices?.find(
@@ -275,6 +283,7 @@ function StartCard() {
 					myName: myName || undefined,
 					agenda,
 					mode,
+					model,
 				},
 				mode === "live" || useMic,
 			);
@@ -468,6 +477,19 @@ function StartCard() {
 								)}
 							</p>
 						)}
+						<div
+							className="text-muted-foreground flex items-center gap-2 text-xs"
+							title={MODEL_HINT}
+						>
+							Model
+							<ModelSelect
+								value={model}
+								onChange={(next) => {
+									setModelState(next);
+									rememberModel(next);
+								}}
+							/>
+						</div>
 						<div className="flex items-center gap-3 sm:ml-auto">
 							<span className="text-muted-foreground hidden text-xs md:inline">
 								{mode === "online"

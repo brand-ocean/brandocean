@@ -1,6 +1,6 @@
 import { getConvexClient } from "@/lib/convex";
 import { api } from "~convex/_generated/api";
-import type { Id } from "~convex/_generated/dataModel";
+import type { Doc, Id } from "~convex/_generated/dataModel";
 import {
 	AudioPipeline,
 	CaptureError,
@@ -33,6 +33,8 @@ export type CoachMode = "online" | "live";
 export type CoachSetup = {
 	/** online = Meet-tabblad + microfoon; live = alleen de microfoon. */
 	mode?: CoachMode;
+	/** Model voor diepe ronde, vragen en verslag. */
+	model?: Doc<"coachSessions">["model"];
 	title: string;
 	clientId?: Id<"clients">;
 	goal?: string;
