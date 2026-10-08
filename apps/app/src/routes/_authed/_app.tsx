@@ -43,6 +43,7 @@ const SEGMENT_LABELS: Record<string, { section: string; page: string }> = {
 	ndas: { section: "Documents", page: "NDAs" },
 	invoices: { section: "Documents", page: "Invoices" },
 	clients: { section: "Platform", page: "Clients" },
+	coach: { section: "Platform", page: "Meeting coach" },
 	billing: { section: "Platform", page: "Usage billing" },
 	boekhouding: { section: "Administratie", page: "Boekhouding" },
 	tasks: { section: "Delivery", page: "Tasks" },

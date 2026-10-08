@@ -58,5 +58,9 @@
   },
   "patchedDependencies": {
     "@quickdrawjs/core@0.2.0": "patches/@quickdrawjs%2Fcore@0.2.0.patch"
+  },
+  "overrides": {
+    "@ai-sdk/provider": "4.0.20",
+    "@ai-sdk/provider-utils": "5.0.52"
   }
 }

@@ -5,9 +5,11 @@
   "version": "0.0.0",
   "dependencies": {
     "@auth/core": "0.37.0",
+    "@convex-dev/ai-sdk-provider": "^0.2.1",
     "@convex-dev/auth": "^0.0.91",
     "@oslojs/crypto": "^1.0.1",
-    "convex": "^1.39.1",
+    "ai": "7.0.123",
+    "convex": "^1.46.0",
     "nanoid": "^5.1.9"
   },
   "scripts": {
