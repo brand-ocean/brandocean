@@ -39,7 +39,7 @@ export function NudgeCard({
 			className={cn(
 				"relative overflow-hidden rounded-xl border animate-in fade-in slide-in-from-bottom-2 duration-500",
 				meta.soft,
-				size === "lg" ? "p-5" : size === "md" ? "p-4" : "p-3",
+				size === "lg" ? "p-4 xl:p-5" : size === "md" ? "p-4" : "p-3",
 				nudge.priority === "high" && "ring-1 ring-current/10",
 			)}
 		>
@@ -62,7 +62,7 @@ export function NudgeCard({
 						className={cn(
 							"font-semibold leading-snug text-balance",
 							size === "lg"
-								? "mt-1 text-2xl"
+								? "mt-1 text-xl xl:text-2xl"
 								: size === "md"
 									? "mt-0.5 text-lg"
 									: "text-sm",
